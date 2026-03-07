@@ -125,7 +125,11 @@ export class ServerManager {
     const shell = process.env.SHELL || "/bin/zsh";
     const child = spawn(
       shell,
-      ["-l", "-c", "uv sync && lumen-sdk sync && exec lumen-sdk serve"],
+      [
+        "-l",
+        "-c",
+        "uv sync && uv run lumen-sdk sync && exec uv run lumen-sdk serve",
+      ],
       {
         cwd: sourcePath,
         stdio: ["ignore", "pipe", "pipe"],
