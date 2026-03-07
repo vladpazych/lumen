@@ -3,15 +3,7 @@ import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 import * as vscode from "vscode";
-
-export type DevServerState =
-  | "stopped"
-  | "starting"
-  | "rebuilding"
-  | "running"
-  | "stopping"
-  | "orphaned"
-  | "error";
+import type { DevServerState } from "../webview/lib/messaging";
 
 /** Read lumen.server setting and resolve ${workspaceFolder}. */
 export function getServerSource(): string {
@@ -75,25 +67,6 @@ function readPid(serverPath: string): number | null {
 const REBUILD_START = /Creating objects|Initializing|Building image/;
 const REBUILD_DONE = /Created web function serve|Serving app/;
 const MODAL_URL_RE = /https:\/\/\S+\.modal\.run/;
-
-/** Check if a server URL is already reachable. */
-export async function isServerReachable(
-  url: string,
-  authKey?: string,
-): Promise<boolean> {
-  try {
-    const headers: Record<string, string> = authKey
-      ? { Authorization: `Bearer ${authKey}` }
-      : {};
-    const res = await fetch(`${url}/pipelines`, {
-      signal: AbortSignal.timeout(3000),
-      headers,
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
 
 export class ServerManager {
   private readonly output: vscode.OutputChannel;
