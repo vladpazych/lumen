@@ -12,7 +12,7 @@ import { DimensionsField } from "@/components/fields/dimensions-field";
 import { IntegerField } from "@/components/fields/integer-field";
 import { NumberField } from "@/components/fields/number-field";
 import { ImageField } from "@/components/fields/image-field";
-import { PlaceholderField } from "@/components/fields/placeholder-field";
+import { VideoField } from "@/components/fields/video-field";
 import { PromptField } from "@/components/fields/prompt-field";
 import { SeedField } from "@/components/fields/seed-field";
 import { SelectField } from "@/components/fields/select-field";
@@ -193,7 +193,15 @@ function renderField(
       );
     }
     case "video":
-      return <PlaceholderField typeName="Video" />;
+      return (
+        <VideoField
+          value={(value as string) ?? ""}
+          onPick={onPickImage ?? (() => {})}
+          onClear={() => onChange("")}
+          isPicking={isPicking ?? false}
+          onDropUri={onDropUri}
+        />
+      );
     case "tags":
       return (
         <TagsField
