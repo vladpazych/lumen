@@ -1341,8 +1341,7 @@ function activate(context) {
     if (cmd === "start") {
       const server = getServers().find((s) => s.source);
       if (server && await isServerReachable(server.url)) {
-        vscode4.window.showWarningMessage("Server is already reachable — not starting a new instance");
-        return;
+        vscode4.window.showInformationMessage("Server endpoint is already reachable — reconnecting with a fresh process");
       }
       serverManager.start(source);
     } else if (cmd === "restart") {
@@ -1354,5 +1353,5 @@ function activate(context) {
 }
 function deactivate() {}
 
-//# debugId=98FA3ED8ADBB146064756E2164756E21
+//# debugId=B787F1B4665B669064756E2164756E21
 //# sourceMappingURL=extension.js.map

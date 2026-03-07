@@ -71,10 +71,9 @@ export function activate(context: vscode.ExtensionContext): void {
     if (cmd === "start") {
       const server = getServers().find((s) => s.source);
       if (server && (await isServerReachable(server.url))) {
-        vscode.window.showWarningMessage(
-          "Server is already reachable — not starting a new instance",
+        vscode.window.showInformationMessage(
+          "Server endpoint is already reachable — reconnecting with a fresh process",
         );
-        return;
       }
       serverManager.start(source);
     } else if (cmd === "restart") {

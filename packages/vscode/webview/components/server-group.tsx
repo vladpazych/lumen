@@ -109,7 +109,6 @@ export function ServerGroup({
   const canRestart =
     devServerState === "running" || devServerState === "rebuilding";
   const isRebuilding = devServerState === "rebuilding";
-  const serverAlreadyUp = canStart && status === "connected";
 
   const focusedConfig = configs[focusIndex - globalIndexOffset];
   const initialKey = focusedConfig?.id ?? null;
@@ -130,7 +129,7 @@ export function ServerGroup({
                 Rebuilding…
               </span>
             )}
-            {canStart && !serverAlreadyUp && (
+            {canStart && (
               <Button variant="ghost" size="xs" onClick={onStartServer}>
                 Start
               </Button>
