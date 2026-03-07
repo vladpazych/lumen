@@ -1,6 +1,1 @@
-import modal
-
-app = modal.App("lumen-example")
-
-from pipelines import _registry as registry  # noqa: E402, F401
-from pipelines._types import *  # noqa: E402, F401, F403 — public API for pipeline authors
+# Pipeline package — modules are auto-discovered by lumen_server.

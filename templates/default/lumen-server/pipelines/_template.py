@@ -10,7 +10,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from pipelines import (
+from lumen_server import (
     GenerateResult,
     OutputAsset,
     PipelineConfig,

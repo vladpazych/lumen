@@ -123,11 +123,15 @@ export class ServerManager {
     this.setState("starting");
 
     const shell = process.env.SHELL || "/bin/zsh";
-    const child = spawn(shell, ["-l", "-c", "uv sync && exec bun dev"], {
-      cwd: sourcePath,
-      stdio: ["ignore", "pipe", "pipe"],
-      detached: true,
-    });
+    const child = spawn(
+      shell,
+      ["-l", "-c", "uv sync && lumen-server sync && exec lumen-server serve"],
+      {
+        cwd: sourcePath,
+        stdio: ["ignore", "pipe", "pipe"],
+        detached: true,
+      },
+    );
 
     if (child.pid) {
       writeFileSync(pidFile(sourcePath), String(child.pid));

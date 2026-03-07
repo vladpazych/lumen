@@ -3,7 +3,7 @@
 import modal
 
 from lumen_server import app, registry
-from lumen_server.app import AUTH_KEY_FILE, _CONTAINER_AUTH_KEY_FILE, create_app
+from lumen_server.web import AUTH_KEY_FILE, _CONTAINER_AUTH_KEY_FILE, create_app
 
 registry.discover("pipelines")
 

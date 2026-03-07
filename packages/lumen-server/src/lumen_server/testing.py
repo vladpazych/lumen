@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from lumen_server import registry
-from lumen_server.app import create_app
+from lumen_server.web import create_app
 
 
 @pytest.fixture
@@ -14,7 +14,7 @@ def client():
     """TestClient with auth key. Discovers pipelines from ./pipelines/."""
     registry.discover("pipelines")
     web_app = create_app()
-    from lumen_server.app import _read_auth_key
+    from lumen_server.web import _read_auth_key
 
     key = _read_auth_key()
     return TestClient(web_app, headers={"Authorization": f"Bearer {key}"})

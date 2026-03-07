@@ -8,8 +8,7 @@ import uuid
 from typing import Any
 
 import httpx
-
-from pipelines import (
+from lumen_server import (
     BooleanParam,
     GenerateResult,
     IntegerParam,

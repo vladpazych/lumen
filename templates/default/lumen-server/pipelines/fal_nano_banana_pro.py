@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from pipelines import (
+from lumen_server import (
     GenerateResult,
     PipelineConfig,
     PipelineOutput,
     PromptParam,
     SelectOption,
 )
+
 from pipelines._fal import run_fal, shared_params
 
 config = PipelineConfig(
