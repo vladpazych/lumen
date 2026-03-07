@@ -112,12 +112,14 @@ export class ServerManager {
     }
 
     ensureAuthKey(sourcePath);
-    this.output.appendLine(`[dev] Starting bun dev in ${sourcePath}`);
+    this.output.appendLine(
+      `[dev] Syncing deps and starting server in ${sourcePath}`,
+    );
     this.output.show(true);
     this.setState("starting");
 
     const shell = process.env.SHELL || "/bin/zsh";
-    const child = spawn(shell, ["-l", "-c", "exec bun dev"], {
+    const child = spawn(shell, ["-l", "-c", "uv sync && exec bun dev"], {
       cwd: sourcePath,
       stdio: ["ignore", "pipe", "pipe"],
       detached: true,
