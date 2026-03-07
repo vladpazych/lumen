@@ -11,6 +11,18 @@ Create a single file in `pipelines/` that exports two things:
 
 That's it. No imports in `app.py`, no registration calls. The server auto-discovers all pipeline modules on startup. Copy `pipelines/_template.py` as a starting point.
 
+### Cost tier
+
+Set `tier` (1–5) on `PipelineConfig` to indicate GPU cost. The VS Code editor shows `$` signs on the Generate button.
+
+| Tier | Meaning         | Example GPU |
+| :--- | :-------------- | :---------- |
+| 1    | Free / CPU-only | —           |
+| 2    | Budget GPU      | T4          |
+| 3    | Mid-range       | A10G        |
+| 4    | High-end        | A100        |
+| 5    | Ultra           | H100        |
+
 ### Available param types
 
 | Type              | Key fields                                                             | Renders as                           |

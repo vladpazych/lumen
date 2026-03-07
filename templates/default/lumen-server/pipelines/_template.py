@@ -52,6 +52,7 @@ config = PipelineConfig(
         #     group="advanced"),
     ],
     output=PipelineOutput(type="image", format="png"),
+    tier=1,  # 1-5 cost hint shown on Generate button (1=free, 5=ultra)
 )
 
 
