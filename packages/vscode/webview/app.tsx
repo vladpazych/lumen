@@ -1,10 +1,22 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { StatusDot } from "@/components/status-dot";
 import { ConfigCard } from "@/components/config-card";
 import { ServerLog } from "@/components/server-log";
 import { AddConfigDialog } from "@/components/add-config-dialog";
 import { useLumen } from "@/lib/use-lumen";
+import { vscode } from "@/lib/vscode";
+
+type PersistedState = { expandedIds?: string[] };
+
+function loadExpanded(): Set<string> {
+  const state = vscode.getState<PersistedState>();
+  return new Set(state?.expandedIds ?? []);
+}
+
+function saveExpanded(ids: Set<string>): void {
+  vscode.setState<PersistedState>({ expandedIds: [...ids] });
+}
 
 const statusVariant = {
   connected: "success",
@@ -20,7 +32,6 @@ export function App() {
     devServerState,
     devServerLog,
     devServerUrl,
-    focusIndex,
     generating,
     progress,
     results,
@@ -41,6 +52,17 @@ export function App() {
   } = useLumen();
 
   const [showAddForm, setShowAddForm] = useState(false);
+  const [expanded, setExpanded] = useState(loadExpanded);
+
+  const toggleCard = useCallback((id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      saveExpanded(next);
+      return next;
+    });
+  }, []);
 
   if (!ready) {
     return (
@@ -69,9 +91,6 @@ export function App() {
   const isRebuilding = devServerState === "rebuilding";
   const isStopping = devServerState === "stopping";
   const isOrphaned = devServerState === "orphaned";
-
-  const focusedConfig = configs[focusIndex];
-  const initialKey = focusedConfig?.id ?? null;
 
   const handleAddConfig = (pipeline: string) => {
     if (!serverUrl) return;
@@ -145,7 +164,11 @@ export function App() {
             config={config}
             schema={schema}
             status={status}
-            defaultOpen={config.id === initialKey}
+            open={expanded.has(config.id)}
+            onToggle={() => {
+              toggleCard(config.id);
+              setFocus(i);
+            }}
             isGenerating={isGen}
             progress={prog}
             result={result}
@@ -180,7 +203,6 @@ export function App() {
             }
             onRename={(name) => updateName(config.id, name)}
             onRemove={() => removeConfig(config.id)}
-            onOpen={() => setFocus(i)}
             isPickingImage={isPickingImage}
             imageThumbs={imageThumbs}
           />

@@ -13,7 +13,8 @@ type Props = {
   config: LumenConfig;
   schema?: PipelineConfig;
   status: ServerStatus;
-  defaultOpen?: boolean;
+  open: boolean;
+  onToggle: () => void;
   isGenerating: boolean;
   progress?: number;
   result?: {
@@ -27,28 +28,16 @@ type Props = {
   onPickImageByUri: (paramName: string, uri: string) => void;
   onRename: (name: string) => void;
   onRemove: () => void;
-  onOpen: () => void;
   isPickingImage: boolean;
   imageThumbs: Record<string, string>;
 };
-
-function promptSummary(
-  config: LumenConfig,
-  schema?: PipelineConfig,
-): string | null {
-  if (!schema) return null;
-  const promptParam = schema.params.find((p) => p.type === "prompt");
-  if (!promptParam) return null;
-  const value = config.params[promptParam.name];
-  if (typeof value !== "string" || value.length === 0) return null;
-  return value.length > 80 ? value.slice(0, 80) + "..." : value;
-}
 
 export function ConfigCard({
   config,
   schema,
   status,
-  defaultOpen,
+  open,
+  onToggle,
   isGenerating,
   progress,
   result,
@@ -58,14 +47,12 @@ export function ConfigCard({
   onPickImageByUri,
   onRename,
   onRemove,
-  onOpen,
   isPickingImage,
   imageThumbs,
 }: Props) {
-  const [open, setOpen] = useState(defaultOpen ?? false);
   const fallbackTitle = schema?.name ?? config.pipeline;
   const title = config.name ?? fallbackTitle;
-  const summary = promptSummary(config, schema);
+  const description = schema?.description ?? null;
 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(title);
@@ -86,56 +73,52 @@ export function ConfigCard({
     setDraft(title);
   };
 
-  const toggle = () => {
-    const next = !open;
-    setOpen(next);
-    if (next) onOpen();
-  };
-
   return (
     <div className="rounded-md border border-border bg-card">
       {/* Header */}
       <button
         type="button"
         className="flex w-full items-center gap-2 px-3 py-2.5 text-left group"
-        onClick={toggle}
+        onClick={onToggle}
       >
         <ChevronDownIcon
           className={`size-3.5 shrink-0 text-text-tertiary transition-transform duration-150 ${open ? "rotate-0" : "-rotate-90"}`}
         />
-        {editing ? (
-          <input
-            ref={inputRef}
-            className="flex-1 bg-transparent text-[13px] font-medium text-text-primary outline-none border-b border-border"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") commitRename();
-              if (e.key === "Escape") cancelRename();
-              e.stopPropagation();
-            }}
-            onBlur={commitRename}
-            onClick={(e) => e.stopPropagation()}
-          />
-        ) : (
-          <span
-            className="flex-1 text-[13px] font-medium text-text-primary truncate"
-            onDoubleClick={(e) => {
-              e.stopPropagation();
-              setDraft(title);
-              setEditing(true);
-            }}
-          >
-            {title}
-          </span>
-        )}
-        {!open && summary && (
-          <span className="text-[11px] text-text-tertiary truncate max-w-[40%]">
-            {summary}
-          </span>
-        )}
+        <div className="flex-1 min-w-0">
+          {editing ? (
+            <input
+              ref={inputRef}
+              className="w-full bg-transparent text-[13px] font-medium text-text-primary outline-none border-b border-border"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitRename();
+                if (e.key === "Escape") cancelRename();
+                e.stopPropagation();
+              }}
+              onBlur={commitRename}
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <span
+              className="block text-[13px] font-medium text-text-primary truncate"
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                setDraft(title);
+                setEditing(true);
+              }}
+            >
+              {title}
+            </span>
+          )}
+          {!open && description && (
+            <span className="block text-[11px] text-text-tertiary truncate">
+              {description}
+            </span>
+          )}
+        </div>
         <span
-          className="text-[11px] text-text-tertiary hover:text-text-primary opacity-0 group-hover:opacity-100 transition-opacity px-1"
+          className="text-[11px] text-text-tertiary hover:text-text-primary opacity-0 group-hover:opacity-100 transition-opacity px-1 shrink-0"
           role="button"
           tabIndex={-1}
           onClick={(e) => {
@@ -152,10 +135,8 @@ export function ConfigCard({
         <div className="px-3 pb-3">
           {schema ? (
             <div className="flex flex-col gap-4">
-              {schema.description && (
-                <p className="text-[11px] text-text-secondary">
-                  {schema.description}
-                </p>
+              {description && (
+                <p className="text-[11px] text-text-secondary">{description}</p>
               )}
               <PipelineForm
                 pipeline={schema}
