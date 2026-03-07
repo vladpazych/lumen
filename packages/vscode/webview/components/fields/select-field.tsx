@@ -1,5 +1,5 @@
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../../kit/select"
-import type { SelectParam } from "../../../shared/types"
+import type { SelectParam } from "@lumen/core/types"
 
 type Props = { param: SelectParam; value: string; onChange: (v: string) => void }
 

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useReducer } from "react";
 import type {
-  DevServerState,
   LumenConfig,
   PipelineConfig,
   ServerStatus,
-} from "../../shared/types";
+} from "@lumen/core/types";
+import type { DevServerState } from "./messaging";
 import type { ExtensionMessage } from "./messaging";
 import { vscode } from "./vscode";
 

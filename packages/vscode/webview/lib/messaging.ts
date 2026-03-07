@@ -1,10 +1,11 @@
 import type {
-  DevServerState,
   GenerateResponse,
   LumenConfig,
   PipelineConfig,
   ServerStatus,
-} from "../../shared/types";
+} from "@lumen/core/types";
+
+export type DevServerState = "stopped" | "starting" | "running" | "error";
 
 // --- Extension → Webview ---
 

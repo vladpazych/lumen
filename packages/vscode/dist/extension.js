@@ -49,50 +49,68 @@ module.exports = __toCommonJS(exports_extension);
 var vscode4 = __toESM(require("vscode"));
 
 // src/provider.ts
-var import_node_fs3 = require("node:fs");
-var import_node_path3 = require("node:path");
+var import_node_fs4 = require("node:fs");
+var import_node_path4 = require("node:path");
 var vscode3 = __toESM(require("vscode"));
 
-// src/api.ts
-var POLL_INTERVAL_MS = 1500;
-var MAX_POLL_ATTEMPTS = 200;
-async function fetchPipelines(serverUrl) {
-  const res = await fetch(`${serverUrl}/pipelines`);
-  if (!res.ok)
-    throw new Error(`GET /pipelines failed: ${res.status}`);
-  const manifests = await res.json();
-  const configs = await Promise.all(manifests.map(async (m) => {
-    const r = await fetch(`${serverUrl}/pipelines/${m.id}`);
-    if (!r.ok)
-      throw new Error(`GET /pipelines/${m.id} failed: ${r.status}`);
-    return await r.json();
-  }));
+// ../lumen/domain/config.ts
+function parseConfigs(text) {
+  const trimmed = text.trim();
+  if (!trimmed || trimmed === "[]" || trimmed === "{}")
+    return [];
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (Array.isArray(parsed))
+      return parsed;
+    if (typeof parsed === "object" && parsed !== null) {
+      return migrateOldFormat(parsed);
+    }
+    return [];
+  } catch {
+    return [];
+  }
+}
+function serializeConfigs(configs) {
+  return JSON.stringify(configs, null, 2) + `
+`;
+}
+function ensureIds(configs) {
+  let assigned = false;
+  for (const config of configs) {
+    if (!config.id) {
+      config.id = crypto.randomUUID();
+      assigned = true;
+    }
+  }
+  return assigned;
+}
+function migrateOldFormat(raw) {
+  const configs = [];
+  for (const [key, value] of Object.entries(raw)) {
+    if (key.startsWith("_") || typeof value !== "object" || value === null)
+      continue;
+    const pipelines = value;
+    for (const [pipelineId, params] of Object.entries(pipelines)) {
+      if (typeof params !== "object" || params === null)
+        continue;
+      configs.push({
+        id: crypto.randomUUID(),
+        service: key,
+        pipeline: pipelineId,
+        params
+      });
+    }
+  }
   return configs;
 }
-async function generate(serverUrl, pipelineId, params) {
-  const res = await fetch(`${serverUrl}/pipelines/${pipelineId}/generate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(params)
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`POST /pipelines/${pipelineId}/generate failed: ${res.status} ${text}`);
-  }
-  return await res.json();
-}
-async function pollRun(serverUrl, pipelineId, runId) {
-  const res = await fetch(`${serverUrl}/pipelines/${pipelineId}/runs/${runId}`);
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`GET /runs/${runId} failed: ${res.status} ${text}`);
-  }
-  return await res.json();
-}
-async function pollUntilDone(serverUrl, pipelineId, runId, onProgress) {
+
+// ../lumen/domain/generation.ts
+var POLL_INTERVAL_MS = 1500;
+var MAX_POLL_ATTEMPTS = 200;
+async function pollUntilDone(provider, pipelineId, runId, onProgress) {
   for (let i = 0;i < MAX_POLL_ATTEMPTS; i++) {
     await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-    const status = await pollRun(serverUrl, pipelineId, runId);
+    const status = await provider.pollRun(pipelineId, runId);
     if (status.status === "running" || status.status === "queued") {
       onProgress?.(status.status === "running" ? status.progress ?? 0 : 0);
       continue;
@@ -106,7 +124,125 @@ async function pollUntilDone(serverUrl, pipelineId, runId, onProgress) {
   };
 }
 
-// src/providers/fal.ts
+// ../lumen/services/editor.ts
+function editorService(ports) {
+  const { providers, assets, logger } = ports;
+  async function refreshSchemas(serviceUrl, schemas, statuses) {
+    const provider = providers[serviceUrl];
+    if (!provider) {
+      return { schemas, statuses };
+    }
+    try {
+      const pipelines = await provider.fetchSchemas();
+      return {
+        schemas: { ...schemas, [serviceUrl]: pipelines },
+        statuses: { ...statuses, [serviceUrl]: "connected" }
+      };
+    } catch (err) {
+      logger.error(`[schema] Failed to fetch from ${serviceUrl}: ${err}`);
+      return {
+        schemas: { ...schemas, [serviceUrl]: [] },
+        statuses: { ...statuses, [serviceUrl]: "error" }
+      };
+    }
+  }
+  async function refreshAllSchemas(serviceUrls, schemas, statuses) {
+    let s = schemas;
+    let st = statuses;
+    for (const url of serviceUrls) {
+      const result = await refreshSchemas(url, s, st);
+      s = result.schemas;
+      st = result.statuses;
+    }
+    return { schemas: s, statuses: st };
+  }
+  async function pollHealth(serviceUrls, schemas, statuses) {
+    const newStatuses = { ...statuses };
+    const changed = [];
+    const reconnected = [];
+    for (const url of serviceUrls) {
+      if (url.startsWith("provider://"))
+        continue;
+      const prev = statuses[url];
+      const provider = providers[url];
+      if (!provider)
+        continue;
+      try {
+        await provider.fetchSchemas();
+        newStatuses[url] = "connected";
+        if (prev !== "connected")
+          reconnected.push(url);
+      } catch {
+        newStatuses[url] = "disconnected";
+      }
+      if (newStatuses[url] !== prev) {
+        changed.push({ url, status: newStatuses[url] });
+      }
+    }
+    return { statuses: newStatuses, changed, reconnected };
+  }
+  async function generate(serviceUrl, pipelineId, params, documentUri, onProgress) {
+    const provider = providers[serviceUrl];
+    if (!provider) {
+      return {
+        status: "failed",
+        runId: "",
+        error: { code: "NO_PROVIDER", message: `No provider for ${serviceUrl}` }
+      };
+    }
+    let response = await provider.generate(pipelineId, params);
+    if (response.status === "running" || response.status === "queued") {
+      response = await pollUntilDone(provider, pipelineId, response.runId, onProgress);
+    }
+    if (response.status === "completed") {
+      for (const output of response.outputs) {
+        output.url = await assets.save(output.url, documentUri, output.format ?? "png");
+      }
+    }
+    return response;
+  }
+  return { refreshSchemas, refreshAllSchemas, pollHealth, generate };
+}
+
+// src/adapters/http-provider.ts
+function httpProvider(serverUrl) {
+  return {
+    async fetchSchemas() {
+      const res = await fetch(`${serverUrl}/pipelines`);
+      if (!res.ok)
+        throw new Error(`GET /pipelines failed: ${res.status}`);
+      const manifests = await res.json();
+      return Promise.all(manifests.map(async (m) => {
+        const r = await fetch(`${serverUrl}/pipelines/${m.id}`);
+        if (!r.ok)
+          throw new Error(`GET /pipelines/${m.id} failed: ${r.status}`);
+        return await r.json();
+      }));
+    },
+    async generate(pipelineId, params) {
+      const res = await fetch(`${serverUrl}/pipelines/${pipelineId}/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(params)
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`POST /pipelines/${pipelineId}/generate failed: ${res.status} ${text}`);
+      }
+      return await res.json();
+    },
+    async pollRun(pipelineId, runId) {
+      const res = await fetch(`${serverUrl}/pipelines/${pipelineId}/runs/${runId}`);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`GET /runs/${runId} failed: ${res.status} ${text}`);
+      }
+      return await res.json();
+    }
+  };
+}
+
+// src/adapters/fal-provider.ts
 var import_node_crypto = require("node:crypto");
 var import_node_fs = require("node:fs");
 var import_node_path = require("node:path");
@@ -133,7 +269,15 @@ var sharedParams = (resolutionOptions) => [
     options: ASPECT_RATIO_OPTIONS,
     group: "basic"
   },
-  { type: "integer", name: "num_images", label: "Images", default: 1, min: 1, max: 4, group: "basic" },
+  {
+    type: "integer",
+    name: "num_images",
+    label: "Images",
+    default: 1,
+    min: 1,
+    max: 4,
+    group: "basic"
+  },
   { type: "seed", name: "seed", label: "Seed", group: "advanced" },
   {
     type: "select",
@@ -151,7 +295,13 @@ var sharedParams = (resolutionOptions) => [
     options: resolutionOptions,
     group: "advanced"
   },
-  { type: "boolean", name: "enable_web_search", label: "Web Search", default: false, group: "advanced" }
+  {
+    type: "boolean",
+    name: "enable_web_search",
+    label: "Web Search",
+    default: false,
+    group: "advanced"
+  }
 ];
 var falPipelines = [
   {
@@ -160,7 +310,13 @@ var falPipelines = [
     description: "Gemini 2.5 Flash image generation via fal.ai",
     category: "image",
     params: [
-      { type: "prompt", name: "prompt", label: "Prompt", required: true, group: "basic" },
+      {
+        type: "prompt",
+        name: "prompt",
+        label: "Prompt",
+        required: true,
+        group: "basic"
+      },
       ...sharedParams([{ value: "1K" }, { value: "2K" }])
     ],
     output: { type: "image", format: "png" }
@@ -171,9 +327,25 @@ var falPipelines = [
     description: "Gemini 3.1 Flash image generation via fal.ai",
     category: "image",
     params: [
-      { type: "prompt", name: "prompt", label: "Prompt", required: true, group: "basic" },
-      { type: "image", name: "image_urls", label: "Reference Image", group: "basic" },
-      ...sharedParams([{ value: "0.5K" }, { value: "1K" }, { value: "2K" }, { value: "4K" }])
+      {
+        type: "prompt",
+        name: "prompt",
+        label: "Prompt",
+        required: true,
+        group: "basic"
+      },
+      {
+        type: "image",
+        name: "image_urls",
+        label: "Reference Image",
+        group: "basic"
+      },
+      ...sharedParams([
+        { value: "0.5K" },
+        { value: "1K" },
+        { value: "2K" },
+        { value: "4K" }
+      ])
     ],
     output: { type: "image", format: "png" }
   },
@@ -183,7 +355,13 @@ var falPipelines = [
     description: "Gemini 3 Pro high-quality image generation via fal.ai",
     category: "image",
     params: [
-      { type: "prompt", name: "prompt", label: "Prompt", required: true, group: "basic" },
+      {
+        type: "prompt",
+        name: "prompt",
+        label: "Prompt",
+        required: true,
+        group: "basic"
+      },
       ...sharedParams([{ value: "1K" }, { value: "2K" }, { value: "4K" }])
     ],
     output: { type: "image", format: "png" }
@@ -202,36 +380,126 @@ var CONTENT_TYPES = {
   webp: "image/webp",
   gif: "image/gif"
 };
-async function uploadImage(apiKey, filePath, storage) {
-  const bytes = import_node_fs.readFileSync(filePath);
-  const hash = import_node_crypto.createHash("sha256").update(bytes).digest("hex");
-  const cache = storage.get(UPLOAD_CACHE_KEY, {});
-  if (cache[hash])
-    return cache[hash];
-  const name = import_node_path.basename(filePath);
-  const ext = name.split(".").pop()?.toLowerCase() ?? "";
-  const contentType = CONTENT_TYPES[ext] ?? "application/octet-stream";
-  const initRes = await fetch("https://rest.fal.ai/storage/upload/initiate?storage_type=fal-cdn-v3", {
-    method: "POST",
-    headers: { Authorization: `Key ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ content_type: contentType, file_name: name })
-  });
-  if (!initRes.ok) {
-    const text = await initRes.text().catch(() => initRes.statusText);
-    throw new Error(`fal upload failed: ${initRes.status} ${text}`);
+function falProvider(deps) {
+  const { apiKey, storage, resolveImagePath } = deps;
+  function requireKey() {
+    const key = apiKey();
+    if (!key)
+      throw new Error("fal.ai API key not set. Run 'Lumen: Set fal.ai API Key'.");
+    return key;
   }
-  const { upload_url, file_url } = await initRes.json();
-  const putRes = await fetch(upload_url, {
-    method: "PUT",
-    headers: { "Content-Type": contentType },
-    body: bytes
-  });
-  if (!putRes.ok) {
-    throw new Error(`fal upload PUT failed: ${putRes.status}`);
+  async function uploadImage(key, filePath) {
+    const bytes = import_node_fs.readFileSync(filePath);
+    const hash = import_node_crypto.createHash("sha256").update(bytes).digest("hex");
+    const cache = storage.get(UPLOAD_CACHE_KEY, {});
+    if (cache[hash])
+      return cache[hash];
+    const name = import_node_path.basename(filePath);
+    const ext = name.split(".").pop()?.toLowerCase() ?? "";
+    const contentType = CONTENT_TYPES[ext] ?? "application/octet-stream";
+    const initRes = await fetch("https://rest.fal.ai/storage/upload/initiate?storage_type=fal-cdn-v3", {
+      method: "POST",
+      headers: {
+        Authorization: `Key ${key}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ content_type: contentType, file_name: name })
+    });
+    if (!initRes.ok) {
+      const text = await initRes.text().catch(() => initRes.statusText);
+      throw new Error(`fal upload failed: ${initRes.status} ${text}`);
+    }
+    const { upload_url, file_url } = await initRes.json();
+    const putRes = await fetch(upload_url, {
+      method: "PUT",
+      headers: { "Content-Type": contentType },
+      body: bytes
+    });
+    if (!putRes.ok) {
+      throw new Error(`fal upload PUT failed: ${putRes.status}`);
+    }
+    cache[hash] = file_url;
+    await storage.update(UPLOAD_CACHE_KEY, cache);
+    return file_url;
   }
-  cache[hash] = file_url;
-  await storage.update(UPLOAD_CACHE_KEY, cache);
-  return file_url;
+  return {
+    async fetchSchemas() {
+      return falPipelines;
+    },
+    async generate(pipelineId, params) {
+      const key = requireKey();
+      const model = MODEL_MAP[pipelineId];
+      if (!model) {
+        return {
+          status: "failed",
+          runId: "",
+          error: {
+            code: "UNKNOWN_PIPELINE",
+            message: `Unknown fal pipeline: ${pipelineId}`
+          }
+        };
+      }
+      const body = { ...params };
+      if (!body.seed)
+        delete body.seed;
+      const imageVal = body.image_urls;
+      const hasImage = typeof imageVal === "string" && imageVal.length > 0;
+      if (hasImage) {
+        let resolvedUrl = imageVal;
+        if (!imageVal.startsWith("http")) {
+          const absPath = resolveImagePath(imageVal);
+          if (!import_node_fs.existsSync(absPath))
+            throw new Error(`Reference image not found: ${imageVal}`);
+          resolvedUrl = await uploadImage(key, absPath);
+        }
+        body.image_urls = [resolvedUrl];
+      } else {
+        delete body.image_urls;
+      }
+      const endpoint = hasImage ? `${model}/edit` : model;
+      const res = await fetch(`https://fal.run/${endpoint}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Key ${key}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        let message = `fal.ai error ${res.status}`;
+        try {
+          const err = await res.json();
+          message = err.detail ?? err.message ?? message;
+        } catch {}
+        return {
+          status: "failed",
+          runId: "",
+          error: { code: "FAL_ERROR", message }
+        };
+      }
+      const data = await res.json();
+      return {
+        status: "completed",
+        runId: crypto.randomUUID().slice(0, 12),
+        outputs: data.images.map((img) => ({
+          url: img.url,
+          type: "image",
+          format: img.content_type.split("/")[1] ?? "png",
+          metadata: { seed: data.seed }
+        }))
+      };
+    },
+    async pollRun() {
+      return {
+        status: "failed",
+        runId: "",
+        error: {
+          code: "NOT_SUPPORTED",
+          message: "fal.ai does not support async polling"
+        }
+      };
+    }
+  };
 }
 async function getApiKey(secrets) {
   return secrets.get("lumen.fal.apiKey");
@@ -248,55 +516,63 @@ async function promptAndStoreApiKey(secrets) {
   await secrets.store("lumen.fal.apiKey", key);
   return true;
 }
-async function generate2(apiKey, pipelineId, params) {
-  const model = MODEL_MAP[pipelineId];
-  if (!model) {
-    return {
-      status: "failed",
-      runId: "",
-      error: { code: "UNKNOWN_PIPELINE", message: `Unknown fal pipeline: ${pipelineId}` }
-    };
-  }
-  const body = { ...params };
-  if (!body.seed)
-    delete body.seed;
-  const imageUrl = body.image_urls;
-  const hasImage = typeof imageUrl === "string" && imageUrl.length > 0;
-  if (hasImage) {
-    body.image_urls = [imageUrl];
-  } else {
-    delete body.image_urls;
-  }
-  const endpoint = hasImage ? `${model}/edit` : model;
-  const res = await fetch(`https://fal.run/${endpoint}`, {
-    method: "POST",
-    headers: { Authorization: `Key ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  });
-  if (!res.ok) {
-    let message = `fal.ai error ${res.status}`;
-    try {
-      const err = await res.json();
-      message = err.detail ?? err.message ?? message;
-    } catch {}
-    return { status: "failed", runId: "", error: { code: "FAL_ERROR", message } };
-  }
-  const data = await res.json();
+
+// src/adapters/vscode-assets.ts
+var import_node_fs2 = require("node:fs");
+var import_node_path2 = require("node:path");
+function vscodeAssetStore(deps) {
   return {
-    status: "completed",
-    runId: crypto.randomUUID().slice(0, 12),
-    outputs: data.images.map((img) => ({
-      url: img.url,
-      type: "image",
-      format: img.content_type.split("/")[1] ?? "png",
-      metadata: { seed: data.seed }
-    }))
+    async save(url, documentUri, format) {
+      const dir = import_node_path2.dirname(documentUri);
+      const base = import_node_path2.basename(documentUri, ".lumen");
+      const now = new Date;
+      const pad = (n) => String(n).padStart(2, "0");
+      const timestamp = `${String(now.getFullYear()).slice(2)}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+      const filePath = import_node_path2.join(dir, `${base}-${timestamp}.${format}`);
+      let buffer;
+      if (url.startsWith("data:")) {
+        const base64 = url.split(",")[1];
+        buffer = Buffer.from(base64, "base64");
+      } else {
+        const res = await fetch(url);
+        if (!res.ok)
+          throw new Error(`Failed to download asset: ${res.status}`);
+        buffer = Buffer.from(await res.arrayBuffer());
+      }
+      import_node_fs2.writeFileSync(filePath, buffer);
+      deps.logger.info(`[asset] Saved ${filePath}`);
+      return deps.toWebviewUri(filePath);
+    }
+  };
+}
+
+// src/adapters/vscode-logger.ts
+function vscodeLogger(channel) {
+  return {
+    info(message) {
+      channel.appendLine(message);
+    },
+    error(message) {
+      channel.appendLine(`[ERROR] ${message}`);
+    }
+  };
+}
+
+// src/adapters/vscode-secrets.ts
+function vscodeSecretStore(secrets) {
+  return {
+    async get(key) {
+      return secrets.get(key);
+    },
+    async set(key, value) {
+      await secrets.store(key, value);
+    }
   };
 }
 
 // src/server.ts
-var import_node_fs2 = require("node:fs");
-var import_node_path2 = require("node:path");
+var import_node_fs3 = require("node:fs");
+var import_node_path3 = require("node:path");
 var import_node_child_process = require("node:child_process");
 var vscode2 = __toESM(require("vscode"));
 function resolveSource(raw) {
@@ -311,7 +587,7 @@ function getServers() {
   }));
 }
 function pidFile(serverPath) {
-  return import_node_path2.join(serverPath, ".dev.pid");
+  return import_node_path3.join(serverPath, ".dev.pid");
 }
 function isAlive(pid) {
   try {
@@ -323,12 +599,12 @@ function isAlive(pid) {
 }
 function readPid(serverPath) {
   const file = pidFile(serverPath);
-  if (!import_node_fs2.existsSync(file))
+  if (!import_node_fs3.existsSync(file))
     return null;
-  const pid = parseInt(import_node_fs2.readFileSync(file, "utf-8").trim(), 10);
+  const pid = parseInt(import_node_fs3.readFileSync(file, "utf-8").trim(), 10);
   if (isNaN(pid) || !isAlive(pid)) {
     try {
-      import_node_fs2.unlinkSync(file);
+      import_node_fs3.unlinkSync(file);
     } catch {}
     return null;
   }
@@ -368,21 +644,21 @@ class ServerManager {
       }
     });
     if (child.pid) {
-      import_node_fs2.writeFileSync(pidFile(sourcePath), String(child.pid));
+      import_node_fs3.writeFileSync(pidFile(sourcePath), String(child.pid));
     }
     child.stdout?.on("data", (d) => this.output.append(d.toString()));
     child.stderr?.on("data", (d) => this.output.append(d.toString()));
     child.on("close", (code) => {
       this.output.appendLine(`[dev] Exited with code ${code}`);
       try {
-        import_node_fs2.unlinkSync(pidFile(sourcePath));
+        import_node_fs3.unlinkSync(pidFile(sourcePath));
       } catch {}
       this.onChange();
     });
     child.on("error", (err) => {
       this.output.appendLine(`[dev] Error: ${err.message}`);
       try {
-        import_node_fs2.unlinkSync(pidFile(sourcePath));
+        import_node_fs3.unlinkSync(pidFile(sourcePath));
       } catch {}
       this.onChange();
     });
@@ -404,14 +680,13 @@ class ServerManager {
       process.kill(pid, "SIGTERM");
     }
     try {
-      import_node_fs2.unlinkSync(pidFile(sourcePath));
+      import_node_fs3.unlinkSync(pidFile(sourcePath));
     } catch {}
     this.onChange();
   }
 }
 
 // src/provider.ts
-var log = vscode3.window.createOutputChannel("Lumen");
 var HEALTH_POLL_MS = 1e4;
 
 class LumenEditorProvider {
@@ -423,14 +698,52 @@ class LumenEditorProvider {
   devServerState = "stopped";
   healthTimer = null;
   falApiKey = null;
+  service;
+  providers = {};
+  log;
   onDevServerCommand = null;
   static register(provider) {
-    return vscode3.window.registerCustomEditorProvider(LumenEditorProvider.viewType, provider, {
-      supportsMultipleEditorsPerDocument: false
-    });
+    return vscode3.window.registerCustomEditorProvider(LumenEditorProvider.viewType, provider, { supportsMultipleEditorsPerDocument: false });
   }
   constructor(context) {
     this.context = context;
+    this.log = vscode3.window.createOutputChannel("Lumen");
+    const logger = vscodeLogger(this.log);
+    const assets = vscodeAssetStore({
+      logger,
+      toWebviewUri: (filePath) => {
+        const panel = this.panels.values().next().value;
+        if (!panel)
+          return filePath;
+        return panel.webview.asWebviewUri(vscode3.Uri.file(filePath)).toString();
+      }
+    });
+    this.service = editorService({
+      providers: this.providers,
+      assets,
+      secrets: vscodeSecretStore(context.secrets),
+      logger
+    });
+  }
+  rebuildProviders() {
+    for (const key of Object.keys(this.providers)) {
+      delete this.providers[key];
+    }
+    for (const s of getServers()) {
+      this.providers[s.url] = httpProvider(s.url);
+    }
+    if (this.falApiKey) {
+      this.providers[FAL_PROVIDER_URL] = falProvider({
+        apiKey: () => this.falApiKey,
+        storage: this.context.globalState,
+        resolveImagePath: (rel) => {
+          const panel = this.panels.values().next().value;
+          if (!panel)
+            return rel;
+          return rel;
+        }
+      });
+    }
   }
   getDevServer() {
     return getServers().find((s) => s.source) ?? null;
@@ -451,6 +764,7 @@ class LumenEditorProvider {
   async refreshFalApiKey() {
     const prev = this.falApiKey;
     this.falApiKey = await getApiKey(this.context.secrets) ?? null;
+    this.rebuildProviders();
     if (this.falApiKey && !prev) {
       this.refreshSchemas(FAL_PROVIDER_URL);
     } else if (!this.falApiKey && prev) {
@@ -467,15 +781,17 @@ class LumenEditorProvider {
     this.devServerState = state;
     this.broadcastToAll({ type: "devServerStatus", state });
     if (state === "running") {
+      this.rebuildProviders();
       for (const url of this.getAllServerUrls())
         this.refreshSchemas(url);
     }
   }
   async resolveCustomTextEditor(document, webviewPanel) {
     this.panels.add(webviewPanel);
+    this.rebuildProviders();
     const resourceRoots = [
-      vscode3.Uri.file(import_node_path3.join(this.context.extensionPath, "dist", "webview")),
-      vscode3.Uri.file(import_node_path3.dirname(document.uri.fsPath)),
+      vscode3.Uri.file(import_node_path4.join(this.context.extensionPath, "dist", "webview")),
+      vscode3.Uri.file(import_node_path4.dirname(document.uri.fsPath)),
       ...(vscode3.workspace.workspaceFolders ?? []).map((f) => f.uri)
     ];
     webviewPanel.webview.options = {
@@ -487,22 +803,21 @@ class LumenEditorProvider {
     const postConfigs = () => {
       if (updatingFromWebview)
         return;
-      const configs = this.parseDocument(document);
+      const configs = parseConfigs(document.getText());
       this.postMessage(webviewPanel, { type: "configsUpdated", configs });
     };
     for (const url of this.getAllServerUrls()) {
-      if (!this.schemas[url]) {
+      if (!this.schemas[url])
         this.refreshSchemas(url);
-      }
     }
     if (this.panels.size === 1)
       this.startHealthPolling();
     webviewPanel.webview.onDidReceiveMessage(async (msg) => {
       switch (msg.type) {
         case "ready": {
-          log.appendLine("[ready] webview ready");
-          const configs = this.parseDocument(document);
-          if (this.ensureIds(configs)) {
+          this.log.appendLine("[ready] webview ready");
+          const configs = parseConfigs(document.getText());
+          if (ensureIds(configs)) {
             updatingFromWebview = true;
             await this.writeDocument(document, configs);
             updatingFromWebview = false;
@@ -521,7 +836,7 @@ class LumenEditorProvider {
             devServerState: this.devServerState,
             devServerUrl: devServer?.url ?? null
           });
-          const docDir = import_node_path3.dirname(document.uri.fsPath);
+          const docDir = import_node_path4.dirname(document.uri.fsPath);
           const thumbs = {};
           for (const config of configs) {
             for (const val of Object.values(config.params)) {
@@ -538,7 +853,7 @@ class LumenEditorProvider {
           break;
         }
         case "updateState": {
-          const configs = this.parseDocument(document);
+          const configs = parseConfigs(document.getText());
           const idx = configs.findIndex((c) => c.id === msg.configId);
           if (idx >= 0) {
             configs[idx] = {
@@ -553,14 +868,29 @@ class LumenEditorProvider {
         }
         case "generateRequest": {
           const { requestId, configId, service, pipeline, params } = msg;
-          const handleComplete = async (response) => {
+          const docDir = import_node_path4.dirname(document.uri.fsPath);
+          if (this.providers[FAL_PROVIDER_URL]) {
+            this.providers[FAL_PROVIDER_URL] = falProvider({
+              apiKey: () => this.falApiKey,
+              storage: this.context.globalState,
+              resolveImagePath: (rel) => import_node_path4.resolve(docDir, rel)
+            });
+          }
+          try {
+            const response = await this.service.generate(service, pipeline, params, document.uri.fsPath, (progress) => {
+              this.postMessage(webviewPanel, {
+                type: "generateProgress",
+                requestId,
+                configId,
+                service,
+                pipeline,
+                progress
+              });
+            });
             if (response.status === "completed") {
-              for (const output of response.outputs) {
-                output.url = await this.saveAsset(output.url, document.uri, output.format ?? "png", webviewPanel);
-              }
               const meta = response.outputs[0]?.metadata;
               if (meta?.seed != null) {
-                const configs = this.parseDocument(document);
+                const configs = parseConfigs(document.getText());
                 const idx = configs.findIndex((c) => c.id === configId);
                 if (idx >= 0) {
                   configs[idx] = {
@@ -582,32 +912,6 @@ class LumenEditorProvider {
               pipeline,
               response
             });
-          };
-          try {
-            const response = await this.doGenerate(service, pipeline, params, document.uri);
-            if (response.status === "running" || response.status === "queued") {
-              pollUntilDone(service, pipeline, response.runId, (progress) => {
-                this.postMessage(webviewPanel, {
-                  type: "generateProgress",
-                  requestId,
-                  configId,
-                  service,
-                  pipeline,
-                  progress
-                });
-              }).then(handleComplete).catch((err) => {
-                this.postMessage(webviewPanel, {
-                  type: "generateResult",
-                  requestId,
-                  configId,
-                  service,
-                  pipeline,
-                  error: err instanceof Error ? err.message : String(err)
-                });
-              });
-            } else {
-              await handleComplete(response);
-            }
           } catch (err) {
             this.postMessage(webviewPanel, {
               type: "generateResult",
@@ -633,7 +937,7 @@ class LumenEditorProvider {
         case "pickImage": {
           const { requestId, configId, service, pipeline, paramName } = msg;
           try {
-            const docDir = import_node_path3.dirname(document.uri.fsPath);
+            const docDir = import_node_path4.dirname(document.uri.fsPath);
             const pickedPath = await this.pickImageWithFileBrowser(docDir);
             const thumbUri = pickedPath ? this.imageThumbUri(pickedPath, docDir, webviewPanel.webview) : undefined;
             this.postMessage(webviewPanel, {
@@ -662,9 +966,9 @@ class LumenEditorProvider {
         case "pickImageByUri": {
           const { requestId, configId, service, pipeline, paramName, uri } = msg;
           try {
-            const docDir = import_node_path3.dirname(document.uri.fsPath);
+            const docDir = import_node_path4.dirname(document.uri.fsPath);
             const fsPath = vscode3.Uri.parse(uri).fsPath;
-            const rel = import_node_path3.relative(docDir, fsPath);
+            const rel = import_node_path4.relative(docDir, fsPath);
             const relPath = rel.startsWith(".") ? rel : `./${rel}`;
             const thumbUri = this.imageThumbUri(relPath, docDir, webviewPanel.webview);
             this.postMessage(webviewPanel, {
@@ -691,7 +995,7 @@ class LumenEditorProvider {
           break;
         }
         case "addConfig": {
-          const configs = this.parseDocument(document);
+          const configs = parseConfigs(document.getText());
           configs.push(msg.config);
           updatingFromWebview = true;
           await this.writeDocument(document, configs);
@@ -699,7 +1003,7 @@ class LumenEditorProvider {
           break;
         }
         case "updateName": {
-          const configs = this.parseDocument(document);
+          const configs = parseConfigs(document.getText());
           const idx = configs.findIndex((c) => c.id === msg.configId);
           if (idx >= 0) {
             configs[idx] = { ...configs[idx], name: msg.name };
@@ -724,15 +1028,15 @@ class LumenEditorProvider {
     });
     const configListener = vscode3.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("lumen.servers")) {
+        this.rebuildProviders();
         for (const url of this.getAllServerUrls()) {
-          if (!this.schemas[url]) {
+          if (!this.schemas[url])
             this.refreshSchemas(url);
-          }
         }
       }
     });
-    const distPath = import_node_path3.join(this.context.extensionPath, "dist", "webview");
-    const distWatcher = vscode3.workspace.createFileSystemWatcher(import_node_path3.join(distPath, "**/*"));
+    const distPath = import_node_path4.join(this.context.extensionPath, "dist", "webview");
+    const distWatcher = vscode3.workspace.createFileSystemWatcher(import_node_path4.join(distPath, "**/*"));
     const distListener = distWatcher.onDidChange(() => {
       webviewPanel.webview.html = this.getHtml(webviewPanel.webview);
     });
@@ -759,130 +1063,32 @@ class LumenEditorProvider {
     }
   }
   async pollHealth() {
-    for (const url of this.getAllServerUrls()) {
-      if (url.startsWith("provider://"))
-        continue;
-      const prev = this.serverStatuses[url];
-      try {
-        const res = await fetch(`${url}/pipelines`, {
-          signal: AbortSignal.timeout(5000)
-        });
-        if (res.ok) {
-          this.serverStatuses[url] = "connected";
-          if (prev !== "connected")
-            this.refreshSchemas(url);
-        } else {
-          this.serverStatuses[url] = "error";
-        }
-      } catch {
-        this.serverStatuses[url] = "disconnected";
-      }
-      if (this.serverStatuses[url] !== prev) {
-        this.broadcastToAll({
-          type: "serverStatus",
-          serverUrl: url,
-          status: this.serverStatuses[url]
-        });
-      }
+    const result = await this.service.pollHealth(this.getAllServerUrls(), this.schemas, this.serverStatuses);
+    this.serverStatuses = result.statuses;
+    for (const { url, status } of result.changed) {
+      this.broadcastToAll({ type: "serverStatus", serverUrl: url, status });
+    }
+    for (const url of result.reconnected) {
+      this.refreshSchemas(url);
     }
   }
   async refreshSchemas(serverUrl) {
-    if (serverUrl === FAL_PROVIDER_URL) {
-      this.schemas[serverUrl] = falPipelines;
-      this.serverStatuses[serverUrl] = "connected";
-      this.broadcastToAll({
-        type: "schemaRefresh",
-        serverUrl,
-        pipelines: falPipelines
-      });
-      this.broadcastToAll({
-        type: "serverStatus",
-        serverUrl,
-        status: "connected"
-      });
-      return;
-    }
-    try {
-      const pipelines = await fetchPipelines(serverUrl);
-      this.schemas[serverUrl] = pipelines;
-      this.serverStatuses[serverUrl] = "connected";
-      this.broadcastToAll({ type: "schemaRefresh", serverUrl, pipelines });
-      this.broadcastToAll({
-        type: "serverStatus",
-        serverUrl,
-        status: "connected"
-      });
-    } catch (err) {
-      log.appendLine(`[schema] Failed to fetch from ${serverUrl}: ${err}`);
-      this.serverStatuses[serverUrl] = "error";
-      this.schemas[serverUrl] = [];
-      this.broadcastToAll({ type: "serverStatus", serverUrl, status: "error" });
-    }
-  }
-  async doGenerate(serverUrl, pipelineId, params, documentUri) {
-    if (serverUrl === FAL_PROVIDER_URL) {
-      if (!this.falApiKey)
-        throw new Error("fal.ai API key not set. Run 'Lumen: Set fal.ai API Key'.");
-      const resolved = { ...params };
-      const imageVal = resolved.image_urls;
-      if (imageVal && !imageVal.startsWith("http")) {
-        const absPath = import_node_path3.resolve(import_node_path3.dirname(documentUri.fsPath), imageVal);
-        if (!import_node_fs3.existsSync(absPath))
-          throw new Error(`Reference image not found: ${imageVal}`);
-        resolved.image_urls = await uploadImage(this.falApiKey, absPath, this.context.globalState);
-      }
-      return generate2(this.falApiKey, pipelineId, resolved);
-    }
-    return generate(serverUrl, pipelineId, params);
-  }
-  ensureIds(configs) {
-    let assigned = false;
-    for (const config of configs) {
-      if (!config.id) {
-        config.id = crypto.randomUUID();
-        assigned = true;
-      }
-    }
-    return assigned;
-  }
-  parseDocument(document) {
-    const text = document.getText().trim();
-    if (!text || text === "[]" || text === "{}")
-      return [];
-    try {
-      const parsed = JSON.parse(text);
-      if (Array.isArray(parsed))
-        return parsed;
-      if (typeof parsed === "object" && parsed !== null) {
-        return this.migrateOldFormat(parsed);
-      }
-      return [];
-    } catch {
-      return [];
-    }
-  }
-  migrateOldFormat(raw) {
-    const configs = [];
-    for (const [key, value] of Object.entries(raw)) {
-      if (key.startsWith("_") || typeof value !== "object" || value === null)
-        continue;
-      const pipelines = value;
-      for (const [pipelineId, params] of Object.entries(pipelines)) {
-        if (typeof params !== "object" || params === null)
-          continue;
-        configs.push({
-          id: crypto.randomUUID(),
-          service: key,
-          pipeline: pipelineId,
-          params
-        });
-      }
-    }
-    return configs;
+    const result = await this.service.refreshSchemas(serverUrl, this.schemas, this.serverStatuses);
+    this.schemas = result.schemas;
+    this.serverStatuses = result.statuses;
+    this.broadcastToAll({
+      type: "schemaRefresh",
+      serverUrl,
+      pipelines: this.schemas[serverUrl] ?? []
+    });
+    this.broadcastToAll({
+      type: "serverStatus",
+      serverUrl,
+      status: this.serverStatuses[serverUrl]
+    });
   }
   async writeDocument(document, configs) {
-    const text = JSON.stringify(configs, null, 2) + `
-`;
+    const text = serializeConfigs(configs);
     const edit = new vscode3.WorkspaceEdit;
     edit.replace(document.uri, new vscode3.Range(0, 0, document.lineCount, 0), text);
     await vscode3.workspace.applyEdit(edit);
@@ -903,7 +1109,7 @@ class LumenEditorProvider {
           { label: "$(arrow-up) ../", alwaysShow: true, dirName: ".." }
         ];
         try {
-          const entries = import_node_fs3.readdirSync(currentDir, { withFileTypes: true }).filter((e) => !e.name.startsWith(".")).sort((a, b) => {
+          const entries = import_node_fs4.readdirSync(currentDir, { withFileTypes: true }).filter((e) => !e.name.startsWith(".")).sort((a, b) => {
             if (a.isDirectory() !== b.isDirectory())
               return a.isDirectory() ? -1 : 1;
             return a.name.localeCompare(b.name);
@@ -916,8 +1122,8 @@ class LumenEditorProvider {
                 dirName: entry.name
               });
             } else if (IMAGE_EXT.test(entry.name)) {
-              const abs = import_node_path3.join(currentDir, entry.name);
-              const rel = import_node_path3.relative(docDir, abs);
+              const abs = import_node_path4.join(currentDir, entry.name);
+              const rel = import_node_path4.relative(docDir, abs);
               const norm = rel.startsWith(".") ? rel : `./${rel}`;
               items.push({
                 label: entry.name,
@@ -934,7 +1140,7 @@ class LumenEditorProvider {
       qp.title = "Pick reference image";
       const navigateTo = (dir) => {
         currentDir = dir;
-        const rel = import_node_path3.relative(docDir, dir);
+        const rel = import_node_path4.relative(docDir, dir);
         qp.placeholder = (rel || ".") + "/";
         qp.value = "";
         qp.items = buildItems();
@@ -944,7 +1150,7 @@ class LumenEditorProvider {
         if (!item)
           return;
         if (item.dirName) {
-          navigateTo(import_node_path3.join(currentDir, item.dirName));
+          navigateTo(import_node_path4.join(currentDir, item.dirName));
         } else if (item.imagePath) {
           done(item.imagePath);
           qp.hide();
@@ -961,8 +1167,8 @@ class LumenEditorProvider {
   imageThumbUri(relPath, docDir, webview) {
     if (!relPath || relPath.startsWith("http"))
       return;
-    const absPath = import_node_path3.resolve(docDir, relPath);
-    if (!import_node_fs3.existsSync(absPath))
+    const absPath = import_node_path4.resolve(docDir, relPath);
+    if (!import_node_fs4.existsSync(absPath))
       return;
     return webview.asWebviewUri(vscode3.Uri.file(absPath)).toString();
   }
@@ -974,33 +1180,11 @@ class LumenEditorProvider {
       this.postMessage(panel, message);
     }
   }
-  async saveAsset(url, documentUri, format, panel) {
-    const dir = import_node_path3.dirname(documentUri.fsPath);
-    const base = import_node_path3.basename(documentUri.fsPath, ".lumen");
-    const now = new Date;
-    const pad = (n) => String(n).padStart(2, "0");
-    const timestamp = `${String(now.getFullYear()).slice(2)}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-    const filePath = import_node_path3.join(dir, `${base}-${timestamp}.${format}`);
-    let buffer;
-    if (url.startsWith("data:")) {
-      const base64 = url.split(",")[1];
-      buffer = Buffer.from(base64, "base64");
-    } else {
-      const res = await fetch(url);
-      if (!res.ok)
-        throw new Error(`Failed to download asset: ${res.status}`);
-      buffer = Buffer.from(await res.arrayBuffer());
-    }
-    import_node_fs3.writeFileSync(filePath, buffer);
-    log.appendLine(`[asset] Saved ${filePath}`);
-    const webviewUri = panel.webview.asWebviewUri(vscode3.Uri.file(filePath));
-    return webviewUri.toString();
-  }
   getHtml(webview) {
-    const distPath = import_node_path3.join(this.context.extensionPath, "dist", "webview");
+    const distPath = import_node_path4.join(this.context.extensionPath, "dist", "webview");
     let html;
     try {
-      html = import_node_fs3.readFileSync(import_node_path3.join(distPath, "index.html"), "utf-8");
+      html = import_node_fs4.readFileSync(import_node_path4.join(distPath, "index.html"), "utf-8");
     } catch {
       return "<html><body><p>Webview not built. Run <code>bun run build</code>.</p></body></html>";
     }
@@ -1008,7 +1192,7 @@ class LumenEditorProvider {
     html = html.replace(/(href|src)="\.?\/?/g, `$1="${baseUri.toString()}/`);
     html = html.replace(/ crossorigin/g, "");
     html = html.replace(' type="module"', " defer");
-    log.appendLine(`[html] ${html.substring(0, 600)}`);
+    this.log.appendLine(`[html] ${html.substring(0, 600)}`);
     return html;
   }
 }
@@ -1062,5 +1246,5 @@ function activate(context) {
 }
 function deactivate() {}
 
-//# debugId=EE196DF14CE80CB964756E2164756E21
+//# debugId=FFF96F2B600A641164756E2164756E21
 //# sourceMappingURL=extension.js.map

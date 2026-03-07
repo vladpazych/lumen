@@ -1,6 +1,6 @@
 import { Stack } from "../kit/stack"
 import { Text } from "../kit/text"
-import type { PipelineConfig } from "../../shared/types"
+import type { PipelineConfig } from "@lumen/core/types"
 import { ParamField } from "./param-field"
 
 type Props = {

@@ -1,5 +1,5 @@
 import { Textarea } from "../../kit/textarea"
-import type { PromptParam } from "../../../shared/types"
+import type { PromptParam } from "@lumen/core/types"
 
 type Props = { param: PromptParam; value: string; onChange: (v: string) => void }
 

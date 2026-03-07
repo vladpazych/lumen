@@ -1,6 +1,6 @@
 import { Stack } from "../kit/stack"
 import { Text } from "../kit/text"
-import type { ParamDefinition } from "../../shared/types"
+import type { ParamDefinition } from "@lumen/core/types"
 import { BooleanField } from "./fields/boolean-field"
 import { DimensionsField } from "./fields/dimensions-field"
 import { IntegerField } from "./fields/integer-field"

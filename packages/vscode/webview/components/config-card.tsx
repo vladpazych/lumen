@@ -9,7 +9,7 @@ import type {
   LumenConfig,
   PipelineConfig,
   ServerStatus,
-} from "../../shared/types";
+} from "@lumen/core/types";
 import { GenerateButton } from "./generate-button";
 import { PipelineForm } from "./pipeline-form";
 import { ResultDisplay } from "./result-display";

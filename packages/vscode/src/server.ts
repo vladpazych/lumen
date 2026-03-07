@@ -3,8 +3,9 @@ import { join } from "node:path";
 import { spawn } from "node:child_process";
 import * as vscode from "vscode";
 
-import type { DevServerState, ServerConfig } from "../shared/types";
-export type { DevServerState };
+import type { ServerConfig } from "@lumen/core/types";
+
+export type DevServerState = "stopped" | "starting" | "running" | "error";
 
 /** Expand ${workspaceFolder} in a path string. */
 export function resolveSource(raw: string): string {

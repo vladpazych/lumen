@@ -11,7 +11,7 @@ import {
   SelectContent,
   SelectItem,
 } from "../kit/select";
-import type { PipelineConfig, ServerStatus } from "../../shared/types";
+import type { PipelineConfig, ServerStatus } from "@lumen/core/types";
 
 type Props = {
   schemas: Record<string, PipelineConfig[]>;

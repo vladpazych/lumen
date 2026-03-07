@@ -1,38 +1,31 @@
-import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { basename, dirname, join, relative, resolve } from "node:path";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
 import * as vscode from "vscode";
-import type {
-  LumenConfig,
-  PipelineConfig,
-  ServerConfig,
-  ServerStatus,
-} from "../shared/types";
-import type {
-  ExtensionMessage,
-  WebviewMessage,
-} from "../webview/lib/messaging";
-import { fetchPipelines, generate, pollUntilDone } from "./api";
-import {
-  FAL_PROVIDER_URL,
-  falPipelines,
-  generate as falGenerate,
-  getApiKey,
-  uploadImage,
-} from "./providers/fal";
+import type { LumenConfig, PipelineConfig, ServerStatus } from "@lumen/core/types";
+import type { ProviderPort } from "@lumen/core/ports";
+import { parseConfigs, serializeConfigs, ensureIds } from "@lumen/core/domain/config";
+import { editorService, type EditorService, type SchemaCache, type StatusCache } from "@lumen/core/editor";
+import type { ExtensionMessage, WebviewMessage } from "../webview/lib/messaging";
+import { httpProvider } from "./adapters/http-provider";
+import { FAL_PROVIDER_URL, falProvider, getApiKey } from "./adapters/fal-provider";
+import { vscodeAssetStore } from "./adapters/vscode-assets";
+import { vscodeLogger } from "./adapters/vscode-logger";
+import { vscodeSecretStore } from "./adapters/vscode-secrets";
 import { type DevServerState, getServers } from "./server";
-
-const log = vscode.window.createOutputChannel("Lumen");
 
 const HEALTH_POLL_MS = 10_000;
 
 export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   private static readonly viewType = "lumen.stateViewer";
   private readonly panels: Set<vscode.WebviewPanel> = new Set();
-  private schemas: Record<string, PipelineConfig[]> = {};
-  private serverStatuses: Record<string, ServerStatus> = {};
+  private schemas: SchemaCache = {};
+  private serverStatuses: StatusCache = {};
   private devServerState: DevServerState = "stopped";
   private healthTimer: ReturnType<typeof setInterval> | null = null;
   private falApiKey: string | null = null;
+  private service: EditorService;
+  private providers: Record<string, ProviderPort> = {};
+  private readonly log: vscode.OutputChannel;
 
   /** Set by extension.ts to route webview start/stop commands to ServerManager */
   onDevServerCommand: ((cmd: "start" | "stop") => void) | null = null;
@@ -41,15 +34,58 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     return vscode.window.registerCustomEditorProvider(
       LumenEditorProvider.viewType,
       provider,
-      {
-        supportsMultipleEditorsPerDocument: false,
-      },
+      { supportsMultipleEditorsPerDocument: false },
     );
   }
 
-  constructor(private readonly context: vscode.ExtensionContext) {}
+  constructor(private readonly context: vscode.ExtensionContext) {
+    this.log = vscode.window.createOutputChannel("Lumen");
+    const logger = vscodeLogger(this.log);
 
-  private getDevServer(): ServerConfig | null {
+    // Asset store needs a panel reference for webview URIs — set per-save
+    const assets = vscodeAssetStore({
+      logger,
+      toWebviewUri: (filePath: string) => {
+        // Use the first available panel for URI conversion
+        const panel = this.panels.values().next().value;
+        if (!panel) return filePath;
+        return panel.webview
+          .asWebviewUri(vscode.Uri.file(filePath))
+          .toString();
+      },
+    });
+
+    this.service = editorService({
+      providers: this.providers,
+      assets,
+      secrets: vscodeSecretStore(context.secrets),
+      logger,
+    });
+  }
+
+  private rebuildProviders(): void {
+    // Clear and rebuild provider map
+    for (const key of Object.keys(this.providers)) {
+      delete this.providers[key];
+    }
+    for (const s of getServers()) {
+      this.providers[s.url] = httpProvider(s.url);
+    }
+    if (this.falApiKey) {
+      this.providers[FAL_PROVIDER_URL] = falProvider({
+        apiKey: () => this.falApiKey,
+        storage: this.context.globalState,
+        resolveImagePath: (rel) => {
+          // Resolve relative to the first open document
+          const panel = this.panels.values().next().value;
+          if (!panel) return rel;
+          return rel;
+        },
+      });
+    }
+  }
+
+  private getDevServer() {
     return getServers().find((s) => s.source) ?? null;
   }
 
@@ -59,7 +95,6 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     return urls;
   }
 
-  /** Build a URL→name map for display in webview */
   private getServerNames(): Record<string, string> {
     const names: Record<string, string> = {};
     for (const s of getServers()) {
@@ -71,6 +106,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   async refreshFalApiKey(): Promise<void> {
     const prev = this.falApiKey;
     this.falApiKey = (await getApiKey(this.context.secrets)) ?? null;
+    this.rebuildProviders();
     if (this.falApiKey && !prev) {
       this.refreshSchemas(FAL_PROVIDER_URL);
     } else if (!this.falApiKey && prev) {
@@ -88,6 +124,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     this.devServerState = state;
     this.broadcastToAll({ type: "devServerStatus", state });
     if (state === "running") {
+      this.rebuildProviders();
       for (const url of this.getAllServerUrls()) this.refreshSchemas(url);
     }
   }
@@ -97,6 +134,8 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     webviewPanel: vscode.WebviewPanel,
   ): Promise<void> {
     this.panels.add(webviewPanel);
+    this.rebuildProviders();
+
     const resourceRoots = [
       vscode.Uri.file(join(this.context.extensionPath, "dist", "webview")),
       vscode.Uri.file(dirname(document.uri.fsPath)),
@@ -112,31 +151,27 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
 
     const postConfigs = () => {
       if (updatingFromWebview) return;
-      const configs = this.parseDocument(document);
+      const configs = parseConfigs(document.getText());
       this.postMessage(webviewPanel, { type: "configsUpdated", configs });
     };
 
     // Fetch schemas for all configured servers on first open
     for (const url of this.getAllServerUrls()) {
-      if (!this.schemas[url]) {
-        this.refreshSchemas(url);
-      }
+      if (!this.schemas[url]) this.refreshSchemas(url);
     }
 
-    // Start health polling if first panel
     if (this.panels.size === 1) this.startHealthPolling();
 
     webviewPanel.webview.onDidReceiveMessage(async (msg: WebviewMessage) => {
       switch (msg.type) {
         case "ready": {
-          log.appendLine("[ready] webview ready");
-          const configs = this.parseDocument(document);
-          if (this.ensureIds(configs)) {
+          this.log.appendLine("[ready] webview ready");
+          const configs = parseConfigs(document.getText());
+          if (ensureIds(configs)) {
             updatingFromWebview = true;
             await this.writeDocument(document, configs);
             updatingFromWebview = false;
           }
-          // Ensure every configured URL appears in schemas (even if not yet fetched)
           for (const url of this.getAllServerUrls()) {
             if (!this.schemas[url]) this.schemas[url] = [];
           }
@@ -150,17 +185,13 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
             devServerState: this.devServerState,
             devServerUrl: devServer?.url ?? null,
           });
-          // Send thumbnails for any image paths already in configs
+          // Send thumbnails for image paths
           const docDir = dirname(document.uri.fsPath);
           const thumbs: Record<string, string> = {};
           for (const config of configs) {
             for (const val of Object.values(config.params)) {
               if (typeof val === "string" && val && !val.startsWith("http")) {
-                const uri = this.imageThumbUri(
-                  val,
-                  docDir,
-                  webviewPanel.webview,
-                );
+                const uri = this.imageThumbUri(val, docDir, webviewPanel.webview);
                 if (uri) thumbs[val] = uri;
               }
             }
@@ -172,7 +203,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
         }
 
         case "updateState": {
-          const configs = this.parseDocument(document);
+          const configs = parseConfigs(document.getText());
           const idx = configs.findIndex((c) => c.id === msg.configId);
           if (idx >= 0) {
             configs[idx] = {
@@ -188,23 +219,40 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
 
         case "generateRequest": {
           const { requestId, configId, service, pipeline, params } = msg;
+          const docDir = dirname(document.uri.fsPath);
 
-          const handleComplete = async (
-            response: import("../shared/types").GenerateResponse,
-          ) => {
+          // Update fal provider's image resolver for this document
+          if (this.providers[FAL_PROVIDER_URL]) {
+            this.providers[FAL_PROVIDER_URL] = falProvider({
+              apiKey: () => this.falApiKey,
+              storage: this.context.globalState,
+              resolveImagePath: (rel) => resolve(docDir, rel),
+            });
+          }
+
+          try {
+            const response = await this.service.generate(
+              service,
+              pipeline,
+              params,
+              document.uri.fsPath,
+              (progress) => {
+                this.postMessage(webviewPanel, {
+                  type: "generateProgress",
+                  requestId,
+                  configId,
+                  service,
+                  pipeline,
+                  progress,
+                });
+              },
+            );
+
+            // Auto-fill seed from server response
             if (response.status === "completed") {
-              for (const output of response.outputs) {
-                output.url = await this.saveAsset(
-                  output.url,
-                  document.uri,
-                  output.format ?? "png",
-                  webviewPanel,
-                );
-              }
-              // Auto-fill seed from server response so preview seed is locked for finalize
               const meta = response.outputs[0]?.metadata;
               if (meta?.seed != null) {
-                const configs = this.parseDocument(document);
+                const configs = parseConfigs(document.getText());
                 const idx = configs.findIndex((c) => c.id === configId);
                 if (idx >= 0) {
                   configs[idx] = {
@@ -218,6 +266,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
                 }
               }
             }
+
             this.postMessage(webviewPanel, {
               type: "generateResult",
               requestId,
@@ -226,41 +275,6 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
               pipeline,
               response,
             });
-          };
-
-          try {
-            const response = await this.doGenerate(
-              service,
-              pipeline,
-              params,
-              document.uri,
-            );
-
-            if (response.status === "running" || response.status === "queued") {
-              pollUntilDone(service, pipeline, response.runId, (progress) => {
-                this.postMessage(webviewPanel, {
-                  type: "generateProgress",
-                  requestId,
-                  configId,
-                  service,
-                  pipeline,
-                  progress,
-                });
-              })
-                .then(handleComplete)
-                .catch((err) => {
-                  this.postMessage(webviewPanel, {
-                    type: "generateResult",
-                    requestId,
-                    configId,
-                    service,
-                    pipeline,
-                    error: err instanceof Error ? err.message : String(err),
-                  });
-                });
-            } else {
-              await handleComplete(response);
-            }
           } catch (err) {
             this.postMessage(webviewPanel, {
               type: "generateResult",
@@ -322,18 +336,13 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
         }
 
         case "pickImageByUri": {
-          const { requestId, configId, service, pipeline, paramName, uri } =
-            msg;
+          const { requestId, configId, service, pipeline, paramName, uri } = msg;
           try {
             const docDir = dirname(document.uri.fsPath);
             const fsPath = vscode.Uri.parse(uri).fsPath;
             const rel = relative(docDir, fsPath);
             const relPath = rel.startsWith(".") ? rel : `./${rel}`;
-            const thumbUri = this.imageThumbUri(
-              relPath,
-              docDir,
-              webviewPanel.webview,
-            );
+            const thumbUri = this.imageThumbUri(relPath, docDir, webviewPanel.webview);
             this.postMessage(webviewPanel, {
               type: "imagePicked",
               requestId,
@@ -359,7 +368,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
         }
 
         case "addConfig": {
-          const configs = this.parseDocument(document);
+          const configs = parseConfigs(document.getText());
           configs.push(msg.config);
           updatingFromWebview = true;
           await this.writeDocument(document, configs);
@@ -368,7 +377,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
         }
 
         case "updateName": {
-          const configs = this.parseDocument(document);
+          const configs = parseConfigs(document.getText());
           const idx = configs.findIndex((c) => c.id === msg.configId);
           if (idx >= 0) {
             configs[idx] = { ...configs[idx], name: msg.name };
@@ -395,23 +404,18 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
       }
     });
 
-    const configListener = vscode.workspace.onDidChangeConfiguration(
-      (event) => {
-        if (event.affectsConfiguration("lumen.servers")) {
-          for (const url of this.getAllServerUrls()) {
-            if (!this.schemas[url]) {
-              this.refreshSchemas(url);
-            }
-          }
+    const configListener = vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("lumen.servers")) {
+        this.rebuildProviders();
+        for (const url of this.getAllServerUrls()) {
+          if (!this.schemas[url]) this.refreshSchemas(url);
         }
-      },
-    );
+      }
+    });
 
     // Reload webview when dist/webview rebuilds (dev mode)
     const distPath = join(this.context.extensionPath, "dist", "webview");
-    const distWatcher = vscode.workspace.createFileSystemWatcher(
-      join(distPath, "**/*"),
-    );
+    const distWatcher = vscode.workspace.createFileSystemWatcher(join(distPath, "**/*"));
     const distListener = distWatcher.onDidChange(() => {
       webviewPanel.webview.html = this.getHtml(webviewPanel.webview);
     });
@@ -425,6 +429,8 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
       if (this.panels.size === 0) this.stopHealthPolling();
     });
   }
+
+  // --- Health polling ---
 
   private startHealthPolling(): void {
     if (this.healthTimer) return;
@@ -440,148 +446,49 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   }
 
   private async pollHealth(): Promise<void> {
-    for (const url of this.getAllServerUrls()) {
-      if (url.startsWith("provider://")) continue;
-      const prev = this.serverStatuses[url];
-      try {
-        const res = await fetch(`${url}/pipelines`, {
-          signal: AbortSignal.timeout(5000),
-        });
-        if (res.ok) {
-          this.serverStatuses[url] = "connected";
-          if (prev !== "connected") this.refreshSchemas(url);
-        } else {
-          this.serverStatuses[url] = "error";
-        }
-      } catch {
-        this.serverStatuses[url] = "disconnected";
-      }
-      if (this.serverStatuses[url] !== prev) {
-        this.broadcastToAll({
-          type: "serverStatus",
-          serverUrl: url,
-          status: this.serverStatuses[url],
-        });
-      }
+    const result = await this.service.pollHealth(
+      this.getAllServerUrls(),
+      this.schemas,
+      this.serverStatuses,
+    );
+    this.serverStatuses = result.statuses;
+    for (const { url, status } of result.changed) {
+      this.broadcastToAll({ type: "serverStatus", serverUrl: url, status });
+    }
+    for (const url of result.reconnected) {
+      this.refreshSchemas(url);
     }
   }
+
+  // --- Schema refresh ---
 
   private async refreshSchemas(serverUrl: string): Promise<void> {
-    if (serverUrl === FAL_PROVIDER_URL) {
-      this.schemas[serverUrl] = falPipelines;
-      this.serverStatuses[serverUrl] = "connected";
-      this.broadcastToAll({
-        type: "schemaRefresh",
-        serverUrl,
-        pipelines: falPipelines,
-      });
-      this.broadcastToAll({
-        type: "serverStatus",
-        serverUrl,
-        status: "connected",
-      });
-      return;
-    }
-    try {
-      const pipelines = await fetchPipelines(serverUrl);
-      this.schemas[serverUrl] = pipelines;
-      this.serverStatuses[serverUrl] = "connected";
-      this.broadcastToAll({ type: "schemaRefresh", serverUrl, pipelines });
-      this.broadcastToAll({
-        type: "serverStatus",
-        serverUrl,
-        status: "connected",
-      });
-    } catch (err) {
-      log.appendLine(`[schema] Failed to fetch from ${serverUrl}: ${err}`);
-      this.serverStatuses[serverUrl] = "error";
-      this.schemas[serverUrl] = [];
-      this.broadcastToAll({ type: "serverStatus", serverUrl, status: "error" });
-    }
+    const result = await this.service.refreshSchemas(
+      serverUrl,
+      this.schemas,
+      this.serverStatuses,
+    );
+    this.schemas = result.schemas;
+    this.serverStatuses = result.statuses;
+    this.broadcastToAll({
+      type: "schemaRefresh",
+      serverUrl,
+      pipelines: this.schemas[serverUrl] ?? [],
+    });
+    this.broadcastToAll({
+      type: "serverStatus",
+      serverUrl,
+      status: this.serverStatuses[serverUrl],
+    });
   }
 
-  private async doGenerate(
-    serverUrl: string,
-    pipelineId: string,
-    params: Record<string, unknown>,
-    documentUri: vscode.Uri,
-  ): Promise<import("../shared/types").GenerateResponse> {
-    if (serverUrl === FAL_PROVIDER_URL) {
-      if (!this.falApiKey)
-        throw new Error(
-          "fal.ai API key not set. Run 'Lumen: Set fal.ai API Key'.",
-        );
-      const resolved = { ...params };
-      const imageVal = resolved.image_urls as string | undefined;
-      if (imageVal && !imageVal.startsWith("http")) {
-        const absPath = resolve(dirname(documentUri.fsPath), imageVal);
-        if (!existsSync(absPath))
-          throw new Error(`Reference image not found: ${imageVal}`);
-        resolved.image_urls = await uploadImage(
-          this.falApiKey,
-          absPath,
-          this.context.globalState,
-        );
-      }
-      return falGenerate(this.falApiKey, pipelineId, resolved);
-    }
-    return generate(serverUrl, pipelineId, params);
-  }
-
-  // --- ID assignment ---
-
-  private ensureIds(configs: LumenConfig[]): boolean {
-    let assigned = false;
-    for (const config of configs) {
-      if (!config.id) {
-        config.id = crypto.randomUUID();
-        assigned = true;
-      }
-    }
-    return assigned;
-  }
-
-  // --- Document parsing & writing ---
-
-  private parseDocument(document: vscode.TextDocument): LumenConfig[] {
-    const text = document.getText().trim();
-    if (!text || text === "[]" || text === "{}") return [];
-    try {
-      const parsed = JSON.parse(text) as unknown;
-      if (Array.isArray(parsed)) return parsed as LumenConfig[];
-      if (typeof parsed === "object" && parsed !== null) {
-        return this.migrateOldFormat(parsed as Record<string, unknown>);
-      }
-      return [];
-    } catch {
-      return [];
-    }
-  }
-
-  private migrateOldFormat(raw: Record<string, unknown>): LumenConfig[] {
-    const configs: LumenConfig[] = [];
-    for (const [key, value] of Object.entries(raw)) {
-      if (key.startsWith("_") || typeof value !== "object" || value === null)
-        continue;
-      const pipelines = value as Record<string, unknown>;
-      for (const [pipelineId, params] of Object.entries(pipelines)) {
-        if (typeof params !== "object" || params === null) continue;
-        configs.push({
-          id: crypto.randomUUID(),
-          service: key,
-          pipeline: pipelineId,
-          params: params as Record<string, unknown>,
-        });
-      }
-    }
-    return configs;
-  }
+  // --- Document I/O ---
 
   private async writeDocument(
     document: vscode.TextDocument,
     configs: LumenConfig[],
   ): Promise<void> {
-    const text = JSON.stringify(configs, null, 2) + "\n";
+    const text = serializeConfigs(configs);
     const edit = new vscode.WorkspaceEdit();
     edit.replace(
       document.uri,
@@ -591,11 +498,9 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     await vscode.workspace.applyEdit(edit);
   }
 
-  // --- Utilities ---
+  // --- VS Code UI utilities ---
 
-  private pickImageWithFileBrowser(
-    docDir: string,
-  ): Promise<string | undefined> {
+  private pickImageWithFileBrowser(docDir: string): Promise<string | undefined> {
     type PickItem = vscode.QuickPickItem & {
       dirName?: string;
       imagePath?: string;
@@ -691,10 +596,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     return webview.asWebviewUri(vscode.Uri.file(absPath)).toString();
   }
 
-  private postMessage(
-    panel: vscode.WebviewPanel,
-    message: ExtensionMessage,
-  ): void {
+  private postMessage(panel: vscode.WebviewPanel, message: ExtensionMessage): void {
     panel.webview.postMessage(message);
   }
 
@@ -702,36 +604,6 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     for (const panel of this.panels) {
       this.postMessage(panel, message);
     }
-  }
-
-  private async saveAsset(
-    url: string,
-    documentUri: vscode.Uri,
-    format: string,
-    panel: vscode.WebviewPanel,
-  ): Promise<string> {
-    const dir = dirname(documentUri.fsPath);
-    const base = basename(documentUri.fsPath, ".lumen");
-    const now = new Date();
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const timestamp = `${String(now.getFullYear()).slice(2)}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-    const filePath = join(dir, `${base}-${timestamp}.${format}`);
-
-    let buffer: Buffer;
-    if (url.startsWith("data:")) {
-      const base64 = url.split(",")[1];
-      buffer = Buffer.from(base64, "base64");
-    } else {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Failed to download asset: ${res.status}`);
-      buffer = Buffer.from(await res.arrayBuffer());
-    }
-
-    writeFileSync(filePath, buffer);
-    log.appendLine(`[asset] Saved ${filePath}`);
-
-    const webviewUri = panel.webview.asWebviewUri(vscode.Uri.file(filePath));
-    return webviewUri.toString();
   }
 
   private getHtml(webview: vscode.Webview): string {
@@ -749,7 +621,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     html = html.replace(/ crossorigin/g, "");
     html = html.replace(' type="module"', " defer");
 
-    log.appendLine(`[html] ${html.substring(0, 600)}`);
+    this.log.appendLine(`[html] ${html.substring(0, 600)}`);
     return html;
   }
 }

@@ -1,6 +1,6 @@
 import { Row } from "../kit/row"
 import { Button } from "../kit/button"
-import type { DevServerState } from "../../shared/types"
+import type { DevServerState } from "../lib/messaging"
 
 type Props = {
   devServerUrl: string | null

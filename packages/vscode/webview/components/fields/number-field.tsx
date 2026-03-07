@@ -1,5 +1,5 @@
 import { Input } from "../../kit/input"
-import type { NumberParam } from "../../../shared/types"
+import type { NumberParam } from "@lumen/core/types"
 
 type Props = { param: NumberParam; value: number | ""; onChange: (v: number) => void }
 

@@ -3,7 +3,7 @@ import { Row } from "../../kit/row"
 import { Text } from "../../kit/text"
 import { Input } from "../../kit/input"
 import { Button } from "../../kit/button"
-import type { DimensionsParam } from "../../../shared/types"
+import type { DimensionsParam } from "@lumen/core/types"
 
 type Dims = { w: number; h: number }
 type Props = { param: DimensionsParam; value: Dims | null; onChange: (v: Dims) => void }

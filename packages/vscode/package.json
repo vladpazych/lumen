@@ -99,6 +99,9 @@
     "reinstall": "bun run package && code --install-extension dist/lumen-vscode.vsix",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.webview.json"
   },
+  "dependencies": {
+    "@lumen/core": "workspace:*"
+  },
   "devDependencies": {
     "@base-ui/react": "^1.0.0",
     "@tailwindcss/vite": "^4.1.0",

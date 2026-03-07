@@ -1,6 +1,6 @@
 import { Input } from "../../kit/input"
 import { Textarea } from "../../kit/textarea"
-import type { TextParam } from "../../../shared/types"
+import type { TextParam } from "@lumen/core/types"
 
 type Props = { param: TextParam; value: string; onChange: (v: string) => void }
 

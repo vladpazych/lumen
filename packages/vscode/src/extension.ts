@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { LumenEditorProvider } from "./provider";
-import { promptAndStoreApiKey } from "./providers/fal";
+import { promptAndStoreApiKey } from "./adapters/fal-provider";
 import { ServerManager, getServers } from "./server";
 
 function activeDocumentUri(): vscode.Uri | undefined {

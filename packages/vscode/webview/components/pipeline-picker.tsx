@@ -1,5 +1,5 @@
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../kit/select"
-import type { PipelineConfig } from "../../shared/types"
+import type { PipelineConfig } from "@lumen/core/types"
 
 type Props = {
   pipelines: PipelineConfig[]

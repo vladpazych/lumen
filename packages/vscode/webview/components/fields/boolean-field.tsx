@@ -1,7 +1,7 @@
 import { Row } from "../../kit/row"
 import { Text } from "../../kit/text"
 import { Checkbox } from "../../kit/checkbox"
-import type { BooleanParam } from "../../../shared/types"
+import type { BooleanParam } from "@lumen/core/types"
 
 type Props = { param: BooleanParam; value: boolean; onChange: (v: boolean) => void }
 
