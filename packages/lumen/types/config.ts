@@ -7,10 +7,4 @@ export type LumenConfig = {
   params: Record<string, unknown>;
 };
 
-export type ServerConfig = {
-  name: string;
-  url?: string;
-  source?: string;
-};
-
 export type ServerStatus = "connected" | "disconnected" | "error";

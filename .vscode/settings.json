@@ -9,21 +9,5 @@
     "**/dist": true,
     "**/.vite": true
   },
-  "editor.formatOnType": false,
-  "editor.formatOnSave": true,
-  "editor.comments.ignoreEmptyLines": false,
-  "python.experiments.optOutFrom": ["pythonTerminalEnvVarActivation"],
-  "files.associations": {
-    "**/.claude/skills/**/SKILL.md": "markdown"
-  },
-  "[markdown]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "lumen.servers": [
-    {
-      "name": "Example Modal",
-      "url": "https://vladpazych--lumen-example-serve-dev.modal.run",
-      "source": "${workspaceFolder}/packages/lumen-example-modal"
-    }
-  ]
+  "lumen.server": "${workspaceFolder}/packages/lumen-example-modal"
 }

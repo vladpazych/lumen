@@ -20,8 +20,4 @@ export type {
 
 export type { OutputAsset, GenerateResponse } from "./generation";
 
-export type {
-  LumenConfig,
-  ServerConfig,
-  ServerStatus,
-} from "./config";
+export type { LumenConfig, ServerStatus } from "./config";

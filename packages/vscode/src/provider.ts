@@ -5,13 +5,9 @@ import {
   readdirSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import * as vscode from "vscode";
-import type {
-  LumenConfig,
-  PipelineConfig,
-  ServerStatus,
-} from "@lumen/core/types";
+import type { LumenConfig } from "@lumen/core/types";
 import type { ProviderPort } from "@lumen/core/ports";
 import {
   parseConfigs,
@@ -31,7 +27,7 @@ import type {
 import { httpProvider } from "./adapters/http-provider";
 import { vscodeAssetStore } from "./adapters/vscode-assets";
 import { vscodeLogger } from "./adapters/vscode-logger";
-import { type DevServerState, getServers } from "./server";
+import { type DevServerState, getServerSource } from "./server";
 
 export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   private static readonly viewType = "lumen.stateViewer";
@@ -40,7 +36,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   private serverStatuses: StatusCache = {};
   private devServerState: DevServerState = "stopped";
   private subscriptions: Map<string, () => void> = new Map();
-  private detectedUrls = new Map<string, string>();
+  private detectedUrl: string | null = null;
   private service: EditorService;
   private providers: Record<string, ProviderPort> = {};
   private readonly log: vscode.OutputChannel;
@@ -61,11 +57,9 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     this.log = vscode.window.createOutputChannel("Lumen");
     const logger = vscodeLogger(this.log);
 
-    // Asset store needs a panel reference for webview URIs — set per-save
     const assets = vscodeAssetStore({
       logger,
       toWebviewUri: (filePath: string) => {
-        // Use the first available panel for URI conversion
         const panel = this.panels.values().next().value;
         if (!panel) return filePath;
         return panel.webview.asWebviewUri(vscode.Uri.file(filePath)).toString();
@@ -80,56 +74,29 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     });
   }
 
-  private resolveUrl(server: {
-    url?: string;
-    source?: string;
-  }): string | undefined {
-    return (
-      server.url ||
-      (server.source ? this.detectedUrls.get(server.source) : undefined)
-    );
-  }
-
   private rebuildProviders(): void {
     for (const key of Object.keys(this.providers)) {
       delete this.providers[key];
     }
-    for (const s of getServers()) {
-      const url = this.resolveUrl(s);
-      if (url) this.providers[url] = httpProvider(url);
+    if (this.detectedUrl) {
+      this.providers[this.detectedUrl] = httpProvider(this.detectedUrl);
     }
   }
 
-  private getDevServer(): { name: string; url: string; source: string } | null {
-    const s = getServers().find((s) => s.source);
-    if (!s?.source) return null;
-    const url = this.resolveUrl(s);
-    if (!url) return null;
-    return { name: s.name, url, source: s.source };
+  private getServerUrl(): string | null {
+    return this.detectedUrl;
   }
 
-  private getAllServerUrls(): string[] {
-    return getServers()
-      .map((s) => this.resolveUrl(s))
-      .filter((url): url is string => !!url);
-  }
-
-  private getServerNames(): Record<string, string> {
-    const names: Record<string, string> = {};
-    for (const s of getServers()) {
-      const url = this.resolveUrl(s);
-      if (url) names[url] = s.name;
-    }
-    return names;
+  private getServerName(): string {
+    return basename(getServerSource());
   }
 
   onDevServerStateChange(state: DevServerState): void {
-    // If process says stopped but SSE shows server still reachable, mark orphaned
-    const devServer = this.getDevServer();
+    const url = this.getServerUrl();
     if (
       state === "stopped" &&
-      devServer &&
-      this.serverStatuses[devServer.url] === "connected"
+      url &&
+      this.serverStatuses[url] === "connected"
     ) {
       this.devServerState = "orphaned";
       this.broadcastToAll({ type: "devServerStatus", state: "orphaned" });
@@ -144,9 +111,9 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     }
   }
 
-  onServerUrlDetected(source: string, url: string): void {
-    this.detectedUrls.set(source, url);
-    this.log.appendLine(`[modal] detected URL for ${source}: ${url}`);
+  onServerUrlDetected(_source: string, url: string): void {
+    this.detectedUrl = url;
+    this.log.appendLine(`[modal] detected URL: ${url}`);
   }
 
   broadcastDevServerLog(text: string): void {
@@ -180,7 +147,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
       this.postMessage(webviewPanel, { type: "configsUpdated", configs });
     };
 
-    // Subscribe to all servers on first panel open
+    // Subscribe on first panel open
     if (this.panels.size === 1) this.subscribeAll();
 
     webviewPanel.webview.onDidReceiveMessage(async (msg: WebviewMessage) => {
@@ -193,18 +160,18 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
             await this.writeDocument(document, configs);
             updatingFromWebview = false;
           }
-          for (const url of this.getAllServerUrls()) {
-            if (!this.schemas[url]) this.schemas[url] = [];
-          }
-          const devServer = this.getDevServer();
+          const url = this.getServerUrl();
+          if (url && !this.schemas[url]) this.schemas[url] = [];
+          const serverNames: Record<string, string> = {};
+          if (url) serverNames[url] = this.getServerName();
           this.postMessage(webviewPanel, {
             type: "init",
             schemas: this.schemas,
             configs,
             serverStatuses: this.serverStatuses,
-            serverNames: this.getServerNames(),
+            serverNames,
             devServerState: this.devServerState,
-            devServerUrl: devServer?.url ?? null,
+            devServerUrl: url,
           });
           // Send thumbnails for image paths
           const docDir = dirname(document.uri.fsPath);
@@ -311,9 +278,8 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
         }
 
         case "refreshSchemas": {
-          for (const url of this.getAllServerUrls()) {
-            this.refreshSchemas(url);
-          }
+          const url = this.getServerUrl();
+          if (url) this.refreshSchemas(url);
           break;
         }
 
@@ -448,7 +414,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
 
     const configListener = vscode.workspace.onDidChangeConfiguration(
       (event) => {
-        if (event.affectsConfiguration("lumen.servers")) {
+        if (event.affectsConfiguration("lumen.server")) {
           this.unsubscribeAll();
           this.rebuildProviders();
           this.subscribeAll();
@@ -486,9 +452,8 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   // --- SSE subscriptions ---
 
   private subscribeAll(): void {
-    for (const url of this.getAllServerUrls()) {
-      this.subscribeTo(url);
-    }
+    const url = this.getServerUrl();
+    if (url) this.subscribeTo(url);
   }
 
   private subscribeTo(url: string): void {
@@ -517,30 +482,26 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
           this.serverStatuses[url] = status;
           this.broadcastToAll({ type: "serverStatus", serverUrl: url, status });
           // Detect orphaned dev server: endpoint alive but no local process
-          const devServer = this.getDevServer();
-          if (devServer && url === devServer.url) {
-            if (status === "connected" && this.devServerState === "stopped") {
-              this.devServerState = "orphaned";
-              this.broadcastToAll({
-                type: "devServerStatus",
-                state: "orphaned",
-              });
-            } else if (
-              status === "disconnected" &&
-              this.devServerState === "orphaned"
-            ) {
-              this.devServerState = "stopped";
-              this.broadcastToAll({
-                type: "devServerStatus",
-                state: "stopped",
-              });
-            }
+          if (status === "connected" && this.devServerState === "stopped") {
+            this.devServerState = "orphaned";
+            this.broadcastToAll({
+              type: "devServerStatus",
+              state: "orphaned",
+            });
+          } else if (
+            status === "disconnected" &&
+            this.devServerState === "orphaned"
+          ) {
+            this.devServerState = "stopped";
+            this.broadcastToAll({
+              type: "devServerStatus",
+              state: "stopped",
+            });
           }
         },
       });
       this.subscriptions.set(url, dispose);
     } else {
-      // Non-SSE providers — one-shot schema fetch
       this.refreshSchemas(url);
     }
   }
@@ -749,12 +710,12 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
 
   // --- Schema file export ---
 
-  private writeSchemaFile(serverUrl: string): void {
-    const server = getServers().find((s) => this.resolveUrl(s) === serverUrl);
-    if (!server?.source) return;
-    const dest = join(server.source, "lumen.schema.json");
+  private writeSchemaFile(_serverUrl: string): void {
+    const source = getServerSource();
+    if (!source) return;
+    const dest = join(source, "lumen.schema.json");
     try {
-      const schemas = this.schemas[serverUrl] ?? [];
+      const schemas = this.schemas[_serverUrl] ?? [];
       writeFileSync(dest, JSON.stringify(schemas, null, 2) + "\n");
     } catch {}
   }

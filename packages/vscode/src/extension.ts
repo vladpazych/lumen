@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { LumenEditorProvider } from "./provider";
-import { ServerManager, getServers, isServerReachable } from "./server";
+import { ServerManager, getServerSource } from "./server";
 
 function activeDocumentUri(): vscode.Uri | undefined {
   const textUri = vscode.window.activeTextEditor?.document.uri;
@@ -10,10 +10,6 @@ function activeDocumentUri(): vscode.Uri | undefined {
   return undefined;
 }
 
-function devSourcePath(): string {
-  return getServers().find((s) => s.source)?.source ?? "";
-}
-
 export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel("Lumen Server");
   const provider = new LumenEditorProvider(context);
@@ -21,7 +17,9 @@ export function activate(context: vscode.ExtensionContext): void {
   const serverManager = new ServerManager(
     output,
     () => {
-      provider.onDevServerStateChange(serverManager.getState(devSourcePath()));
+      provider.onDevServerStateChange(
+        serverManager.getState(getServerSource()),
+      );
     },
     (text) => {
       provider.broadcastDevServerLog(text);
@@ -32,9 +30,9 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   // Check for already-running dev server from a previous session
-  const initialSource = devSourcePath();
-  if (initialSource) {
-    provider.onDevServerStateChange(serverManager.getState(initialSource));
+  const source = getServerSource();
+  if (source) {
+    provider.onDevServerStateChange(serverManager.getState(source));
   }
 
   context.subscriptions.push(
@@ -57,24 +55,18 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
 
     vscode.commands.registerCommand("lumen.startServer", () =>
-      serverManager.start(devSourcePath()),
+      serverManager.start(getServerSource()),
     ),
     vscode.commands.registerCommand("lumen.stopServer", () =>
-      serverManager.stop(devSourcePath()),
+      serverManager.stop(getServerSource()),
     ),
 
     output,
   );
 
-  provider.onDevServerCommand = async (cmd: "start" | "stop" | "restart") => {
-    const source = devSourcePath();
+  provider.onDevServerCommand = (cmd: "start" | "stop" | "restart") => {
+    const source = getServerSource();
     if (cmd === "start") {
-      const server = getServers().find((s) => s.source);
-      if (server?.url && (await isServerReachable(server.url))) {
-        vscode.window.showInformationMessage(
-          "Remote endpoint still alive — new process will replace it",
-        );
-      }
       serverManager.start(source);
     } else if (cmd === "restart") {
       serverManager.restart(source);

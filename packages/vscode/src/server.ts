@@ -3,8 +3,6 @@ import { join } from "node:path";
 import { spawn } from "node:child_process";
 import * as vscode from "vscode";
 
-import type { ServerConfig } from "@lumen/core/types";
-
 export type DevServerState =
   | "stopped"
   | "starting"
@@ -14,21 +12,13 @@ export type DevServerState =
   | "orphaned"
   | "error";
 
-/** Expand ${workspaceFolder} in a path string. */
-export function resolveSource(raw: string): string {
-  const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
-  return raw.replace(/\$\{workspaceFolder\}/g, root);
-}
-
-/** Read lumen.servers and resolve source paths. */
-export function getServers(): ServerConfig[] {
+/** Read lumen.server setting and resolve ${workspaceFolder}. */
+export function getServerSource(): string {
   const raw = vscode.workspace
     .getConfiguration("lumen")
-    .get<ServerConfig[]>("servers", []);
-  return raw.map((s) => ({
-    ...s,
-    source: s.source ? resolveSource(s.source) : undefined,
-  }));
+    .get<string>("server", "lumen-server");
+  const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
+  return raw.replace(/\$\{workspaceFolder\}/g, root);
 }
 
 function pidFile(serverPath: string): string {
@@ -109,9 +99,7 @@ export class ServerManager {
 
   start(sourcePath: string): void {
     if (!sourcePath) {
-      vscode.window.showErrorMessage(
-        "No server with source configured in lumen.servers",
-      );
+      vscode.window.showErrorMessage("No lumen.server configured");
       return;
     }
     if (readPid(sourcePath) !== null) {

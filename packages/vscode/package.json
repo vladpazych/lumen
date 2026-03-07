@@ -63,30 +63,10 @@
           "default": "",
           "description": "Absolute path to mirror all Lumen logs (extension + dev server). Useful for LLM-assisted debugging. Leave empty to disable."
         },
-        "lumen.servers": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "name": {
-                "type": "string",
-                "description": "Display name for this server"
-              },
-              "url": {
-                "type": "string",
-                "description": "Server URL. Optional when source is set — auto-detected from Modal output."
-              },
-              "source": {
-                "type": "string",
-                "description": "Path to source directory. When set, the extension can start/stop the dev server via `bun dev` and auto-detect the URL. Supports ${workspaceFolder}."
-              }
-            },
-            "required": [
-              "name"
-            ]
-          },
-          "default": [],
-          "description": "Lumen inference servers"
+        "lumen.server": {
+          "type": "string",
+          "default": "lumen-server",
+          "description": "Path to the inference server source directory. Supports ${workspaceFolder}. The extension starts/stops the dev server and auto-detects the URL from Modal output."
         }
       }
     }
