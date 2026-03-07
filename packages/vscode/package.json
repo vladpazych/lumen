@@ -1,7 +1,7 @@
 {
   "name": "lumen-vscode",
   "displayName": "Lumen",
-  "description": "Schema-driven editor for .imagic files",
+  "description": "Schema-driven editor for .lumen files",
   "version": "0.0.0",
   "private": true,
   "publisher": "vladpazych",
@@ -15,70 +15,70 @@
   "contributes": {
     "commands": [
       {
-        "command": "imagic.openPreview",
-        "title": "Imagic: Open Preview"
+        "command": "lumen.openPreview",
+        "title": "Lumen: Open Preview"
       },
       {
-        "command": "imagic.startServer",
-        "title": "Imagic: Start Server"
+        "command": "lumen.startServer",
+        "title": "Lumen: Start Server"
       },
       {
-        "command": "imagic.stopServer",
-        "title": "Imagic: Stop Server"
+        "command": "lumen.stopServer",
+        "title": "Lumen: Stop Server"
       },
       {
-        "command": "imagic.openAsJson",
-        "title": "Imagic: Open as JSON"
+        "command": "lumen.openAsJson",
+        "title": "Lumen: Open as JSON"
       },
       {
-        "command": "imagic.setFalApiKey",
-        "title": "Imagic: Set fal.ai API Key"
+        "command": "lumen.setFalApiKey",
+        "title": "Lumen: Set fal.ai API Key"
       }
     ],
     "menus": {
       "commandPalette": [
         {
-          "command": "imagic.openPreview",
-          "when": "resourceFilename =~ /\\.imagic$/"
+          "command": "lumen.openPreview",
+          "when": "resourceFilename =~ /\\.lumen$/"
         },
         {
-          "command": "imagic.openAsJson",
-          "when": "resourceFilename =~ /\\.imagic$/"
+          "command": "lumen.openAsJson",
+          "when": "resourceFilename =~ /\\.lumen$/"
         }
       ]
     },
     "customEditors": [
       {
-        "viewType": "imagic.stateViewer",
-        "displayName": "Imagic",
+        "viewType": "lumen.stateViewer",
+        "displayName": "Lumen",
         "selector": [
           {
-            "filenamePattern": "*.imagic"
+            "filenamePattern": "*.lumen"
           }
         ],
         "priority": "default"
       }
     ],
     "configuration": {
-      "title": "Imagic",
+      "title": "Lumen",
       "properties": {
-        "imagic.serverUrls": {
+        "lumen.serverUrls": {
           "type": "array",
           "items": {
             "type": "string"
           },
           "default": [],
-          "description": "Deployed Imagic server URLs (grab yours from https://modal.com/apps)"
+          "description": "Deployed Lumen server URLs (grab yours from https://modal.com/apps)"
         },
-        "imagic.serverPath": {
+        "lumen.serverPath": {
           "type": "string",
           "default": "",
-          "description": "Path to modal-pipelines directory (for local dev). Requires imagic.devServerUrl to be set."
+          "description": "Path to lumen-example-modal directory (for local dev). Requires lumen.devServerUrl to be set."
         },
-        "imagic.devServerUrl": {
+        "lumen.devServerUrl": {
           "type": "string",
           "default": "",
-          "description": "URL of the local dev server (e.g. http://localhost:8000). Required alongside imagic.serverPath for dev server to appear."
+          "description": "URL of the local dev server (e.g. http://localhost:8000). Required alongside lumen.serverPath for dev server to appear."
         }
       }
     }
@@ -87,8 +87,8 @@
     "dev": "bun run dev.ts",
     "watch": "bun build src/extension.ts --outdir dist --target node --format cjs --external vscode --sourcemap=linked --watch & vite build --watch",
     "build": "bun build src/extension.ts --outdir dist --target node --format cjs --external vscode --sourcemap=linked && vite build",
-    "package": "bun run build && bunx @vscode/vsce package --no-dependencies -o dist/imagic-vscode.vsix",
-    "reinstall": "bun run package && code --install-extension dist/imagic-vscode.vsix",
+    "package": "bun run build && bunx @vscode/vsce package --no-dependencies -o dist/lumen-vscode.vsix",
+    "reinstall": "bun run package && code --install-extension dist/lumen-vscode.vsix",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.webview.json"
   },
   "devDependencies": {

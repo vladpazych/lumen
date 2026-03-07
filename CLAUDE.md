@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Schema-driven image/video generation editor. Provider-agnostic `.imagic` file format, VS Code custom editor, ML inference pipelines.
+Schema-driven image/video generation editor. Provider-agnostic `.lumen` file format, VS Code custom editor, ML inference pipelines.
 
 ## Rules
 

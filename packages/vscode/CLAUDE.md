@@ -1,6 +1,6 @@
 # packages/vscode/CLAUDE.md
 
-Provider-agnostic schema-driven custom editor for `.imagic` files.
+Provider-agnostic schema-driven custom editor for `.lumen` files.
 
 The extension owns the schema contract. Providers implement it. The file format is portable.
 
@@ -12,14 +12,14 @@ The extension owns the schema contract. Providers implement it. The file format 
 
 Two provider models:
 
-- **Dynamic** — HTTP server exposing `GET /pipelines`, `GET /pipelines/:id`, `POST /pipelines/:id/generate`, `GET /pipelines/:id/runs/:runId`. `lumen-example-modal` is one implementation. Add URL to `imagic.serverUrls` setting — no extension code needed.
+- **Dynamic** — HTTP server exposing `GET /pipelines`, `GET /pipelines/:id`, `POST /pipelines/:id/generate`, `GET /pipelines/:id/runs/:runId`. `lumen-example-modal` is one implementation. Add URL to `lumen.serverUrls` setting — no extension code needed.
 - **Static** — schemas hardcoded in `src/providers/`, generation proxied through provider-specific APIs. fal.ai is the current static provider.
 
 New static provider: implement `PipelineConfig[]` + a generate function returning `GenerateResponse` in `src/providers/`.
 
-### .imagic file format
+### .lumen file format
 
-Top-level JSON array of `ImagicConfig` objects. Each = `{ id, name?, service, pipeline, params }`.
+Top-level JSON array of `LumenConfig` objects. Each = `{ id, name?, service, pipeline, params }`.
 
 ```json
 [
@@ -45,7 +45,7 @@ Identity is the `id` (UUID) — multiple configs for the same `service + pipelin
 
 Extension host: CJS, Node via `bun build` → `dist/extension.js`.
 Webview: IIFE, React + Tailwind via Vite → `dist/webview/`.
-Packaged: `dist/imagic-vscode.vsix`.
+Packaged: `dist/lumen-vscode.vsix`.
 
 No `"type": "module"` in package.json — breaks VS Code CJS loading.
 
