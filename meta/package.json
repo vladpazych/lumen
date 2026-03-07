@@ -1,0 +1,12 @@
+{
+  "name": "@lumen/meta",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@vladpazych/dexter": "^0.1.13"
+  },
+  "devDependencies": {
+    "@types/bun": "^1"
+  }
+}

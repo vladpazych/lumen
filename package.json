@@ -1,0 +1,8 @@
+{
+  "name": "lumen-workspace",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "meta"
+  ]
+}
