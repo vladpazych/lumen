@@ -230,12 +230,94 @@ function editorService(ports) {
 }
 
 // src/adapters/http-provider.ts
+var RECONNECT_MS = 3000;
+function parseSSEFrame(frame) {
+  let event = "message";
+  const dataLines = [];
+  for (const line of frame.split(`
+`)) {
+    if (line.startsWith("event:"))
+      event = line.slice(6).trim();
+    else if (line.startsWith("data:"))
+      dataLines.push(line.slice(5).trimStart());
+  }
+  if (dataLines.length === 0)
+    return null;
+  return { event, data: dataLines.join(`
+`) };
+}
 function httpProvider(serverUrl) {
   return {
     async ping() {
       const res = await fetch(`${serverUrl}/pipelines`);
       if (!res.ok)
         throw new Error(`GET /pipelines failed: ${res.status}`);
+    },
+    subscribe(callbacks) {
+      let abortController = new AbortController;
+      let disposed = false;
+      let reconnectTimer = null;
+      const scheduleReconnect = () => {
+        if (disposed)
+          return;
+        reconnectTimer = setTimeout(() => {
+          abortController = new AbortController;
+          connect();
+        }, RECONNECT_MS);
+      };
+      const connect = async () => {
+        if (disposed)
+          return;
+        try {
+          const res = await fetch(`${serverUrl}/pipelines/events`, {
+            signal: abortController.signal,
+            headers: { Accept: "text/event-stream" }
+          });
+          if (!res.ok || !res.body) {
+            callbacks.onStatus("disconnected");
+            scheduleReconnect();
+            return;
+          }
+          callbacks.onStatus("connected");
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder;
+          let buffer = "";
+          for (;; ) {
+            const { done, value } = await reader.read();
+            if (done)
+              break;
+            buffer += decoder.decode(value, { stream: true });
+            const frames = buffer.split(`
+
+`);
+            buffer = frames.pop() ?? "";
+            for (const frame of frames) {
+              const parsed = parseSSEFrame(frame);
+              if (parsed?.event === "schemas") {
+                callbacks.onSchemas(JSON.parse(parsed.data));
+              }
+            }
+          }
+          if (!disposed) {
+            callbacks.onStatus("disconnected");
+            scheduleReconnect();
+          }
+        } catch (err) {
+          if (disposed)
+            return;
+          if (err instanceof DOMException && err.name === "AbortError")
+            return;
+          callbacks.onStatus("disconnected");
+          scheduleReconnect();
+        }
+      };
+      connect();
+      return () => {
+        disposed = true;
+        abortController.abort();
+        if (reconnectTimer)
+          clearTimeout(reconnectTimer);
+      };
     },
     async fetchSchemas() {
       const res = await fetch(`${serverUrl}/pipelines`);
@@ -797,6 +879,7 @@ class LumenEditorProvider {
   context;
   static viewType = "lumen.stateViewer";
   panels = new Set;
+  logFiles = new Set;
   schemas = {};
   serverStatuses = {};
   devServerState = "stopped";
@@ -890,12 +973,24 @@ class LumenEditorProvider {
         this.refreshSchemas(url);
     }
   }
+  static ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b].*?\x07/g;
   broadcastDevServerLog(text) {
     this.broadcastToAll({ type: "devServerLog", text });
+    if (this.logFiles.size > 0) {
+      const clean = text.replace(LumenEditorProvider.ANSI_RE, "");
+      for (const path of this.logFiles) {
+        try {
+          import_node_fs4.appendFileSync(path, clean);
+        } catch {}
+      }
+    }
   }
   async resolveCustomTextEditor(document, webviewPanel) {
     this.panels.add(webviewPanel);
     this.rebuildProviders();
+    const logPath = document.uri.fsPath + ".log";
+    import_node_fs4.writeFileSync(logPath, "");
+    this.logFiles.add(logPath);
     const resourceRoots = [
       vscode3.Uri.file(import_node_path4.join(this.context.extensionPath, "dist", "webview")),
       vscode3.Uri.file(import_node_path4.dirname(document.uri.fsPath)),
@@ -1164,6 +1259,7 @@ class LumenEditorProvider {
     });
     webviewPanel.onDidDispose(() => {
       this.panels.delete(webviewPanel);
+      this.logFiles.delete(logPath);
       changeListener.dispose();
       configListener.dispose();
       docListener.dispose();
@@ -1379,5 +1475,5 @@ function activate(context) {
 }
 function deactivate() {}
 
-//# debugId=3762946D1749CFA864756E2164756E21
+//# debugId=10720D1CE6CD658864756E2164756E21
 //# sourceMappingURL=extension.js.map

@@ -1,4 +1,10 @@
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import * as vscode from "vscode";
 import type {
@@ -38,6 +44,7 @@ const HEALTH_POLL_MS = 10_000;
 export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   private static readonly viewType = "lumen.stateViewer";
   private readonly panels: Set<vscode.WebviewPanel> = new Set();
+  private readonly logFiles: Set<string> = new Set();
   private schemas: SchemaCache = {};
   private serverStatuses: StatusCache = {};
   private devServerState: DevServerState = "stopped";
@@ -148,8 +155,18 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     }
   }
 
+  private static readonly ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b].*?\x07/g;
+
   broadcastDevServerLog(text: string): void {
     this.broadcastToAll({ type: "devServerLog", text });
+    if (this.logFiles.size > 0) {
+      const clean = text.replace(LumenEditorProvider.ANSI_RE, "");
+      for (const path of this.logFiles) {
+        try {
+          appendFileSync(path, clean);
+        } catch {}
+      }
+    }
   }
 
   async resolveCustomTextEditor(
@@ -158,6 +175,11 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   ): Promise<void> {
     this.panels.add(webviewPanel);
     this.rebuildProviders();
+
+    // Companion log file — truncated on each session
+    const logPath = document.uri.fsPath + ".log";
+    writeFileSync(logPath, "");
+    this.logFiles.add(logPath);
 
     const resourceRoots = [
       vscode.Uri.file(join(this.context.extensionPath, "dist", "webview")),
@@ -479,6 +501,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
 
     webviewPanel.onDidDispose(() => {
       this.panels.delete(webviewPanel);
+      this.logFiles.delete(logPath);
       changeListener.dispose();
       configListener.dispose();
       docListener.dispose();
