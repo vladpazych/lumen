@@ -24,6 +24,7 @@ type State = {
     { imageUrl?: string; error?: string; metadata?: Record<string, unknown> }
   >;
   imageThumbs: Record<string, string>;
+  devServerLog: string[];
   isPickingImage: boolean;
   ready: boolean;
 };
@@ -58,7 +59,8 @@ type Action =
     }
   | { type: "pickImageStart" }
   | { type: "pickImageDone" }
-  | { type: "mergeImageThumbs"; thumbs: Record<string, string> };
+  | { type: "mergeImageThumbs"; thumbs: Record<string, string> }
+  | { type: "devServerLog"; text: string };
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
@@ -90,8 +92,10 @@ function reducer(state: State, action: Action): State {
           [action.serverUrl]: action.status,
         },
       };
-    case "devServerStatus":
-      return { ...state, devServerState: action.state };
+    case "devServerStatus": {
+      const log = action.state === "starting" ? [] : state.devServerLog;
+      return { ...state, devServerState: action.state, devServerLog: log };
+    }
     case "updateParam": {
       const configs = state.configs.map((c) =>
         c.id === action.configId
@@ -147,6 +151,14 @@ function reducer(state: State, action: Action): State {
         ...state,
         imageThumbs: { ...state.imageThumbs, ...action.thumbs },
       };
+    case "devServerLog": {
+      const lines = [...state.devServerLog, ...action.text.split("\n")];
+      // Rolling buffer — keep last 200 lines
+      return {
+        ...state,
+        devServerLog: lines.length > 200 ? lines.slice(-200) : lines,
+      };
+    }
   }
 }
 
@@ -162,6 +174,7 @@ const initialState: State = {
   progress: {},
   results: {},
   imageThumbs: {},
+  devServerLog: [],
   isPickingImage: false,
   ready: false,
 };
@@ -203,6 +216,9 @@ export function useLumen() {
           break;
         case "devServerStatus":
           dispatch({ type: "devServerStatus", state: msg.state });
+          break;
+        case "devServerLog":
+          dispatch({ type: "devServerLog", text: msg.text });
           break;
         case "generateProgress":
           dispatch({

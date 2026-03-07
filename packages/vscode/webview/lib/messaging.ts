@@ -56,6 +56,11 @@ export type DevServerStatusMessage = {
   state: DevServerState;
 };
 
+export type DevServerLogMessage = {
+  type: "devServerLog";
+  text: string;
+};
+
 export type GenerateProgressMessage = {
   type: "generateProgress";
   requestId: string;
@@ -90,6 +95,7 @@ export type ExtensionMessage =
   | SchemaRefreshMessage
   | ServerStatusMessage
   | DevServerStatusMessage
+  | DevServerLogMessage
   | ImagePickedMessage
   | ImageThumbsMessage;
 

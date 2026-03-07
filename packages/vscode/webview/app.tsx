@@ -12,6 +12,7 @@ export function App() {
     serverStatuses,
     serverNames,
     devServerState,
+    devServerLog,
     devServerUrl,
     focusIndex,
     generating,
@@ -112,6 +113,7 @@ export function App() {
                 imageThumbs={imageThumbs}
                 isDevServer={isDevServer(serverUrl)}
                 devServerState={devServerState}
+                devServerLog={devServerLog}
                 onStartServer={startDevServer}
                 onStopServer={stopDevServer}
                 onRestartServer={restartDevServer}

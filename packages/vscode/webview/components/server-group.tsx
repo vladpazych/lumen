@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Accordion, AccordionItem } from "@/components/ui/accordion";
 import { StatusDot } from "@/components/status-dot";
 import { ConfigCard } from "@/components/config-card";
+import { ServerLog } from "@/components/server-log";
 
 type Props = {
   serverUrl: string;
@@ -26,6 +27,7 @@ type Props = {
   imageThumbs: Record<string, string>;
   isDevServer: boolean;
   devServerState: DevServerState;
+  devServerLog: string[];
   onStartServer: () => void;
   onStopServer: () => void;
   onRestartServer: () => void;
@@ -88,6 +90,7 @@ export function ServerGroup({
   imageThumbs,
   isDevServer,
   devServerState,
+  devServerLog,
   onStartServer,
   onStopServer,
   onRestartServer,
@@ -147,6 +150,10 @@ export function ServerGroup({
           </div>
         )}
       </div>
+
+      {isDevServer && devServerLog.length > 0 && (
+        <ServerLog lines={devServerLog} />
+      )}
 
       {configs.length > 0 && (
         <Accordion defaultValue={initialKey ? [initialKey] : undefined}>

@@ -19,9 +19,15 @@ export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel("Lumen Server");
   const provider = new LumenEditorProvider(context);
 
-  const serverManager = new ServerManager(output, () => {
-    provider.onDevServerStateChange(serverManager.getState(devSourcePath()));
-  });
+  const serverManager = new ServerManager(
+    output,
+    () => {
+      provider.onDevServerStateChange(serverManager.getState(devSourcePath()));
+    },
+    (text) => {
+      provider.broadcastDevServerLog(text);
+    },
+  );
 
   // Check for already-running dev server from a previous session
   const initialSource = devSourcePath();

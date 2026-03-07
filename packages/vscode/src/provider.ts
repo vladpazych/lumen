@@ -148,6 +148,10 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     }
   }
 
+  broadcastDevServerLog(text: string): void {
+    this.broadcastToAll({ type: "devServerLog", text });
+  }
+
   async resolveCustomTextEditor(
     document: vscode.TextDocument,
     webviewPanel: vscode.WebviewPanel,

@@ -74,11 +74,17 @@ export async function isServerReachable(url: string): Promise<boolean> {
 export class ServerManager {
   private readonly output: vscode.OutputChannel;
   private readonly onChange: () => void;
+  private readonly onLog: (text: string) => void;
   private trackedState: DevServerState = "stopped";
 
-  constructor(output: vscode.OutputChannel, onChange: () => void) {
+  constructor(
+    output: vscode.OutputChannel,
+    onChange: () => void,
+    onLog: (text: string) => void,
+  ) {
     this.output = output;
     this.onChange = onChange;
+    this.onLog = onLog;
   }
 
   getState(sourcePath: string): DevServerState {
@@ -125,6 +131,7 @@ export class ServerManager {
     const handleOutput = (chunk: Buffer) => {
       const text = chunk.toString();
       this.output.append(text);
+      this.onLog(text);
       if (REBUILD_DONE.test(text)) {
         this.setState("running");
       } else if (REBUILD_START.test(text)) {

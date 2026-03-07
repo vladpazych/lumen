@@ -656,10 +656,12 @@ async function isServerReachable(url) {
 class ServerManager {
   output;
   onChange;
+  onLog;
   trackedState = "stopped";
-  constructor(output, onChange) {
+  constructor(output, onChange, onLog) {
     this.output = output;
     this.onChange = onChange;
+    this.onLog = onLog;
   }
   getState(sourcePath) {
     if (!sourcePath)
@@ -698,6 +700,7 @@ class ServerManager {
     const handleOutput = (chunk) => {
       const text = chunk.toString();
       this.output.append(text);
+      this.onLog(text);
       if (REBUILD_DONE.test(text)) {
         this.setState("running");
       } else if (REBUILD_START.test(text)) {
@@ -868,6 +871,9 @@ class LumenEditorProvider {
       for (const url of this.getAllServerUrls())
         this.refreshSchemas(url);
     }
+  }
+  broadcastDevServerLog(text) {
+    this.broadcastToAll({ type: "devServerLog", text });
   }
   async resolveCustomTextEditor(document, webviewPanel) {
     this.panels.add(webviewPanel);
@@ -1315,6 +1321,8 @@ function activate(context) {
   const provider = new LumenEditorProvider(context);
   const serverManager = new ServerManager(output, () => {
     provider.onDevServerStateChange(serverManager.getState(devSourcePath()));
+  }, (text) => {
+    provider.broadcastDevServerLog(text);
   });
   const initialSource = devSourcePath();
   if (initialSource) {
@@ -1353,5 +1361,5 @@ function activate(context) {
 }
 function deactivate() {}
 
-//# debugId=B787F1B4665B669064756E2164756E21
+//# debugId=18FFC099966B88B864756E2164756E21
 //# sourceMappingURL=extension.js.map
