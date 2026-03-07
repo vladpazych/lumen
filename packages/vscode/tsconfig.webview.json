@@ -12,7 +12,11 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "rootDir": ".",
-    "outDir": "dist/webview"
+    "outDir": "dist/webview",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["webview/*"]
+    }
   },
   "include": ["webview/**/*.ts", "webview/**/*.tsx"],
   "exclude": ["node_modules", "dist"]

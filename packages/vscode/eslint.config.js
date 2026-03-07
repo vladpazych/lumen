@@ -8,12 +8,23 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export default [
   { ignores: ["dist/**", "node_modules/**"] },
   {
-    files: ["**/*.{ts,tsx}"],
+    files: ["src/**/*.ts"],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
         projectService: false,
         project: "./tsconfig.json",
+        tsconfigRootDir: __dirname,
+      },
+    },
+  },
+  {
+    files: ["vite.config.ts", "dev.ts"],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        projectService: false,
+        project: "./tsconfig.node.json",
         tsconfigRootDir: __dirname,
       },
     },

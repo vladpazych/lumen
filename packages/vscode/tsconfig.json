@@ -13,6 +13,6 @@
     "rootDir": ".",
     "outDir": "dist"
   },
-  "include": ["src/**/*.ts", "vite.config.ts", "dev.ts"],
+  "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "webview"]
 }

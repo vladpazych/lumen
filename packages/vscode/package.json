@@ -97,7 +97,7 @@
     "build": "bun build src/extension.ts --outdir dist --target node --format cjs --external vscode --sourcemap=linked && vite build",
     "package": "bun run build && bunx @vscode/vsce package --no-dependencies -o dist/lumen-vscode.vsix",
     "reinstall": "bun run package && code --install-extension dist/lumen-vscode.vsix",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.webview.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.webview.json"
   },
   "dependencies": {
     "@lumen/core": "workspace:*"
