@@ -19,7 +19,7 @@ export function AddConfigDialog({ pipelines, onAdd, onCancel }: Props) {
   const [pipeline, setPipeline] = useState<string | null>(null);
 
   return (
-    <div className="border border-border rounded-md p-3">
+    <div className="rounded-md border border-border bg-card p-3">
       <div className="flex flex-col gap-3">
         <Select
           value={pipeline ?? undefined}

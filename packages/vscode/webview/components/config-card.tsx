@@ -1,6 +1,4 @@
 import { useState, useRef, useEffect } from "react";
-import { AccordionTrigger, AccordionPanel } from "@/components/ui/accordion";
-import { StatusDot } from "@/components/status-dot";
 import type {
   LumenConfig,
   PipelineConfig,
@@ -9,11 +7,13 @@ import type {
 import { GenerateSection } from "@/components/generate-section";
 import { PipelineForm } from "@/components/pipeline-form";
 import { ResultDisplay } from "@/components/result-display";
+import { ChevronDownIcon } from "lucide-react";
 
 type Props = {
   config: LumenConfig;
   schema?: PipelineConfig;
   status: ServerStatus;
+  defaultOpen?: boolean;
   isGenerating: boolean;
   progress?: number;
   result?: {
@@ -27,15 +27,10 @@ type Props = {
   onPickImageByUri: (paramName: string, uri: string) => void;
   onRename: (name: string) => void;
   onRemove: () => void;
+  onOpen: () => void;
   isPickingImage: boolean;
   imageThumbs: Record<string, string>;
 };
-
-const statusVariant = {
-  connected: "success",
-  error: "destructive",
-  disconnected: "muted",
-} as const;
 
 function promptSummary(
   config: LumenConfig,
@@ -53,6 +48,7 @@ export function ConfigCard({
   config,
   schema,
   status,
+  defaultOpen,
   isGenerating,
   progress,
   result,
@@ -62,9 +58,11 @@ export function ConfigCard({
   onPickImageByUri,
   onRename,
   onRemove,
+  onOpen,
   isPickingImage,
   imageThumbs,
 }: Props) {
+  const [open, setOpen] = useState(defaultOpen ?? false);
   const fallbackTitle = schema?.name ?? config.pipeline;
   const title = config.name ?? fallbackTitle;
   const summary = promptSummary(config, schema);
@@ -88,98 +86,114 @@ export function ConfigCard({
     setDraft(title);
   };
 
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    if (next) onOpen();
+  };
+
   return (
-    <>
-      <AccordionTrigger>
-        <div className="flex flex-1 items-center gap-2">
-          {editing ? (
-            <input
-              ref={inputRef}
-              className="bg-transparent text-[13px] font-medium text-text-primary outline-none border-b border-border w-full"
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") commitRename();
-                if (e.key === "Escape") cancelRename();
-                e.stopPropagation();
-              }}
-              onBlur={commitRename}
-              onClick={(e) => e.stopPropagation()}
-            />
-          ) : (
-            <span
-              className="text-[13px] font-medium text-text-primary truncate"
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                setDraft(title);
-                setEditing(true);
-              }}
-            >
-              {title}
-            </span>
-          )}
-          <StatusDot variant={statusVariant[status]} size="xs" />
-          <button
-            className="ml-auto text-[11px] text-text-tertiary hover:text-text-primary opacity-0 group-hover/trigger:opacity-100 transition-opacity px-1"
-            onClick={(e) => {
+    <div className="rounded-md border border-border bg-card">
+      {/* Header */}
+      <button
+        type="button"
+        className="flex w-full items-center gap-2 px-3 py-2.5 text-left group"
+        onClick={toggle}
+      >
+        <ChevronDownIcon
+          className={`size-3.5 shrink-0 text-text-tertiary transition-transform duration-150 ${open ? "rotate-0" : "-rotate-90"}`}
+        />
+        {editing ? (
+          <input
+            ref={inputRef}
+            className="flex-1 bg-transparent text-[13px] font-medium text-text-primary outline-none border-b border-border"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitRename();
+              if (e.key === "Escape") cancelRename();
               e.stopPropagation();
-              onRemove();
             }}
-            title="Remove configuration"
+            onBlur={commitRename}
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <span
+            className="flex-1 text-[13px] font-medium text-text-primary truncate"
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              setDraft(title);
+              setEditing(true);
+            }}
           >
-            ✕
-          </button>
-        </div>
-      </AccordionTrigger>
-      <AccordionPanel>
-        <div data-slot="config-card-collapsed">
-          {summary && (
-            <p className="text-[11px] text-text-tertiary truncate">{summary}</p>
+            {title}
+          </span>
+        )}
+        {!open && summary && (
+          <span className="text-[11px] text-text-tertiary truncate max-w-[40%]">
+            {summary}
+          </span>
+        )}
+        <span
+          className="text-[11px] text-text-tertiary hover:text-text-primary opacity-0 group-hover:opacity-100 transition-opacity px-1"
+          role="button"
+          tabIndex={-1}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+        >
+          ✕
+        </span>
+      </button>
+
+      {/* Body */}
+      {open && (
+        <div className="px-3 pb-3">
+          {schema ? (
+            <div className="flex flex-col gap-4">
+              {schema.description && (
+                <p className="text-[11px] text-text-secondary">
+                  {schema.description}
+                </p>
+              )}
+              <PipelineForm
+                pipeline={schema}
+                values={config.params}
+                onParamChange={onParamChange}
+                onPickImage={onPickImage}
+                isPickingImage={isPickingImage}
+                imageThumbs={imageThumbs}
+                onPickImageByUri={onPickImageByUri}
+              />
+              <GenerateSection
+                loading={isGenerating}
+                progress={progress}
+                hasQuality={schema.params.some((p) => p.name === "quality")}
+                onPreview={() =>
+                  onGenerate({ ...config.params, quality: "preview" })
+                }
+                onGenerate={() =>
+                  onGenerate({ ...config.params, quality: "full" })
+                }
+              />
+              {result && (
+                <ResultDisplay
+                  imageUrl={result.imageUrl}
+                  error={result.error}
+                  metadata={result.metadata}
+                />
+              )}
+            </div>
+          ) : (
+            <p className="text-[11px] text-text-tertiary py-1">
+              {status === "disconnected"
+                ? "Start server to edit"
+                : "Loading pipeline…"}
+            </p>
           )}
         </div>
-        {schema ? (
-          <div className="flex flex-col gap-4">
-            {schema.description && (
-              <p className="text-[11px] text-text-secondary">
-                {schema.description}
-              </p>
-            )}
-            <PipelineForm
-              pipeline={schema}
-              values={config.params}
-              onParamChange={onParamChange}
-              onPickImage={onPickImage}
-              isPickingImage={isPickingImage}
-              imageThumbs={imageThumbs}
-              onPickImageByUri={onPickImageByUri}
-            />
-            <GenerateSection
-              loading={isGenerating}
-              progress={progress}
-              hasQuality={schema.params.some((p) => p.name === "quality")}
-              onPreview={() =>
-                onGenerate({ ...config.params, quality: "preview" })
-              }
-              onGenerate={() =>
-                onGenerate({ ...config.params, quality: "full" })
-              }
-            />
-            {result && (
-              <ResultDisplay
-                imageUrl={result.imageUrl}
-                error={result.error}
-                metadata={result.metadata}
-              />
-            )}
-          </div>
-        ) : (
-          <div className="p-3">
-            <p className="text-[11px] text-text-tertiary">
-              Connect server to edit
-            </p>
-          </div>
-        )}
-      </AccordionPanel>
-    </>
+      )}
+    </div>
   );
 }
