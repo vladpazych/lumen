@@ -19,7 +19,11 @@
   "[markdown]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
-  "lumen.serverPath": "${workspaceFolder}/packages/lumen-example-modal",
-  "lumen.devServerUrl": "https://vladpazych--lumen-example-serve-dev.modal.run",
-  "lumen.serverUrls": []
+  "lumen.servers": [
+    {
+      "name": "Example Modal",
+      "url": "https://vladpazych--lumen-example-serve-dev.modal.run",
+      "source": "${workspaceFolder}/packages/lumen-example-modal"
+    }
+  ]
 }

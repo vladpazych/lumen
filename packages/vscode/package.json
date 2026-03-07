@@ -62,23 +62,31 @@
     "configuration": {
       "title": "Lumen",
       "properties": {
-        "lumen.serverUrls": {
+        "lumen.servers": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Display name for this server"
+              },
+              "url": {
+                "type": "string",
+                "description": "Server URL (e.g. https://you--app-serve.modal.run)"
+              },
+              "source": {
+                "type": "string",
+                "description": "Path to source directory. When set, the extension can start/stop the dev server via `bun dev`. Supports ${workspaceFolder}."
+              }
+            },
+            "required": [
+              "name",
+              "url"
+            ]
           },
           "default": [],
-          "description": "Deployed Lumen server URLs (grab yours from https://modal.com/apps)"
-        },
-        "lumen.serverPath": {
-          "type": "string",
-          "default": "",
-          "description": "Path to lumen-example-modal directory (for local dev). Requires lumen.devServerUrl to be set."
-        },
-        "lumen.devServerUrl": {
-          "type": "string",
-          "default": "",
-          "description": "URL of the local dev server (e.g. http://localhost:8000). Required alongside lumen.serverPath for dev server to appear."
+          "description": "Lumen inference servers"
         }
       }
     }
@@ -97,6 +105,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/vscode": "^1.85.0",
+    "@typescript-eslint/parser": "^8.56.1",
     "@vitejs/plugin-react": "^4.7.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

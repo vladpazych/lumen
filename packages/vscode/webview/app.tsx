@@ -1,17 +1,18 @@
-import { useState } from "react"
-import { Stack } from "./kit/stack"
-import { Text } from "./kit/text"
-import { Accordion, AccordionItem } from "./kit/accordion"
-import { Header } from "./components/header"
-import { ConfigCard } from "./components/config-card"
-import { AddConfig } from "./components/add-config"
-import { useLumen } from "./lib/use-lumen"
+import { useState } from "react";
+import { Stack } from "./kit/stack";
+import { Text } from "./kit/text";
+import { Accordion, AccordionItem } from "./kit/accordion";
+import { Header } from "./components/header";
+import { ConfigCard } from "./components/config-card";
+import { AddConfig } from "./components/add-config";
+import { useLumen } from "./lib/use-lumen";
 
 export function App() {
   const {
     schemas,
     configs,
     serverStatuses,
+    serverNames,
     devServerState,
     devServerUrl,
     focusIndex,
@@ -30,60 +31,46 @@ export function App() {
     pickImageByUri,
     isPickingImage,
     imageThumbs,
-  } = useLumen()
+  } = useLumen();
 
-  const [showAddForm, setShowAddForm] = useState(false)
+  const [showAddForm, setShowAddForm] = useState(false);
 
   if (!ready) {
     return (
       <div className="mx-auto max-w-2xl p-4">
         <Text color="secondary">Loading...</Text>
       </div>
-    )
+    );
   }
 
-  const serverUrls = Object.keys(schemas)
+  const serverUrls = Object.keys(schemas);
 
   if (serverUrls.length === 0 && configs.length === 0) {
     return (
       <div className="mx-auto max-w-2xl p-4">
         <Stack spacing="normal">
           <Text variant="caption" color="secondary">
-            No server URL configured.
+            No servers configured. Add servers to{" "}
+            <span className="font-mono text-[11px] text-text-primary">
+              lumen.servers
+            </span>{" "}
+            in VS Code settings.
           </Text>
-          <ol className="list-decimal list-inside">
-            <Stack spacing="tight">
-              <li>
-                <Text variant="caption" color="secondary">
-                  Grab your serve URL from{" "}
-                  <a href="https://modal.com/apps/vladpazych/main" className="text-primary underline">
-                    modal.com/apps
-                  </a>
-                </Text>
-              </li>
-              <li>
-                <Text variant="caption" color="secondary">
-                  Add it to <span className="font-mono text-[11px] text-text-primary">lumen.serverUrls</span> in VS
-                  Code settings
-                </Text>
-              </li>
-            </Stack>
-          </ol>
         </Stack>
       </div>
-    )
+    );
   }
 
   // Derive initial expanded key from focusIndex
-  const focusedConfig = configs[focusIndex]
-  const initialKey = focusedConfig?.id ?? null
+  const focusedConfig = configs[focusIndex];
+  const initialKey = focusedConfig?.id ?? null;
 
   const handleAddConfig = (service: string, pipeline: string) => {
-    addConfig(service, pipeline, schemas, configs)
-    setShowAddForm(false)
+    addConfig(service, pipeline, schemas, configs);
+    setShowAddForm(false);
     // Focus the new config (will be at the end)
-    setFocus(configs.length)
-  }
+    setFocus(configs.length);
+  };
 
   return (
     <div className="mx-auto max-w-2xl p-4">
@@ -104,35 +91,68 @@ export function App() {
 
         <Accordion defaultValue={initialKey ? [initialKey] : undefined}>
           {configs.map((config, i) => {
-            const schema = schemas[config.service]?.find((p) => p.id === config.pipeline)
-            const status = serverStatuses[config.service] ?? "disconnected"
-            const isGen = generating[config.id] ?? false
-            const prog = progress[config.id]
-            const result = results[config.id]
+            const schema = schemas[config.service]?.find(
+              (p) => p.id === config.pipeline,
+            );
+            const status = serverStatuses[config.service] ?? "disconnected";
+            const isGen = generating[config.id] ?? false;
+            const prog = progress[config.id];
+            const result = results[config.id];
 
             return (
-              <AccordionItem key={config.id} value={config.id} onOpenChange={(open) => open && setFocus(i)}>
+              <AccordionItem
+                key={config.id}
+                value={config.id}
+                onOpenChange={(open) => open && setFocus(i)}
+              >
                 <ConfigCard
                   config={config}
                   schema={schema}
+                  serverName={serverNames[config.service]}
                   status={status}
                   isGenerating={isGen}
                   progress={prog}
                   result={result}
                   onParamChange={(paramName, value) =>
-                    updateParam(config.id, config.service, config.pipeline, paramName, value)
+                    updateParam(
+                      config.id,
+                      config.service,
+                      config.pipeline,
+                      paramName,
+                      value,
+                    )
                   }
-                  onGenerate={(params) => requestGenerate(config.id, config.service, config.pipeline, params)}
-                  onPickImage={(paramName) => pickImage(config.id, config.service, config.pipeline, paramName)}
+                  onGenerate={(params) =>
+                    requestGenerate(
+                      config.id,
+                      config.service,
+                      config.pipeline,
+                      params,
+                    )
+                  }
+                  onPickImage={(paramName) =>
+                    pickImage(
+                      config.id,
+                      config.service,
+                      config.pipeline,
+                      paramName,
+                    )
+                  }
                   onPickImageByUri={(paramName, uri) =>
-                    pickImageByUri(config.id, config.service, config.pipeline, paramName, uri)
+                    pickImageByUri(
+                      config.id,
+                      config.service,
+                      config.pipeline,
+                      paramName,
+                      uri,
+                    )
                   }
                   onRename={(name) => updateName(config.id, name)}
                   isPickingImage={isPickingImage}
                   imageThumbs={imageThumbs}
                 />
               </AccordionItem>
-            )
+            );
           })}
         </Accordion>
 
@@ -140,11 +160,12 @@ export function App() {
           <AddConfig
             schemas={schemas}
             serverStatuses={serverStatuses}
+            serverNames={serverNames}
             onAdd={handleAddConfig}
             onCancel={() => setShowAddForm(false)}
           />
         )}
       </Stack>
     </div>
-  )
+  );
 }
