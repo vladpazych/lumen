@@ -26,6 +26,7 @@ Schema-driven image/video generation editor. Provider-agnostic `.lumen` file for
 
 | Dir                           | Purpose                                           |
 | :---------------------------- | :------------------------------------------------ |
+| packages/lumen/               | Hexagonal core: types, ports, domain, services    |
 | packages/vscode/              | VS Code custom editor extension                   |
 | packages/lumen-example-modal/ | Example FastAPI + Modal inference server (Python) |
 | meta/                         | Repo tooling (dexter-powered)                     |

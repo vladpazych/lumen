@@ -1,67 +1,48 @@
 # packages/vscode/CLAUDE.md
 
-Provider-agnostic schema-driven custom editor for `.lumen` files.
-
-The extension owns the schema contract. Providers implement it. The file format is portable.
+VS Code custom editor for `.lumen` files. Bootstraps `@lumen/core`, wires adapters, owns the webview.
 
 ## Rules
 
-### Schema contract
+### Architecture
 
-`shared/types.ts` is the contract: `PipelineConfig`, `ParamDefinition` (discriminated union on `type`), `GenerateResponse`. All providers produce these types — the extension renders UI from them.
+- Domain types, ports, and services live in `@lumen/core`. This package implements adapters and VS Code glue.
+- `src/adapters/` implement `@lumen/core/ports` contracts. Each adapter owns its framework coupling (VS Code APIs, fal.ai REST, HTTP fetch).
+- `src/provider.ts` is the `CustomTextEditorProvider` — thin shell that delegates to `EditorService` from `@lumen/core/editor`.
+- `src/extension.ts` bootstraps: creates adapters, wires the service, registers commands.
 
-Two provider models:
+### Providers
 
-- **Dynamic** — HTTP server exposing `GET /pipelines`, `GET /pipelines/:id`, `POST /pipelines/:id/generate`, `GET /pipelines/:id/runs/:runId`. `lumen-example-modal` is one implementation. Add URL to `lumen.serverUrls` setting — no extension code needed.
-- **Static** — schemas hardcoded in `src/providers/`, generation proxied through provider-specific APIs. fal.ai is the current static provider.
+Two adapter models, both implement `ProviderPort`:
 
-New static provider: implement `PipelineConfig[]` + a generate function returning `GenerateResponse` in `src/providers/`.
+- **HTTP** (`src/adapters/http-provider.ts`) — wraps `GET /pipelines`, `POST /pipelines/:id/generate`, `GET /pipelines/:id/runs/:runId`. Add server URL to `lumen.servers` setting.
+- **fal.ai** (`src/adapters/fal-provider.ts`) — built-in schemas, fal.ai REST API, image upload to fal CDN. Activated when API key is set.
 
 ### .lumen file format
 
 Top-level JSON array of `LumenConfig` objects. Each = `{ id, name?, service, pipeline, params }`.
 
-```json
-[
-  {
-    "id": "a1b2c3",
-    "service": "http://localhost:8000",
-    "pipeline": "txt2img",
-    "params": { "prompt": "a cat" }
-  },
-  {
-    "id": "d4e5f6",
-    "name": "banana portrait",
-    "service": "provider://fal",
-    "pipeline": "nano-banana",
-    "params": { "prompt": "a dog" }
-  }
-]
-```
-
-Identity is the `id` (UUID) — multiple configs for the same `service + pipeline` pair are allowed. IDs are auto-assigned on first open if missing. `name` is optional (auto-generated from pipeline display name, editable inline). Array order = display order. No metadata in file — focus index in VS Code workspace state. Old nested format auto-migrates on open.
+Identity is the `id` (UUID). IDs auto-assigned on first open if missing. `name` is optional. Array order = display order. Focus index in VS Code workspace state. Old nested format auto-migrates on open.
 
 ### Build targets
 
 Extension host: CJS, Node via `bun build` → `dist/extension.js`.
 Webview: IIFE, React + Tailwind via Vite → `dist/webview/`.
-Packaged: `dist/lumen-vscode.vsix`.
 
 No `"type": "module"` in package.json — breaks VS Code CJS loading.
 
 ### Message protocol
 
-All message types in `webview/lib/messaging.ts`. Add new messages there.
+All message types in `webview/lib/messaging.ts`. `DevServerState` defined there — VS Code-specific, not in core.
 
 Echo prevention: `updatingFromWebview` flag skips `configsUpdated` post during extension-initiated file writes.
 
 ## Structure
 
-- `shared/types.ts` — schema contract types (no Zod — shared between extension host and webview)
-- `src/providers/` — static provider implementations
-- `src/api.ts` — HTTP client for dynamic providers
-- `src/provider.ts` — CustomTextEditorProvider: document parsing, messaging bridge, generation proxy
-- `src/server.ts` — dev server process manager (modal-specific)
+- `src/adapters/` — port implementations (`ProviderPort`, `AssetStorePort`, `SecretStorePort`, `LoggerPort`)
+- `src/provider.ts` — `CustomTextEditorProvider`: document lifecycle, messaging bridge, webview management
+- `src/server.ts` — dev server process manager
+- `src/extension.ts` — bootstrap and command registration
 - `webview/lib/` — state reducer, typed messaging
 - `webview/components/fields/` — one renderer per `ParamDefinition.type`
 
