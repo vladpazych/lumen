@@ -1,11 +1,17 @@
-import { Input } from "../../kit/input"
-import type { NumberParam } from "@lumen/core/types"
+import { Input } from "@/components/ui/input";
+import type { NumberParam } from "@lumen/core/types";
 
-type Props = { param: NumberParam; value: number | ""; onChange: (v: number) => void }
+type Props = {
+  param: NumberParam;
+  value: number | "";
+  onChange: (v: number) => void;
+  id: string;
+};
 
-export function NumberField({ param, value, onChange }: Props) {
+export function NumberField({ param, value, onChange, id }: Props) {
   return (
     <Input
+      id={id}
       type="number"
       min={param.min}
       max={param.max}
@@ -13,9 +19,9 @@ export function NumberField({ param, value, onChange }: Props) {
       placeholder={param.default?.toString()}
       value={value}
       onChange={(e) => {
-        const n = parseFloat(e.target.value)
-        if (!isNaN(n)) onChange(n)
+        const n = parseFloat(e.target.value);
+        if (!isNaN(n)) onChange(n);
       }}
     />
-  )
+  );
 }

@@ -1,12 +1,23 @@
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../../kit/select"
-import type { SelectParam } from "@lumen/core/types"
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import type { SelectParam } from "@lumen/core/types";
 
-type Props = { param: SelectParam; value: string; onChange: (v: string) => void }
+type Props = {
+  param: SelectParam;
+  value: string;
+  onChange: (v: string) => void;
+  id: string;
+};
 
-export function SelectField({ param, value, onChange }: Props) {
+export function SelectField({ param, value, onChange, id }: Props) {
   return (
     <Select value={value || null} onValueChange={(v) => v && onChange(v)}>
-      <SelectTrigger>
+      <SelectTrigger id={id}>
         <SelectValue placeholder="Select..." />
       </SelectTrigger>
       <SelectContent>
@@ -17,5 +28,5 @@ export function SelectField({ param, value, onChange }: Props) {
         ))}
       </SelectContent>
     </Select>
-  )
+  );
 }

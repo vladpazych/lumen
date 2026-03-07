@@ -1,19 +1,23 @@
-import { Row } from "../../kit/row"
-import { Text } from "../../kit/text"
-import { Checkbox } from "../../kit/checkbox"
-import type { BooleanParam } from "@lumen/core/types"
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import type { BooleanParam } from "@lumen/core/types";
 
-type Props = { param: BooleanParam; value: boolean; onChange: (v: boolean) => void }
+type Props = {
+  param: BooleanParam;
+  value: boolean;
+  onChange: (v: boolean) => void;
+  id: string;
+};
 
-export function BooleanField({ param, value, onChange }: Props) {
+export function BooleanField({ param, value, onChange, id }: Props) {
   return (
-    <label className="cursor-pointer">
-      <Row spacing="snug">
-        <Checkbox checked={value} onCheckedChange={(checked) => onChange(checked as boolean)} />
-        <Text variant="caption" color="secondary">
-          {param.label ?? param.name}
-        </Text>
-      </Row>
+    <label htmlFor={id} className="flex items-center gap-2 cursor-pointer">
+      <Checkbox
+        id={id}
+        checked={value}
+        onCheckedChange={(checked) => onChange(checked as boolean)}
+      />
+      <Label htmlFor={id}>{param.label ?? param.name}</Label>
     </label>
-  )
+  );
 }

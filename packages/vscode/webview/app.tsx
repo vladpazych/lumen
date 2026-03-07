@@ -1,11 +1,9 @@
 import { useState } from "react";
-import { Stack } from "./kit/stack";
-import { Text } from "./kit/text";
-import { Accordion, AccordionItem } from "./kit/accordion";
-import { Header } from "./components/header";
-import { ConfigCard } from "./components/config-card";
-import { AddConfig } from "./components/add-config";
-import { useLumen } from "./lib/use-lumen";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { ServerGroup } from "@/components/server-group";
+import { AddConfigDialog } from "@/components/add-config-dialog";
+import { useLumen } from "@/lib/use-lumen";
 
 export function App() {
   const {
@@ -27,6 +25,7 @@ export function App() {
     requestGenerate,
     startDevServer,
     stopDevServer,
+    isDevServer,
     pickImage,
     pickImageByUri,
     isPickingImage,
@@ -38,7 +37,7 @@ export function App() {
   if (!ready) {
     return (
       <div className="mx-auto max-w-2xl p-4">
-        <Text color="secondary">Loading...</Text>
+        <p className="text-text-secondary">Loading...</p>
       </div>
     );
   }
@@ -48,116 +47,109 @@ export function App() {
   if (serverUrls.length === 0 && configs.length === 0) {
     return (
       <div className="mx-auto max-w-2xl p-4">
-        <Stack spacing="normal">
-          <Text variant="caption" color="secondary">
-            No servers configured. Add servers to{" "}
-            <span className="font-mono text-[11px] text-text-primary">
-              lumen.servers
-            </span>{" "}
-            in VS Code settings.
-          </Text>
-        </Stack>
+        <p className="text-[11px] text-text-secondary">
+          No servers configured. Add servers to{" "}
+          <span className="font-mono text-[11px] text-text-primary">
+            lumen.servers
+          </span>{" "}
+          in VS Code settings.
+        </p>
       </div>
     );
   }
 
-  // Derive initial expanded key from focusIndex
-  const focusedConfig = configs[focusIndex];
-  const initialKey = focusedConfig?.id ?? null;
+  // Group configs by server URL, seeded from schema keys
+  const serverConfigMap = new Map<string, typeof configs>();
+  for (const url of serverUrls) {
+    serverConfigMap.set(url, []);
+  }
+  for (const config of configs) {
+    const existing = serverConfigMap.get(config.service) ?? [];
+    existing.push(config);
+    serverConfigMap.set(config.service, existing);
+  }
 
   const handleAddConfig = (service: string, pipeline: string) => {
     addConfig(service, pipeline, schemas, configs);
     setShowAddForm(false);
-    // Focus the new config (will be at the end)
     setFocus(configs.length);
   };
 
+  let globalOffset = 0;
+
   return (
     <div className="mx-auto max-w-2xl p-4">
-      <Stack spacing="loose">
-        <Header
-          devServerUrl={devServerUrl}
-          devServerState={devServerState}
-          onStartServer={startDevServer}
-          onStopServer={stopDevServer}
-          onAddConfig={() => setShowAddForm(true)}
-        />
+      <div className="flex flex-col gap-6">
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAddForm(true)}
+          >
+            + Add
+          </Button>
+        </div>
+
+        {[...serverConfigMap.entries()].map(([serverUrl, serverConfigs], i) => {
+          const offset = globalOffset;
+          globalOffset += serverConfigs.length;
+          return (
+            <div key={serverUrl}>
+              {i > 0 && <Separator className="mb-4" />}
+              <ServerGroup
+                serverUrl={serverUrl}
+                serverName={serverNames[serverUrl]}
+                status={serverStatuses[serverUrl] ?? "disconnected"}
+                configs={serverConfigs}
+                pipelines={schemas[serverUrl] ?? []}
+                focusIndex={focusIndex}
+                generating={generating}
+                progress={progress}
+                results={results}
+                isPickingImage={isPickingImage}
+                imageThumbs={imageThumbs}
+                isDevServer={isDevServer(serverUrl)}
+                devServerState={devServerState}
+                onStartServer={startDevServer}
+                onStopServer={stopDevServer}
+                onParamChange={(
+                  configId,
+                  service,
+                  pipeline,
+                  paramName,
+                  value,
+                ) => updateParam(configId, service, pipeline, paramName, value)}
+                onGenerate={(configId, service, pipeline, params) =>
+                  requestGenerate(configId, service, pipeline, params)
+                }
+                onPickImage={(configId, service, pipeline, paramName) =>
+                  pickImage(configId, service, pipeline, paramName)
+                }
+                onPickImageByUri={(
+                  configId,
+                  service,
+                  pipeline,
+                  paramName,
+                  uri,
+                ) =>
+                  pickImageByUri(configId, service, pipeline, paramName, uri)
+                }
+                onRename={(configId, name) => updateName(configId, name)}
+                onFocus={setFocus}
+                globalIndexOffset={offset}
+              />
+            </div>
+          );
+        })}
 
         {configs.length === 0 && (
-          <Text variant="caption" color="tertiary">
+          <p className="text-[11px] text-text-tertiary">
             No configurations yet. Click + Add to get started.
-          </Text>
+          </p>
         )}
 
-        <Accordion defaultValue={initialKey ? [initialKey] : undefined}>
-          {configs.map((config, i) => {
-            const schema = schemas[config.service]?.find(
-              (p) => p.id === config.pipeline,
-            );
-            const status = serverStatuses[config.service] ?? "disconnected";
-            const isGen = generating[config.id] ?? false;
-            const prog = progress[config.id];
-            const result = results[config.id];
-
-            return (
-              <AccordionItem
-                key={config.id}
-                value={config.id}
-                onOpenChange={(open) => open && setFocus(i)}
-              >
-                <ConfigCard
-                  config={config}
-                  schema={schema}
-                  serverName={serverNames[config.service]}
-                  status={status}
-                  isGenerating={isGen}
-                  progress={prog}
-                  result={result}
-                  onParamChange={(paramName, value) =>
-                    updateParam(
-                      config.id,
-                      config.service,
-                      config.pipeline,
-                      paramName,
-                      value,
-                    )
-                  }
-                  onGenerate={(params) =>
-                    requestGenerate(
-                      config.id,
-                      config.service,
-                      config.pipeline,
-                      params,
-                    )
-                  }
-                  onPickImage={(paramName) =>
-                    pickImage(
-                      config.id,
-                      config.service,
-                      config.pipeline,
-                      paramName,
-                    )
-                  }
-                  onPickImageByUri={(paramName, uri) =>
-                    pickImageByUri(
-                      config.id,
-                      config.service,
-                      config.pipeline,
-                      paramName,
-                      uri,
-                    )
-                  }
-                  onRename={(name) => updateName(config.id, name)}
-                  isPickingImage={isPickingImage}
-                  imageThumbs={imageThumbs}
-                />
-              </AccordionItem>
-            );
-          })}
-        </Accordion>
-
         {showAddForm && (
-          <AddConfig
+          <AddConfigDialog
             schemas={schemas}
             serverStatuses={serverStatuses}
             serverNames={serverNames}
@@ -165,7 +157,7 @@ export function App() {
             onCancel={() => setShowAddForm(false)}
           />
         )}
-      </Stack>
+      </div>
     </div>
   );
 }

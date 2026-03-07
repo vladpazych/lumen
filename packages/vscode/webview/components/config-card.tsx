@@ -1,18 +1,14 @@
 import { useState, useRef, useEffect } from "react";
-import { Stack } from "../kit/stack";
-import { Row } from "../kit/row";
-import { Inset } from "../kit/inset";
-import { Text } from "../kit/text";
-import { StatusDot } from "../kit/status-dot";
-import { AccordionTrigger, AccordionPanel } from "../kit/accordion";
+import { AccordionTrigger, AccordionPanel } from "@/components/ui/accordion";
+import { StatusDot } from "@/components/status-dot";
 import type {
   LumenConfig,
   PipelineConfig,
   ServerStatus,
 } from "@lumen/core/types";
-import { GenerateButton } from "./generate-button";
-import { PipelineForm } from "./pipeline-form";
-import { ResultDisplay } from "./result-display";
+import { GenerateSection } from "@/components/generate-section";
+import { PipelineForm } from "@/components/pipeline-form";
+import { ResultDisplay } from "@/components/result-display";
 
 type Props = {
   config: LumenConfig;
@@ -103,7 +99,7 @@ export function ConfigCard({
   return (
     <>
       <AccordionTrigger>
-        <Row spacing="snug" align="center" grow>
+        <div className="flex flex-1 items-center gap-2">
           {editing ? (
             <input
               ref={inputRef}
@@ -120,34 +116,31 @@ export function ConfigCard({
             />
           ) : (
             <span
+              className="text-[13px] font-medium text-text-primary truncate"
               onDoubleClick={(e) => {
                 e.stopPropagation();
                 setDraft(title);
                 setEditing(true);
               }}
             >
-              <Text variant="caption" weight="medium" truncate>
-                {title}
-              </Text>
+              {title}
             </span>
           )}
           <StatusDot variant={statusVariant[status]} size="xs" />
-        </Row>
+        </div>
       </AccordionTrigger>
       <AccordionPanel>
         <div data-slot="config-card-collapsed">
           {summary && (
-            <Text variant="caption" color="tertiary" truncate>
-              {summary}
-            </Text>
+            <p className="text-[11px] text-text-tertiary truncate">{summary}</p>
           )}
         </div>
         {schema ? (
-          <Stack spacing="relaxed">
+          <div className="flex flex-col gap-4">
             {schema.description && (
-              <Text variant="caption" color="secondary">
+              <p className="text-[11px] text-text-secondary">
                 {schema.description}
-              </Text>
+              </p>
             )}
             <PipelineForm
               pipeline={schema}
@@ -158,7 +151,7 @@ export function ConfigCard({
               imageThumbs={imageThumbs}
               onPickImageByUri={onPickImageByUri}
             />
-            <GenerateButton
+            <GenerateSection
               loading={isGenerating}
               progress={progress}
               hasQuality={schema.params.some((p) => p.name === "quality")}
@@ -176,13 +169,13 @@ export function ConfigCard({
                 metadata={result.metadata}
               />
             )}
-          </Stack>
+          </div>
         ) : (
-          <Inset spacing="normal">
-            <Text variant="caption" color="tertiary">
+          <div className="p-3">
+            <p className="text-[11px] text-text-tertiary">
               Connect to {serverLabel} to edit
-            </Text>
-          </Inset>
+            </p>
+          </div>
         )}
       </AccordionPanel>
     </>
