@@ -21,12 +21,14 @@ export function serializeConfigs(configs: LumenConfig[]): string {
   return JSON.stringify(configs, null, 2) + "\n";
 }
 
-/** Assign UUIDs to configs missing an id. Returns true if any were assigned. */
+/** Assign slug ids to configs missing an id. Returns true if any were assigned. */
 export function ensureIds(configs: LumenConfig[]): boolean {
   let assigned = false;
+  const existingIds = new Set(configs.map((c) => c.id).filter(Boolean));
   for (const config of configs) {
     if (!config.id) {
-      config.id = crypto.randomUUID();
+      config.id = generateSlugId(config.pipeline, existingIds);
+      existingIds.add(config.id);
       assigned = true;
     }
   }
@@ -53,12 +55,10 @@ export function updateName(
   configId: string,
   name: string,
 ): LumenConfig[] {
-  return configs.map((c) =>
-    c.id === configId ? { ...c, name } : c,
-  );
+  return configs.map((c) => (c.id === configId ? { ...c, name } : c));
 }
 
-/** Create a new config with auto-generated name based on dupe count */
+/** Create a new config with auto-generated slug id and name */
 export function createConfig(
   service: string,
   pipeline: string,
@@ -72,8 +72,10 @@ export function createConfig(
   ).length;
   const name =
     dupeCount === 0 ? displayName : `${displayName} #${dupeCount + 1}`;
+
+  const existingIds = new Set(existingConfigs.map((c) => c.id));
   return {
-    id: crypto.randomUUID(),
+    id: generateSlugId(pipeline, existingIds),
     name,
     service,
     pipeline,
@@ -81,17 +83,37 @@ export function createConfig(
   };
 }
 
+/** Generate a kebab-case slug id unique within the given set */
+export function generateSlugId(base: string, existingIds: Set<string>): string {
+  const slug = toKebab(base);
+  if (!existingIds.has(slug)) return slug;
+  for (let i = 2; ; i++) {
+    const candidate = `${slug}-${i}`;
+    if (!existingIds.has(candidate)) return candidate;
+  }
+}
+
+function toKebab(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 // Old nested format: { "serverUrl": { "pipelineId": { params } } }
 function migrateOldFormat(raw: Record<string, unknown>): LumenConfig[] {
   const configs: LumenConfig[] = [];
+  const existingIds = new Set<string>();
   for (const [key, value] of Object.entries(raw)) {
     if (key.startsWith("_") || typeof value !== "object" || value === null)
       continue;
     const pipelines = value as Record<string, unknown>;
     for (const [pipelineId, params] of Object.entries(pipelines)) {
       if (typeof params !== "object" || params === null) continue;
+      const id = generateSlugId(pipelineId, existingIds);
+      existingIds.add(id);
       configs.push({
-        id: crypto.randomUUID(),
+        id,
         service: key,
         pipeline: pipelineId,
         params: params as Record<string, unknown>,

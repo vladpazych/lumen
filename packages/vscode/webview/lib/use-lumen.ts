@@ -4,6 +4,7 @@ import type {
   PipelineConfig,
   ServerStatus,
 } from "@lumen/core/types";
+import { createConfig } from "@lumen/core/domain/config";
 import type { DevServerState } from "./messaging";
 import type { ExtensionMessage } from "./messaging";
 import { vscode } from "./vscode";
@@ -341,20 +342,7 @@ export function useLumen() {
       schemas: Record<string, PipelineConfig[]>,
       existingConfigs: LumenConfig[],
     ) => {
-      const schema = schemas[service]?.find((p) => p.id === pipeline);
-      const displayName = schema?.name ?? pipeline;
-      const dupeCount = existingConfigs.filter(
-        (c) => c.service === service && c.pipeline === pipeline,
-      ).length;
-      const name =
-        dupeCount === 0 ? displayName : `${displayName} #${dupeCount + 1}`;
-      const config: LumenConfig = {
-        id: crypto.randomUUID(),
-        name,
-        service,
-        pipeline,
-        params: {},
-      };
+      const config = createConfig(service, pipeline, schemas, existingConfigs);
       dispatch({ type: "addConfig", config });
       vscode.postMessage({ type: "addConfig", config });
     },

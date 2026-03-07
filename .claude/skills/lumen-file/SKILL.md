@@ -12,7 +12,7 @@ JSON array of config objects. Each config targets one pipeline on one service.
 ```json
 [
   {
-    "id": "uuid-string",
+    "id": "txt2img",
     "name": "Display Name",
     "service": "http://localhost:8000",
     "pipeline": "txt2img",
@@ -27,13 +27,13 @@ JSON array of config objects. Each config targets one pipeline on one service.
 
 ### Fields
 
-| Field      | Type   | Required | Description                                                                   |
-| :--------- | :----- | :------- | :---------------------------------------------------------------------------- |
-| `id`       | string | yes      | Stable UUID. Generate with `crypto.randomUUID()`. Never reuse across configs. |
-| `name`     | string | no       | Display name. Auto-generated from pipeline name if omitted.                   |
-| `service`  | string | yes      | Server URL (`http://...`) or virtual provider (`provider://fal`).             |
-| `pipeline` | string | yes      | Pipeline ID on that service (e.g., `txt2img`, `nano-banana`).                 |
-| `params`   | object | yes      | Key-value pairs matching the pipeline's `ParamDefinition[]` schema.           |
+| Field      | Type   | Required | Description                                                                                                               |
+| :--------- | :----- | :------- | :------------------------------------------------------------------------------------------------------------------------ |
+| `id`       | string | yes      | Kebab-case slug, unique within the file. Derive from pipeline id (e.g., `nano-banana`). Append `-2`, `-3` for duplicates. |
+| `name`     | string | no       | Display name. Auto-generated from pipeline name if omitted.                                                               |
+| `service`  | string | yes      | Server URL (`http://...`) or virtual provider (`provider://fal`).                                                         |
+| `pipeline` | string | yes      | Pipeline ID on that service (e.g., `txt2img`, `nano-banana`).                                                             |
+| `params`   | object | yes      | Key-value pairs matching the pipeline's `ParamDefinition[]` schema.                                                       |
 
 ### Param value types
 
@@ -54,7 +54,7 @@ Match param values to their schema type:
 
 ## Rules
 
-1. Always generate a fresh UUID for `id` when adding a config. Never copy an existing id.
+1. `id` is a kebab-case slug derived from the pipeline id. Must be unique within the file. For duplicates, append `-2`, `-3`, etc.
 2. Array order = display order in the editor.
 3. Multiple configs for the same service + pipeline pair are allowed (different param sets).
 4. Image/video paths are relative to the `.lumen` file location.
@@ -84,7 +84,7 @@ Single config, minimal:
 ```json
 [
   {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "id": "nano-banana",
     "service": "provider://fal",
     "pipeline": "nano-banana",
     "params": {
@@ -99,7 +99,7 @@ Multiple configs:
 ```json
 [
   {
-    "id": "11111111-1111-1111-1111-111111111111",
+    "id": "nano-banana-pro",
     "name": "Portrait shot",
     "service": "provider://fal",
     "pipeline": "nano-banana-pro",
@@ -111,7 +111,7 @@ Multiple configs:
     }
   },
   {
-    "id": "22222222-2222-2222-2222-222222222222",
+    "id": "nano-banana-2",
     "name": "Landscape variation",
     "service": "provider://fal",
     "pipeline": "nano-banana",
