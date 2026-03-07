@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
 import { LumenEditorProvider } from "./provider";
-import { promptAndStoreApiKey } from "./adapters/fal-provider";
 import { ServerManager, getServers, isServerReachable } from "./server";
 
 function activeDocumentUri(): vscode.Uri | undefined {
@@ -35,9 +34,6 @@ export function activate(context: vscode.ExtensionContext): void {
     provider.onDevServerStateChange(serverManager.getState(initialSource));
   }
 
-  // Load fal API key from secrets (if previously set)
-  provider.refreshFalApiKey();
-
   context.subscriptions.push(
     LumenEditorProvider.register(provider),
 
@@ -63,11 +59,6 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("lumen.stopServer", () =>
       serverManager.stop(devSourcePath()),
     ),
-
-    vscode.commands.registerCommand("lumen.setFalApiKey", async () => {
-      const set = await promptAndStoreApiKey(context.secrets);
-      if (set) await provider.refreshFalApiKey();
-    }),
 
     output,
   );

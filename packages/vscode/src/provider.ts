@@ -1,4 +1,10 @@
-import { appendFileSync, existsSync, readFileSync, readdirSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import * as vscode from "vscode";
 import type {
@@ -23,14 +29,8 @@ import type {
   WebviewMessage,
 } from "../webview/lib/messaging";
 import { httpProvider } from "./adapters/http-provider";
-import {
-  FAL_PROVIDER_URL,
-  falProvider,
-  getApiKey,
-} from "./adapters/fal-provider";
 import { vscodeAssetStore } from "./adapters/vscode-assets";
 import { vscodeLogger } from "./adapters/vscode-logger";
-import { vscodeSecretStore } from "./adapters/vscode-secrets";
 import { type DevServerState, getServers } from "./server";
 
 export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
@@ -40,7 +40,6 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   private serverStatuses: StatusCache = {};
   private devServerState: DevServerState = "stopped";
   private subscriptions: Map<string, () => void> = new Map();
-  private falApiKey: string | null = null;
   private service: EditorService;
   private providers: Record<string, ProviderPort> = {};
   private readonly log: vscode.OutputChannel;
@@ -75,7 +74,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     this.service = editorService({
       providers: this.providers,
       assets,
-      secrets: vscodeSecretStore(context.secrets),
+      secrets: { get: async () => undefined, set: async () => {} },
       logger,
     });
   }
@@ -88,18 +87,6 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     for (const s of getServers()) {
       this.providers[s.url] = httpProvider(s.url);
     }
-    if (this.falApiKey) {
-      this.providers[FAL_PROVIDER_URL] = falProvider({
-        apiKey: () => this.falApiKey,
-        storage: this.context.globalState,
-        resolveImagePath: (rel) => {
-          // Resolve relative to the first open document
-          const panel = this.panels.values().next().value;
-          if (!panel) return rel;
-          return rel;
-        },
-      });
-    }
   }
 
   private getDevServer() {
@@ -107,9 +94,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   }
 
   private getAllServerUrls(): string[] {
-    const urls = getServers().map((s) => s.url);
-    if (this.falApiKey) urls.push(FAL_PROVIDER_URL);
-    return urls;
+    return getServers().map((s) => s.url);
   }
 
   private getServerNames(): Record<string, string> {
@@ -118,23 +103,6 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
       names[s.url] = s.name;
     }
     return names;
-  }
-
-  async refreshFalApiKey(): Promise<void> {
-    const prev = this.falApiKey;
-    this.falApiKey = (await getApiKey(this.context.secrets)) ?? null;
-    this.rebuildProviders();
-    if (this.falApiKey && !prev) {
-      this.refreshSchemas(FAL_PROVIDER_URL);
-    } else if (!this.falApiKey && prev) {
-      delete this.schemas[FAL_PROVIDER_URL];
-      delete this.serverStatuses[FAL_PROVIDER_URL];
-      this.broadcastToAll({
-        type: "schemaRefresh",
-        serverUrl: FAL_PROVIDER_URL,
-        pipelines: [],
-      });
-    }
   }
 
   onDevServerStateChange(state: DevServerState): void {
@@ -254,21 +222,18 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
         case "generateRequest": {
           const { requestId, configId, service, pipeline, params } = msg;
           const docDir = dirname(document.uri.fsPath);
-
-          // Update fal provider's image resolver for this document
-          if (this.providers[FAL_PROVIDER_URL]) {
-            this.providers[FAL_PROVIDER_URL] = falProvider({
-              apiKey: () => this.falApiKey,
-              storage: this.context.globalState,
-              resolveImagePath: (rel) => resolve(docDir, rel),
-            });
-          }
+          const resolved = this.resolveImageParams(
+            service,
+            pipeline,
+            params,
+            docDir,
+          );
 
           try {
             const response = await this.service.generate(
               service,
               pipeline,
-              params,
+              resolved,
               document.uri.fsPath,
               (progress) => {
                 this.postMessage(webviewPanel, {
@@ -516,6 +481,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
           this.log.appendLine(`[sse] ${url} schemas: ${ids}`);
           this.appendToLogFile(`[sse] ${url} schemas: ${ids}\n`);
           this.schemas[url] = schemas;
+          this.writeSchemaFile();
           this.broadcastToAll({
             type: "schemaRefresh",
             serverUrl: url,
@@ -551,7 +517,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
       });
       this.subscriptions.set(url, dispose);
     } else {
-      // Non-SSE providers (e.g. fal) — one-shot schema fetch
+      // Non-SSE providers — one-shot schema fetch
       this.refreshSchemas(url);
     }
   }
@@ -571,6 +537,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     );
     this.schemas = result.schemas;
     this.serverStatuses = result.statuses;
+    this.writeSchemaFile();
     this.broadcastToAll({
       type: "schemaRefresh",
       serverUrl,
@@ -597,6 +564,33 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
       text,
     );
     await vscode.workspace.applyEdit(edit);
+  }
+
+  // --- Param resolution ---
+
+  /** Convert local image paths to data URIs so servers can receive them. */
+  private resolveImageParams(
+    service: string,
+    pipelineId: string,
+    params: Record<string, unknown>,
+    docDir: string,
+  ): Record<string, unknown> {
+    const schema = this.schemas[service]?.find((p) => p.id === pipelineId);
+    if (!schema) return params;
+    const resolved = { ...params };
+    for (const param of schema.params) {
+      if (param.type !== "image") continue;
+      const val = resolved[param.name];
+      if (typeof val !== "string" || !val) continue;
+      if (val.startsWith("http") || val.startsWith("data:")) continue;
+      const absPath = resolve(docDir, val);
+      if (!existsSync(absPath)) continue;
+      const bytes = readFileSync(absPath);
+      const ext = absPath.split(".").pop()?.toLowerCase() ?? "png";
+      const mime = ext === "jpg" ? "image/jpeg" : `image/${ext}`;
+      resolved[param.name] = `data:${mime};base64,${bytes.toString("base64")}`;
+    }
+    return resolved;
   }
 
   // --- VS Code UI utilities ---
@@ -727,6 +721,23 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     try {
       const clean = text.replace(LumenEditorProvider.ANSI_RE, "");
       appendFileSync(logFile, clean);
+    } catch {}
+  }
+
+  // --- Schema file export ---
+
+  private getSchemaFilePath(): string | undefined {
+    const p = vscode.workspace
+      .getConfiguration("lumen")
+      .get<string>("schemaFile");
+    return p || undefined;
+  }
+
+  private writeSchemaFile(): void {
+    const schemaFile = this.getSchemaFilePath();
+    if (!schemaFile) return;
+    try {
+      writeFileSync(schemaFile, JSON.stringify(this.schemas, null, 2) + "\n");
     } catch {}
   }
 
