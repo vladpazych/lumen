@@ -1,13 +1,33 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import * as vscode from "vscode";
-import type { LumenConfig, PipelineConfig, ServerStatus } from "@lumen/core/types";
+import type {
+  LumenConfig,
+  PipelineConfig,
+  ServerStatus,
+} from "@lumen/core/types";
 import type { ProviderPort } from "@lumen/core/ports";
-import { parseConfigs, serializeConfigs, ensureIds } from "@lumen/core/domain/config";
-import { editorService, type EditorService, type SchemaCache, type StatusCache } from "@lumen/core/editor";
-import type { ExtensionMessage, WebviewMessage } from "../webview/lib/messaging";
+import {
+  parseConfigs,
+  serializeConfigs,
+  ensureIds,
+} from "@lumen/core/domain/config";
+import {
+  editorService,
+  type EditorService,
+  type SchemaCache,
+  type StatusCache,
+} from "@lumen/core/editor";
+import type {
+  ExtensionMessage,
+  WebviewMessage,
+} from "../webview/lib/messaging";
 import { httpProvider } from "./adapters/http-provider";
-import { FAL_PROVIDER_URL, falProvider, getApiKey } from "./adapters/fal-provider";
+import {
+  FAL_PROVIDER_URL,
+  falProvider,
+  getApiKey,
+} from "./adapters/fal-provider";
 import { vscodeAssetStore } from "./adapters/vscode-assets";
 import { vscodeLogger } from "./adapters/vscode-logger";
 import { vscodeSecretStore } from "./adapters/vscode-secrets";
@@ -49,9 +69,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
         // Use the first available panel for URI conversion
         const panel = this.panels.values().next().value;
         if (!panel) return filePath;
-        return panel.webview
-          .asWebviewUri(vscode.Uri.file(filePath))
-          .toString();
+        return panel.webview.asWebviewUri(vscode.Uri.file(filePath)).toString();
       },
     });
 
@@ -191,7 +209,11 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
           for (const config of configs) {
             for (const val of Object.values(config.params)) {
               if (typeof val === "string" && val && !val.startsWith("http")) {
-                const uri = this.imageThumbUri(val, docDir, webviewPanel.webview);
+                const uri = this.imageThumbUri(
+                  val,
+                  docDir,
+                  webviewPanel.webview,
+                );
                 if (uri) thumbs[val] = uri;
               }
             }
@@ -336,13 +358,18 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
         }
 
         case "pickImageByUri": {
-          const { requestId, configId, service, pipeline, paramName, uri } = msg;
+          const { requestId, configId, service, pipeline, paramName, uri } =
+            msg;
           try {
             const docDir = dirname(document.uri.fsPath);
             const fsPath = vscode.Uri.parse(uri).fsPath;
             const rel = relative(docDir, fsPath);
             const relPath = rel.startsWith(".") ? rel : `./${rel}`;
-            const thumbUri = this.imageThumbUri(relPath, docDir, webviewPanel.webview);
+            const thumbUri = this.imageThumbUri(
+              relPath,
+              docDir,
+              webviewPanel.webview,
+            );
             this.postMessage(webviewPanel, {
               type: "imagePicked",
               requestId,
@@ -404,18 +431,28 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
       }
     });
 
-    const configListener = vscode.workspace.onDidChangeConfiguration((event) => {
-      if (event.affectsConfiguration("lumen.servers")) {
-        this.rebuildProviders();
-        for (const url of this.getAllServerUrls()) {
-          if (!this.schemas[url]) this.refreshSchemas(url);
+    const configListener = vscode.workspace.onDidChangeConfiguration(
+      (event) => {
+        if (event.affectsConfiguration("lumen.servers")) {
+          this.rebuildProviders();
+          for (const url of this.getAllServerUrls()) {
+            if (!this.schemas[url]) this.refreshSchemas(url);
+          }
         }
-      }
-    });
+      },
+    );
+
+    // Re-sync webview when the .lumen file changes on disk (external edits)
+    const docWatcher = vscode.workspace.createFileSystemWatcher(
+      document.uri.fsPath,
+    );
+    const docListener = docWatcher.onDidChange(() => postConfigs());
 
     // Reload webview when dist/webview rebuilds (dev mode)
     const distPath = join(this.context.extensionPath, "dist", "webview");
-    const distWatcher = vscode.workspace.createFileSystemWatcher(join(distPath, "**/*"));
+    const distWatcher = vscode.workspace.createFileSystemWatcher(
+      join(distPath, "**/*"),
+    );
     const distListener = distWatcher.onDidChange(() => {
       webviewPanel.webview.html = this.getHtml(webviewPanel.webview);
     });
@@ -424,6 +461,8 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
       this.panels.delete(webviewPanel);
       changeListener.dispose();
       configListener.dispose();
+      docListener.dispose();
+      docWatcher.dispose();
       distListener.dispose();
       distWatcher.dispose();
       if (this.panels.size === 0) this.stopHealthPolling();
@@ -500,7 +539,9 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
 
   // --- VS Code UI utilities ---
 
-  private pickImageWithFileBrowser(docDir: string): Promise<string | undefined> {
+  private pickImageWithFileBrowser(
+    docDir: string,
+  ): Promise<string | undefined> {
     type PickItem = vscode.QuickPickItem & {
       dirName?: string;
       imagePath?: string;
@@ -596,7 +637,10 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     return webview.asWebviewUri(vscode.Uri.file(absPath)).toString();
   }
 
-  private postMessage(panel: vscode.WebviewPanel, message: ExtensionMessage): void {
+  private postMessage(
+    panel: vscode.WebviewPanel,
+    message: ExtensionMessage,
+  ): void {
     panel.webview.postMessage(message);
   }
 
