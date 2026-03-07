@@ -16,7 +16,7 @@ export function IntegerField({ param, value, onChange, id }: Props) {
       min={param.min}
       max={param.max}
       step={1}
-      placeholder={param.default?.toString()}
+      placeholder={param.placeholder ?? param.default?.toString()}
       value={value}
       onChange={(e) => {
         const n = parseInt(e.target.value, 10);

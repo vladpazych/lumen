@@ -16,7 +16,7 @@ export function NumberField({ param, value, onChange, id }: Props) {
       min={param.min}
       max={param.max}
       step={param.step ?? 0.1}
-      placeholder={param.default?.toString()}
+      placeholder={param.placeholder ?? param.default?.toString()}
       value={value}
       onChange={(e) => {
         const n = parseFloat(e.target.value);

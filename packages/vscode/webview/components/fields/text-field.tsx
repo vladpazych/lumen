@@ -15,7 +15,7 @@ export function TextField({ param, value, onChange, id }: Props) {
       <Textarea
         id={id}
         rows={3}
-        placeholder={param.default}
+        placeholder={param.placeholder ?? param.default}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />

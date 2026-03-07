@@ -13,6 +13,9 @@ class TextParam(BaseModel):
     label: str | None = None
     required: bool | None = None
     group: str | None = None
+    placeholder: str | None = None
+    description: str | None = None
+    hidden: bool | None = None
     default: str | None = None
     multiline: bool | None = None
 
@@ -23,6 +26,9 @@ class NumberParam(BaseModel):
     label: str | None = None
     required: bool | None = None
     group: str | None = None
+    placeholder: str | None = None
+    description: str | None = None
+    hidden: bool | None = None
     default: float | None = None
     min: float | None = None
     max: float | None = None
@@ -35,6 +41,9 @@ class IntegerParam(BaseModel):
     label: str | None = None
     required: bool | None = None
     group: str | None = None
+    placeholder: str | None = None
+    description: str | None = None
+    hidden: bool | None = None
     default: int | None = None
     min: int | None = None
     max: int | None = None
@@ -46,6 +55,9 @@ class BooleanParam(BaseModel):
     label: str | None = None
     required: bool | None = None
     group: str | None = None
+    placeholder: str | None = None
+    description: str | None = None
+    hidden: bool | None = None
     default: bool | None = None
 
 
@@ -60,6 +72,9 @@ class SelectParam(BaseModel):
     label: str | None = None
     required: bool | None = None
     group: str | None = None
+    placeholder: str | None = None
+    description: str | None = None
+    hidden: bool | None = None
     options: list[SelectOption] = []
     default: str | None = None
 
@@ -70,6 +85,9 @@ class SeedParam(BaseModel):
     label: str | None = None
     required: bool | None = None
     group: str | None = None
+    placeholder: str | None = None
+    description: str | None = None
+    hidden: bool | None = None
     default: int | None = None
 
 
@@ -90,6 +108,9 @@ class DimensionsParam(BaseModel):
     label: str | None = None
     required: bool | None = None
     group: str | None = None
+    placeholder: str | None = None
+    description: str | None = None
+    hidden: bool | None = None
     default: Dimensions | None = None
     presets: list[DimensionPreset] | None = None
 
@@ -100,6 +121,9 @@ class ImageParam(BaseModel):
     label: str | None = None
     required: bool | None = None
     group: str | None = None
+    placeholder: str | None = None
+    description: str | None = None
+    hidden: bool | None = None
 
 
 class VideoParam(BaseModel):
@@ -108,6 +132,9 @@ class VideoParam(BaseModel):
     label: str | None = None
     required: bool | None = None
     group: str | None = None
+    placeholder: str | None = None
+    description: str | None = None
+    hidden: bool | None = None
 
 
 class PromptParam(BaseModel):
@@ -116,6 +143,9 @@ class PromptParam(BaseModel):
     label: str | None = None
     required: bool | None = None
     group: str | None = None
+    placeholder: str | None = None
+    description: str | None = None
+    hidden: bool | None = None
     default: str | None = None
 
 

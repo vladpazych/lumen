@@ -13,7 +13,7 @@ export function PromptField({ param, value, onChange, id }: Props) {
     <Textarea
       id={id}
       rows={4}
-      placeholder={param.default ?? "Enter prompt..."}
+      placeholder={param.placeholder ?? param.default ?? "Enter prompt..."}
       value={value}
       onChange={(e) => onChange(e.target.value)}
     />

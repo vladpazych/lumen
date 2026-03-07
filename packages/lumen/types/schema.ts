@@ -5,6 +5,9 @@ type BaseParam = {
   label?: string;
   required?: boolean;
   group?: string;
+  placeholder?: string;
+  description?: string;
+  hidden?: boolean;
 };
 
 export type TextParam = BaseParam & {

@@ -1,5 +1,11 @@
 import { useId } from "react";
+import { Info } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { ParamDefinition } from "@lumen/core/types";
 import { BooleanField } from "@/components/fields/boolean-field";
 import { DimensionsField } from "@/components/fields/dimensions-field";
@@ -31,13 +37,27 @@ export function ParamField({
   thumbnailUri,
   onDropUri,
 }: Props) {
+  if (param.hidden) return null;
+
   const fieldId = useId();
   const showLabel = param.type !== "boolean";
   const label = param.label ?? param.name;
 
   return (
     <div className="flex flex-col gap-1.5">
-      {showLabel && <Label htmlFor={fieldId}>{label}</Label>}
+      {showLabel && (
+        <div className="flex items-center gap-1">
+          <Label htmlFor={fieldId}>{label}</Label>
+          {param.description && (
+            <Tooltip>
+              <TooltipTrigger>
+                <Info className="size-3 text-text-tertiary" />
+              </TooltipTrigger>
+              <TooltipContent>{param.description}</TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      )}
       {renderField(
         param,
         value,
