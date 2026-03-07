@@ -146,11 +146,7 @@ export function App() {
               + Add
             </Button>
           </div>
-          {devServerLog.length > 0 && (
-            <div className="px-3 pb-2">
-              <ServerLog lines={devServerLog} />
-            </div>
-          )}
+          {devServerLog.length > 0 && <ServerLog lines={devServerLog} />}
         </div>
 
         {/* Config cards */}
