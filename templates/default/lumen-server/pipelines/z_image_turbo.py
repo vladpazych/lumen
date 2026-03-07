@@ -70,6 +70,7 @@ gpu_image = (
         "accelerate>=0.30.0",
         "sentencepiece>=0.2.0",
         "safetensors>=0.4.0",
+        "pydantic>=2.0.0",
     )
     .run_commands(
         "python -c \""
