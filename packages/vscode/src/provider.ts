@@ -118,6 +118,11 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     this.connection.onUrlDetected(source, url);
   }
 
+  clearDevLog(): void {
+    this.devLogBuffer.length = 0;
+    this.fileLog.clear();
+  }
+
   broadcastDevServerLog(text: string): void {
     this.fileLog.append(text);
 

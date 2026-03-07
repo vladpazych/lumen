@@ -1,4 +1,4 @@
-import { appendFileSync } from "node:fs";
+import { appendFileSync, writeFileSync } from "node:fs";
 import * as vscode from "vscode";
 import type { LoggerPort } from "@lumen/core/ports";
 
@@ -17,6 +17,7 @@ const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b].*?\x07/g;
 
 export type FileLogger = {
   append(text: string): void;
+  clear(): void;
 };
 
 export function fileLogger(getPath: () => string | undefined): FileLogger {
@@ -26,6 +27,13 @@ export function fileLogger(getPath: () => string | undefined): FileLogger {
       if (!path) return;
       try {
         appendFileSync(path, text.replace(ANSI_RE, ""));
+      } catch {}
+    },
+    clear(): void {
+      const path = getPath();
+      if (!path) return;
+      try {
+        writeFileSync(path, "");
       } catch {}
     },
   };

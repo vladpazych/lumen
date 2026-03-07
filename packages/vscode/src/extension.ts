@@ -24,6 +24,9 @@ export function activate(context: vscode.ExtensionContext): void {
     (text) => {
       provider.broadcastDevServerLog(text);
     },
+    () => {
+      provider.clearDevLog();
+    },
     (source, url) => {
       provider.onServerUrlDetected(source, url);
     },

@@ -72,6 +72,7 @@ export class ServerManager {
   private readonly output: vscode.OutputChannel;
   private readonly onChange: () => void;
   private readonly onLog: (text: string) => void;
+  private readonly onLogClear: () => void;
   private readonly onUrl: (sourcePath: string, url: string) => void;
   private trackedState: DevServerState = "stopped";
 
@@ -79,11 +80,13 @@ export class ServerManager {
     output: vscode.OutputChannel,
     onChange: () => void,
     onLog: (text: string) => void,
+    onLogClear: () => void,
     onUrl: (sourcePath: string, url: string) => void,
   ) {
     this.output = output;
     this.onChange = onChange;
     this.onLog = onLog;
+    this.onLogClear = onLogClear;
     this.onUrl = onUrl;
   }
 
@@ -112,6 +115,7 @@ export class ServerManager {
     }
 
     ensureAuthKey(sourcePath);
+    this.onLogClear();
     this.output.appendLine(
       `[dev] Syncing deps and starting server in ${sourcePath}`,
     );
