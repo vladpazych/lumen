@@ -56,12 +56,33 @@ var vscode5 = __toESM(require("vscode"));
 // ../lumen/domain/generation.ts
 var POLL_INTERVAL_MS = 1500;
 var MAX_POLL_ATTEMPTS = 200;
+var MAX_CONSECUTIVE_ERRORS = 3;
 async function pollUntilDone(provider, pipelineId, runId, onProgress) {
+  let consecutiveErrors = 0;
   for (let i = 0;i < MAX_POLL_ATTEMPTS; i++) {
     await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-    const status = await provider.pollRun(pipelineId, runId);
-    if (status.status === "running" || status.status === "queued") {
-      onProgress?.(status.status === "running" ? status.progress ?? 0 : 0);
+    let status;
+    try {
+      status = await provider.pollRun(pipelineId, runId);
+      consecutiveErrors = 0;
+    } catch (err) {
+      consecutiveErrors++;
+      if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return {
+          status: "failed",
+          runId,
+          error: { code: "POLL_ERROR", message: msg }
+        };
+      }
+      continue;
+    }
+    if (status.status === "queued") {
+      onProgress?.({ progress: 0, stage: "queued" });
+      continue;
+    }
+    if (status.status === "running") {
+      onProgress?.({ progress: status.progress ?? 0, stage: "running" });
       continue;
     }
     return status;
@@ -383,15 +404,7 @@ function httpProvider(serverUrl, authKey) {
       });
       if (!res.ok)
         throw new Error(`GET /pipelines failed: ${res.status}`);
-      const manifests = await res.json();
-      return Promise.all(manifests.map(async (m) => {
-        const r = await fetch(`${serverUrl}/pipelines/${m.id}`, {
-          headers: authHeaders
-        });
-        if (!r.ok)
-          throw new Error(`GET /pipelines/${m.id} failed: ${r.status}`);
-        return await r.json();
-      }));
+      return await res.json();
     },
     async generate(pipelineId, params) {
       const res = await fetch(`${serverUrl}/pipelines/${pipelineId}/generate`, {
@@ -510,11 +523,11 @@ class ServerManager {
       return;
     }
     ensureAuthKey(sourcePath);
-    this.output.appendLine(`[dev] Starting bun dev in ${sourcePath}`);
+    this.output.appendLine(`[dev] Syncing deps and starting server in ${sourcePath}`);
     this.output.show(true);
     this.setState("starting");
     const shell = process.env.SHELL || "/bin/zsh";
-    const child = import_node_child_process.spawn(shell, ["-l", "-c", "exec bun dev"], {
+    const child = import_node_child_process.spawn(shell, ["-l", "-c", "uv sync && exec bun dev"], {
       cwd: sourcePath,
       stdio: ["ignore", "pipe", "pipe"],
       detached: true
@@ -968,14 +981,15 @@ async function handleGenerate(ctx, msg) {
   const docDir = import_node_path5.dirname(document.uri.fsPath);
   const resolved = resolveImageParams(connection.schemas, svc, pipeline, params, docDir);
   try {
-    const response = await service.generate(svc, pipeline, resolved, document.uri.fsPath, (progress) => {
+    const response = await service.generate(svc, pipeline, resolved, document.uri.fsPath, (info) => {
       ctx.post({
         type: "generateProgress",
         requestId,
         configId,
         service: svc,
         pipeline,
-        progress
+        progress: info.progress,
+        stage: info.stage
       });
     });
     if (response.status === "completed") {
@@ -1317,5 +1331,5 @@ function activate(context) {
 }
 function deactivate() {}
 
-//# debugId=A5CDC8984732578964756E2164756E21
+//# debugId=DC983F3BDB04CAFC64756E2164756E21
 //# sourceMappingURL=extension.js.map
