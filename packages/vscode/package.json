@@ -62,6 +62,11 @@
     "configuration": {
       "title": "Lumen",
       "properties": {
+        "lumen.logFile": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to mirror all Lumen logs (extension + dev server). Useful for LLM-assisted debugging. Leave empty to disable."
+        },
         "lumen.servers": {
           "type": "array",
           "items": {

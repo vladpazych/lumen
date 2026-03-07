@@ -1,10 +1,4 @@
-import {
-  appendFileSync,
-  existsSync,
-  readFileSync,
-  readdirSync,
-  writeFileSync,
-} from "node:fs";
+import { appendFileSync, existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import * as vscode from "vscode";
 import type {
@@ -42,7 +36,6 @@ import { type DevServerState, getServers } from "./server";
 export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   private static readonly viewType = "lumen.stateViewer";
   private readonly panels: Set<vscode.WebviewPanel> = new Set();
-  private readonly logFiles: Set<string> = new Set();
   private schemas: SchemaCache = {};
   private serverStatuses: StatusCache = {};
   private devServerState: DevServerState = "stopped";
@@ -165,18 +158,9 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     }
   }
 
-  private static readonly ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b].*?\x07/g;
-
   broadcastDevServerLog(text: string): void {
     this.broadcastToAll({ type: "devServerLog", text });
-    if (this.logFiles.size > 0) {
-      const clean = text.replace(LumenEditorProvider.ANSI_RE, "");
-      for (const path of this.logFiles) {
-        try {
-          appendFileSync(path, clean);
-        } catch {}
-      }
-    }
+    this.appendToLogFile(text);
   }
 
   async resolveCustomTextEditor(
@@ -185,11 +169,6 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   ): Promise<void> {
     this.panels.add(webviewPanel);
     this.rebuildProviders();
-
-    // Companion log file — truncated on each session
-    const logPath = document.uri.fsPath + ".log";
-    writeFileSync(logPath, "");
-    this.logFiles.add(logPath);
 
     const resourceRoots = [
       vscode.Uri.file(join(this.context.extensionPath, "dist", "webview")),
@@ -506,7 +485,6 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
 
     webviewPanel.onDidDispose(() => {
       this.panels.delete(webviewPanel);
-      this.logFiles.delete(logPath);
       changeListener.dispose();
       configListener.dispose();
       docListener.dispose();
@@ -531,8 +509,12 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     if (!provider) return;
 
     if (provider.subscribe) {
+      this.log.appendLine(`[sse] subscribing to ${url}`);
       const dispose = provider.subscribe({
         onSchemas: (schemas) => {
+          const ids = schemas.map((s) => s.id).join(", ");
+          this.log.appendLine(`[sse] ${url} schemas: ${ids}`);
+          this.appendToLogFile(`[sse] ${url} schemas: ${ids}\n`);
           this.schemas[url] = schemas;
           this.broadcastToAll({
             type: "schemaRefresh",
@@ -541,6 +523,8 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
           });
         },
         onStatus: (status) => {
+          this.log.appendLine(`[sse] ${url} ${status}`);
+          this.appendToLogFile(`[sse] ${url} ${status}\n`);
           this.serverStatuses[url] = status;
           this.broadcastToAll({ type: "serverStatus", serverUrl: url, status });
           // Detect orphaned dev server: endpoint alive but no local process
@@ -728,6 +712,24 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     }
   }
 
+  // --- Logging ---
+
+  private static readonly ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b].*?\x07/g;
+
+  private getLogFilePath(): string | undefined {
+    const p = vscode.workspace.getConfiguration("lumen").get<string>("logFile");
+    return p || undefined;
+  }
+
+  private appendToLogFile(text: string): void {
+    const logFile = this.getLogFilePath();
+    if (!logFile) return;
+    try {
+      const clean = text.replace(LumenEditorProvider.ANSI_RE, "");
+      appendFileSync(logFile, clean);
+    } catch {}
+  }
+
   private getHtml(webview: vscode.Webview): string {
     const distPath = join(this.context.extensionPath, "dist", "webview");
 
@@ -743,7 +745,6 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     html = html.replace(/ crossorigin/g, "");
     html = html.replace(' type="module"', " defer");
 
-    this.log.appendLine(`[html] ${html.substring(0, 600)}`);
     return html;
   }
 }
