@@ -36,7 +36,7 @@ All param types share: `name` (required, key in params dict), `label`, `required
 
 ### GPU pipelines
 
-The `serve` function runs on a lightweight image (no torch). GPU inference runs in a separate `@app.cls` with its own image.
+The `serve` function runs on a lightweight image (no torch). GPU inference runs in a separate `@app.cls` with its own image. See `pipelines/z_image_turbo.py` for a complete reference.
 
 - Define a `gpu_image` with torch, diffusers, and model-specific deps.
 - Download model weights at image build time via `.run_commands()` with `snapshot_download`. Loads once, cached across deploys.
@@ -45,6 +45,61 @@ The `serve` function runs on a lightweight image (no torch). GPU inference runs 
 - Keep heavy imports (`torch`, `diffusers`) inside class methods only. The serve image does not have them.
 - Return image bytes from the GPU class; the generate function encodes to base64 data URL.
 - Include `seed` in `OutputAsset.metadata` for reproducibility.
+
+## Modal patterns
+
+This server runs on [Modal](https://modal.com) — a serverless cloud platform. The Modal app is defined in `pipelines/__init__.py`. Key concepts for pipeline authors:
+
+### Images — define deps per function, not globally
+
+Each `@app.function` or `@app.cls` gets its own container image. Define dependencies in the Image, not in `pyproject.toml`. Put `import` statements inside class methods — module-level code must be executable in all images.
+
+```python
+gpu_image = (
+    modal.Image.debian_slim(python_version="3.12")
+    .pip_install("torch>=2.4.0", "diffusers>=0.32.0")  # deps go here
+    .apt_install("ffmpeg")                               # system packages
+    .run_commands("python -c 'from huggingface_hub import snapshot_download; "
+                  "snapshot_download(\"model/id\")'")    # cache weights at build
+)
+```
+
+### Classes — stateful GPU containers
+
+Use `@app.cls` for models that need warm containers with loaded weights:
+
+```python
+@app.cls(image=gpu_image, gpu="A10G", timeout=120)
+class MyModel:
+    @modal.enter()
+    def load(self):
+        import torch  # heavy import inside method
+        self.model = ...
+
+    @modal.method()
+    def inference(self, prompt: str) -> bytes:
+        ...
+```
+
+Invoke from the generate function: `MyModel().inference.remote(prompt)`.
+
+### GPU options
+
+```python
+gpu="T4"           # Budget, 16 GB VRAM
+gpu="A10G"         # Mid-range, 24 GB VRAM
+gpu="A100"         # High-end, 40/80 GB VRAM
+gpu="H100"         # Top-end
+gpu="A100:2"       # Multi-GPU
+gpu=["H100", "A100", "any"]  # Fallback chain
+```
+
+### Style rules
+
+- Always `import modal` then use qualified names: `modal.Image`, `modal.enter()`.
+- Names use kebab-case: `modal.App("lumen-example")`.
+- Never use deprecated Modal features — Modal prints warnings when they're used.
+- Docs: [modal.com/docs](https://modal.com/docs), examples: [modal.com/docs/examples](https://modal.com/docs/examples).
 
 ### `dimensions` param handling
 
