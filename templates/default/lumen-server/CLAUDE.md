@@ -27,7 +27,7 @@ That's it. No imports in `app.py`, no registration calls. The server auto-discov
 | `VideoParam`      | `maxItems`                                                             | File upload + drag-drop              |
 | `TagsParam`       | `options`, `default`, `allowCustom`, `max`                             | Chip list + input                    |
 
-All param types share: `name` (required, key in params dict), `label`, `required`, `group`, `placeholder`, `description`, `hidden`.
+All param types share: `name` (required, key in params dict), `label`, `required`, `group`, `placeholder`, `hidden`.
 
 ### Display hints
 
@@ -39,7 +39,7 @@ Some param types accept a `display` field to control UI rendering:
 ### Common fields
 
 - `placeholder` — hint text shown in empty inputs
-- `description` — tooltip text explaining the param (shown as info icon)
+
 - `hidden` — param sent in generate but not shown in UI (for fixed pipeline constants)
 
 ### Generate function contract
@@ -182,5 +182,5 @@ After saving a pipeline file, the extension hot-reloads the server. Check `lumen
 ## Gotchas
 
 - Hot-reload silently fails when a new `@app.cls` with an unbuilt image is added. The user must restart the dev server from VS Code after adding a new GPU pipeline. Subsequent file edits hot-reload normally.
-- `ruff check` line-length limit is 100 chars. Long description strings need parenthesized multi-line concatenation.
+- `ruff check` line-length limit is 100 chars. Long strings need parenthesized multi-line concatenation.
 - Server logs go to `lumen.log` in this directory — read this file to diagnose runtime errors.
