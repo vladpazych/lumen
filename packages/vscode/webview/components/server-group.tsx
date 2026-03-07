@@ -55,6 +55,7 @@ type Props = {
     uri: string,
   ) => void;
   onRename: (configId: string, name: string) => void;
+  onRemove: (configId: string) => void;
   onFocus: (index: number) => void;
   globalIndexOffset: number;
 };
@@ -93,6 +94,7 @@ export function ServerGroup({
   onPickImage,
   onPickImageByUri,
   onRename,
+  onRemove,
   onFocus,
   globalIndexOffset,
 }: Props) {
@@ -185,6 +187,7 @@ export function ServerGroup({
                     )
                   }
                   onRename={(name) => onRename(config.id, name)}
+                  onRemove={() => onRemove(config.id)}
                   isPickingImage={isPickingImage}
                   imageThumbs={imageThumbs}
                 />

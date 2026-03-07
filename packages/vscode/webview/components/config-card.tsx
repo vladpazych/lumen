@@ -27,6 +27,7 @@ type Props = {
   onPickImage: (paramName: string) => void;
   onPickImageByUri: (paramName: string, uri: string) => void;
   onRename: (name: string) => void;
+  onRemove: () => void;
   isPickingImage: boolean;
   imageThumbs: Record<string, string>;
 };
@@ -69,6 +70,7 @@ export function ConfigCard({
   onPickImage,
   onPickImageByUri,
   onRename,
+  onRemove,
   isPickingImage,
   imageThumbs,
 }: Props) {
@@ -127,6 +129,16 @@ export function ConfigCard({
             </span>
           )}
           <StatusDot variant={statusVariant[status]} size="xs" />
+          <button
+            className="ml-auto text-[11px] text-text-tertiary hover:text-text-primary opacity-0 group-hover/trigger:opacity-100 transition-opacity px-1"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove();
+            }}
+            title="Remove configuration"
+          >
+            ✕
+          </button>
         </div>
       </AccordionTrigger>
       <AccordionPanel>

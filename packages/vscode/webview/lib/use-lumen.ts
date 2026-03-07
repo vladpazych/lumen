@@ -44,6 +44,7 @@ type Action =
   | { type: "devServerStatus"; state: DevServerState }
   | { type: "updateParam"; configId: string; paramName: string; value: unknown }
   | { type: "addConfig"; config: LumenConfig }
+  | { type: "removeConfig"; configId: string }
   | { type: "updateName"; configId: string; name: string }
   | { type: "setFocus"; index: number }
   | { type: "generateStart"; key: string }
@@ -101,6 +102,11 @@ function reducer(state: State, action: Action): State {
     }
     case "addConfig":
       return { ...state, configs: [...state.configs, action.config] };
+    case "removeConfig":
+      return {
+        ...state,
+        configs: state.configs.filter((c) => c.id !== action.configId),
+      };
     case "updateName": {
       const configs = state.configs.map((c) =>
         c.id === action.configId ? { ...c, name: action.name } : c,
@@ -349,6 +355,11 @@ export function useLumen() {
     [],
   );
 
+  const removeConfig = useCallback((configId: string) => {
+    dispatch({ type: "removeConfig", configId });
+    vscode.postMessage({ type: "removeConfig", configId });
+  }, []);
+
   const updateName = useCallback((configId: string, name: string) => {
     dispatch({ type: "updateName", configId, name });
     vscode.postMessage({ type: "updateName", configId, name });
@@ -400,6 +411,7 @@ export function useLumen() {
     ...state,
     isDevServer,
     addConfig,
+    removeConfig,
     updateParam,
     updateName,
     setFocus,

@@ -150,6 +150,11 @@ export type UpdateNameMessage = {
   name: string;
 };
 
+export type RemoveConfigMessage = {
+  type: "removeConfig";
+  configId: string;
+};
+
 export type WebviewMessage =
   | ReadyMessage
   | UpdateStateMessage
@@ -161,4 +166,5 @@ export type WebviewMessage =
   | PickImageMessage
   | PickImageByUriMessage
   | AddConfigMessage
-  | UpdateNameMessage;
+  | UpdateNameMessage
+  | RemoveConfigMessage;

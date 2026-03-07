@@ -19,6 +19,7 @@ export function App() {
     results,
     ready,
     addConfig,
+    removeConfig,
     updateParam,
     updateName,
     setFocus,
@@ -135,6 +136,7 @@ export function App() {
                   pickImageByUri(configId, service, pipeline, paramName, uri)
                 }
                 onRename={(configId, name) => updateName(configId, name)}
+                onRemove={(configId) => removeConfig(configId)}
                 onFocus={setFocus}
                 globalIndexOffset={offset}
               />

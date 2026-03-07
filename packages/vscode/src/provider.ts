@@ -403,6 +403,17 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
           break;
         }
 
+        case "removeConfig": {
+          const configs = parseConfigs(document.getText());
+          const filtered = configs.filter((c) => c.id !== msg.configId);
+          if (filtered.length !== configs.length) {
+            updatingFromWebview = true;
+            await this.writeDocument(document, filtered);
+            updatingFromWebview = false;
+          }
+          break;
+        }
+
         case "updateName": {
           const configs = parseConfigs(document.getText());
           const idx = configs.findIndex((c) => c.id === msg.configId);
