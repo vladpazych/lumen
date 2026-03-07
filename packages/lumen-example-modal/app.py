@@ -13,7 +13,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.responses import StreamingResponse
 
-from pipelines import app, registry
+from pipelines import GenerateResult, app, registry
 
 registry.discover()
 
@@ -91,7 +91,14 @@ async def generate(pipeline_id: str, params: dict | None = None):
             status_code=404,
             content={"code": "NOT_FOUND", "message": f"Pipeline not found: {pipeline_id}"},
         )
-    result = await entry.generate(params or {})
+    try:
+        result = await entry.generate(params or {})
+    except Exception as exc:
+        result = GenerateResult(
+            status="failed",
+            run_id="",
+            error={"code": "INTERNAL_ERROR", "message": str(exc)},
+        )
     return result.to_wire()
 
 
@@ -99,7 +106,7 @@ async def generate(pipeline_id: str, params: dict | None = None):
 
 server_image = (
     modal.Image.debian_slim(python_version="3.12")
-    .pip_install("fastapi>=0.115.0")
+    .pip_install("fastapi>=0.115.0", "httpx>=0.28.0")
     .add_local_python_source("pipelines")
     .add_local_file(AUTH_KEY_FILE, _CONTAINER_AUTH_KEY_FILE)
 )
