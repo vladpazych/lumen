@@ -77,33 +77,35 @@ export function ConfigCard({
         />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1">
-            <span className="inline-grid min-w-[4ch] max-w-full -mx-0.5">
-              <span
-                aria-hidden
-                className="col-start-1 row-start-1 invisible whitespace-pre text-[13px] font-medium px-0.5 pointer-events-none select-none"
-              >
-                {draft || " "}
+            <div className="flex-1 min-w-0">
+              <span className="inline-grid min-w-[4ch] max-w-full -mx-0.5">
+                <span
+                  aria-hidden
+                  className="col-start-1 row-start-1 invisible whitespace-pre text-[13px] font-medium px-0.5 pointer-events-none select-none"
+                >
+                  {draft || " "}
+                </span>
+                <input
+                  ref={inputRef}
+                  className="col-start-1 row-start-1 min-w-0 bg-transparent text-[13px] font-medium text-text-primary outline-none cursor-text rounded-sm px-0.5 hover:bg-hover focus:bg-surface-3 focus:ring-1 focus:ring-ring/50"
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commitRename();
+                    if (e.key === "Escape") {
+                      setDraft(title);
+                      inputRef.current?.blur();
+                    }
+                  }}
+                  onFocus={(e) => {
+                    e.stopPropagation();
+                    e.target.select();
+                  }}
+                  onBlur={commitRename}
+                  onClick={(e) => e.stopPropagation()}
+                />
               </span>
-              <input
-                ref={inputRef}
-                className="col-start-1 row-start-1 min-w-0 bg-transparent text-[13px] font-medium text-text-primary outline-none cursor-text rounded-sm px-0.5 hover:bg-hover focus:bg-surface-3 focus:ring-1 focus:ring-ring/50"
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") commitRename();
-                  if (e.key === "Escape") {
-                    setDraft(title);
-                    inputRef.current?.blur();
-                  }
-                }}
-                onFocus={(e) => {
-                  e.stopPropagation();
-                  e.target.select();
-                }}
-                onBlur={commitRename}
-                onClick={(e) => e.stopPropagation()}
-              />
-            </span>
+            </div>
             <span
               className="text-[11px] text-text-tertiary hover:text-text-primary opacity-0 group-hover:opacity-100 transition-opacity px-1 shrink-0 cursor-pointer"
               role="button"
