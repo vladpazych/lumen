@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Shuffle } from "lucide-react";
 import {
   InputGroup,
@@ -8,7 +9,18 @@ import {
 type Props = { value: number | ""; onChange: (v: number) => void; id: string };
 
 export function SeedField({ value, onChange, id }: Props) {
-  const randomize = () => onChange(Math.floor(Math.random() * 2147483647));
+  const [draft, setDraft] = useState<string | null>(null);
+  const display = draft ?? (value === "" ? "" : String(value));
+  const randomize = () => {
+    setDraft(null);
+    onChange(Math.floor(Math.random() * 2147483647));
+  };
+
+  const commit = (raw: string) => {
+    setDraft(null);
+    const n = parseInt(raw, 10);
+    if (!isNaN(n) && n >= 0) onChange(n);
+  };
 
   return (
     <InputGroup>
@@ -18,10 +30,11 @@ export function SeedField({ value, onChange, id }: Props) {
         min={0}
         step={1}
         placeholder="Random"
-        value={value}
-        onChange={(e) => {
-          const n = parseInt(e.target.value, 10);
-          if (!isNaN(n)) onChange(n);
+        value={display}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={(e) => commit(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit(e.currentTarget.value);
         }}
       />
       <InputGroupButton onClick={randomize}>

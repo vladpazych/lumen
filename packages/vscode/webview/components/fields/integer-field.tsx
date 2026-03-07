@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import type { IntegerParam } from "@lumen/core/types";
@@ -33,18 +34,54 @@ export function IntegerField({ param, value, onChange, id }: Props) {
   }
 
   return (
-    <Input
+    <IntegerInput
       id={id}
-      type="number"
       min={param.min}
       max={param.max}
-      step={1}
       placeholder={param.placeholder ?? param.default?.toString()}
       value={value}
-      onChange={(e) => {
-        const n = parseInt(e.target.value, 10);
-        if (!isNaN(n)) onChange(n);
+      onChange={onChange}
+    />
+  );
+}
+
+function IntegerInput({
+  value,
+  onChange,
+  min,
+  max,
+  ...props
+}: {
+  value: number | "";
+  onChange: (v: number) => void;
+  min?: number;
+  max?: number;
+} & Omit<React.ComponentProps<typeof Input>, "value" | "onChange">) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const display = draft ?? (value === "" ? "" : String(value));
+
+  const commit = (raw: string) => {
+    setDraft(null);
+    const n = parseInt(raw, 10);
+    if (isNaN(n)) return;
+    const clamped =
+      min != null && n < min ? min : max != null && n > max ? max : n;
+    onChange(clamped);
+  };
+
+  return (
+    <Input
+      type="number"
+      min={min}
+      max={max}
+      step={1}
+      value={display}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={(e) => commit(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") commit(e.currentTarget.value);
       }}
+      {...props}
     />
   );
 }

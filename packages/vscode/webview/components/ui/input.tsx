@@ -15,6 +15,7 @@ function Input({ className, type, ...props }: InputProps) {
         "disabled:cursor-not-allowed disabled:opacity-40",
         "aria-invalid:ring-1 aria-invalid:ring-destructive aria-invalid:text-destructive",
         "file:border-0 file:bg-transparent file:text-[12px] file:font-medium file:text-text-primary",
+        "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
         className,
       )}
       {...props}

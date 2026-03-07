@@ -25,7 +25,7 @@ export function AddConfigDialog({ pipelines, onAdd, onCancel }: Props) {
         />
 
         <div className="flex gap-2">
-          <Button variant="ghost" size="sm" grow onClick={onCancel}>
+          <Button variant="outline" size="sm" grow onClick={onCancel}>
             Cancel
           </Button>
           <Button
