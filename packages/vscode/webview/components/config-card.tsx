@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import type {
   LumenConfig,
   PipelineConfig,
@@ -55,23 +55,14 @@ export function ConfigCard({
   const pipelineName = schema?.name ?? config.pipeline;
   const description = schema?.description ?? null;
 
-  const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(title);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (editing) inputRef.current?.focus();
-  }, [editing]);
-
   const commitRename = () => {
-    setEditing(false);
+    inputRef.current?.blur();
     const trimmed = draft.trim();
     if (trimmed && trimmed !== title) onRename(trimmed);
-  };
-
-  const cancelRename = () => {
-    setEditing(false);
-    setDraft(title);
+    else setDraft(title);
   };
 
   return (
@@ -86,31 +77,25 @@ export function ConfigCard({
         />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1">
-            {editing ? (
-              <input
-                ref={inputRef}
-                className="flex-1 bg-transparent text-[13px] font-medium text-text-primary outline-none border-b border-border cursor-text"
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") commitRename();
-                  if (e.key === "Escape") cancelRename();
-                }}
-                onBlur={commitRename}
-                onClick={(e) => e.stopPropagation()}
-              />
-            ) : (
-              <span
-                className="flex-1 text-[13px] font-medium text-text-primary truncate cursor-text"
-                onClick={(e) => {
-                  e.stopPropagation();
+            <input
+              ref={inputRef}
+              className="flex-1 min-w-0 bg-transparent text-[13px] font-medium text-text-primary outline-none cursor-text rounded-sm px-0.5 -mx-0.5 hover:bg-hover focus:bg-surface-3 focus:ring-1 focus:ring-ring/50 truncate"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitRename();
+                if (e.key === "Escape") {
                   setDraft(title);
-                  setEditing(true);
-                }}
-              >
-                {title}
-              </span>
-            )}
+                  inputRef.current?.blur();
+                }
+              }}
+              onFocus={(e) => {
+                e.stopPropagation();
+                e.target.select();
+              }}
+              onBlur={commitRename}
+              onClick={(e) => e.stopPropagation()}
+            />
             <span
               className="text-[11px] text-text-tertiary hover:text-text-primary opacity-0 group-hover:opacity-100 transition-opacity px-1 shrink-0 cursor-pointer"
               role="button"
