@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
@@ -19,6 +20,29 @@ export function getServerSource(): string {
     .get<string>("server", "lumen-server");
   const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
   return raw.replace(/\$\{workspaceFolder\}/g, root);
+}
+
+function authKeyFile(serverPath: string): string {
+  return join(serverPath, ".authkey");
+}
+
+/** Ensure .authkey exists in the server directory. Creates one if missing. */
+export function ensureAuthKey(serverPath: string): string {
+  const file = authKeyFile(serverPath);
+  if (existsSync(file)) {
+    return readFileSync(file, "utf-8").trim();
+  }
+  const key = randomBytes(32).toString("hex");
+  writeFileSync(file, key + "\n");
+  return key;
+}
+
+/** Read the .authkey from a server directory, or null if missing. */
+export function readAuthKey(serverPath: string): string | null {
+  const file = authKeyFile(serverPath);
+  if (!existsSync(file)) return null;
+  const key = readFileSync(file, "utf-8").trim();
+  return key || null;
 }
 
 function pidFile(serverPath: string): string {
@@ -53,10 +77,17 @@ const REBUILD_DONE = /Created web function serve|Serving app/;
 const MODAL_URL_RE = /https:\/\/\S+\.modal\.run/;
 
 /** Check if a server URL is already reachable. */
-export async function isServerReachable(url: string): Promise<boolean> {
+export async function isServerReachable(
+  url: string,
+  authKey?: string,
+): Promise<boolean> {
   try {
+    const headers: Record<string, string> = authKey
+      ? { Authorization: `Bearer ${authKey}` }
+      : {};
     const res = await fetch(`${url}/pipelines`, {
       signal: AbortSignal.timeout(3000),
+      headers,
     });
     return res.ok;
   } catch {
@@ -107,6 +138,7 @@ export class ServerManager {
       return;
     }
 
+    ensureAuthKey(sourcePath);
     this.output.appendLine(`[dev] Starting bun dev in ${sourcePath}`);
     this.output.show(true);
     this.setState("starting");

@@ -16,10 +16,19 @@ function parseSSEFrame(frame: string): { event: string; data: string } | null {
 }
 
 /** ProviderPort adapter for HTTP servers exposing the lumen REST contract */
-export function httpProvider(serverUrl: string): ProviderPort {
+export function httpProvider(
+  serverUrl: string,
+  authKey?: string,
+): ProviderPort {
+  const authHeaders: Record<string, string> = authKey
+    ? { Authorization: `Bearer ${authKey}` }
+    : {};
+
   return {
     async ping(): Promise<void> {
-      const res = await fetch(`${serverUrl}/pipelines`);
+      const res = await fetch(`${serverUrl}/pipelines`, {
+        headers: authHeaders,
+      });
       if (!res.ok) throw new Error(`GET /pipelines failed: ${res.status}`);
     },
 
@@ -41,7 +50,7 @@ export function httpProvider(serverUrl: string): ProviderPort {
         try {
           const res = await fetch(`${serverUrl}/pipelines/events`, {
             signal: abortController.signal,
-            headers: { Accept: "text/event-stream" },
+            headers: { Accept: "text/event-stream", ...authHeaders },
           });
           if (!res.ok || !res.body) {
             callbacks.onStatus("disconnected");
@@ -91,13 +100,17 @@ export function httpProvider(serverUrl: string): ProviderPort {
     },
 
     async fetchSchemas(): Promise<PipelineConfig[]> {
-      const res = await fetch(`${serverUrl}/pipelines`);
+      const res = await fetch(`${serverUrl}/pipelines`, {
+        headers: authHeaders,
+      });
       if (!res.ok) throw new Error(`GET /pipelines failed: ${res.status}`);
       const manifests = (await res.json()) as { id: string }[];
 
       return Promise.all(
         manifests.map(async (m) => {
-          const r = await fetch(`${serverUrl}/pipelines/${m.id}`);
+          const r = await fetch(`${serverUrl}/pipelines/${m.id}`, {
+            headers: authHeaders,
+          });
           if (!r.ok)
             throw new Error(`GET /pipelines/${m.id} failed: ${r.status}`);
           return (await r.json()) as PipelineConfig;
@@ -111,7 +124,7 @@ export function httpProvider(serverUrl: string): ProviderPort {
     ): Promise<GenerateResponse> {
       const res = await fetch(`${serverUrl}/pipelines/${pipelineId}/generate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify(params),
       });
       if (!res.ok) {
@@ -129,6 +142,7 @@ export function httpProvider(serverUrl: string): ProviderPort {
     ): Promise<GenerateResponse> {
       const res = await fetch(
         `${serverUrl}/pipelines/${pipelineId}/runs/${runId}`,
+        { headers: authHeaders },
       );
       if (!res.ok) {
         const text = await res.text();

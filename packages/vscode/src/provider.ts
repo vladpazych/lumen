@@ -27,7 +27,7 @@ import type {
 import { httpProvider } from "./adapters/http-provider";
 import { vscodeAssetStore } from "./adapters/vscode-assets";
 import { vscodeLogger } from "./adapters/vscode-logger";
-import { type DevServerState, getServerSource } from "./server";
+import { type DevServerState, getServerSource, readAuthKey } from "./server";
 
 export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   private static readonly viewType = "lumen.stateViewer";
@@ -79,7 +79,11 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
       delete this.providers[key];
     }
     if (this.detectedUrl) {
-      this.providers[this.detectedUrl] = httpProvider(this.detectedUrl);
+      const authKey = readAuthKey(getServerSource()) ?? undefined;
+      this.providers[this.detectedUrl] = httpProvider(
+        this.detectedUrl,
+        authKey,
+      );
     }
   }
 
