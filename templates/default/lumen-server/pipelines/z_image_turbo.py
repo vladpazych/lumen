@@ -134,7 +134,7 @@ async def generate(params: dict[str, Any]) -> GenerateResult:
     run_id = uuid.uuid4().hex[:12]
 
     model = ZImageTurboModel()
-    image_bytes = model.inference.remote(prompt, width, height, seed, num_steps)
+    image_bytes = await model.inference.remote.aio(prompt, width, height, seed, num_steps)
 
     data_url = f"data:image/png;base64,{base64.b64encode(image_bytes).decode()}"
 
