@@ -24,6 +24,7 @@ export type HandlerContext = {
   context: vscode.ExtensionContext;
   post(message: ExtensionMessage): void;
   onDevServerCommand: ((cmd: "start" | "stop" | "restart") => void) | null;
+  getDevLogBuffer(): string[];
 };
 
 export async function handleMessage(
@@ -81,6 +82,11 @@ async function handleReady(ctx: HandlerContext): Promise<void> {
     devServerState: connection.devServerState,
     devServerUrl: url,
   });
+
+  const bufferedLog = ctx.getDevLogBuffer();
+  if (bufferedLog.length > 0) {
+    ctx.post({ type: "devServerLog", text: bufferedLog.join("\n") });
+  }
 
   const docDir = dirname(document.uri.fsPath);
   const thumbs = collectThumbs(configs, docDir, panel.webview);

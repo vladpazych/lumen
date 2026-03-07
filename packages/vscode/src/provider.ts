@@ -25,6 +25,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   private readonly fileLog: FileLogger;
   private readonly service: EditorService;
   readonly connection: ServerConnection;
+  private readonly devLogBuffer: string[] = [];
 
   /** Set by extension.ts to route webview start/stop/restart commands to ServerManager */
   onDevServerCommand: ((cmd: "start" | "stop" | "restart") => void) | null =
@@ -46,7 +47,9 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
       const p = vscode.workspace
         .getConfiguration("lumen")
         .get<string>("logFile");
-      return p || undefined;
+      if (p) return p;
+      const source = getServerSource();
+      return source ? join(source, "lumen.log") : undefined;
     });
 
     const assets = vscodeAssetStore({
@@ -100,8 +103,17 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   }
 
   broadcastDevServerLog(text: string): void {
+    const lines = text.split("\n");
+    this.devLogBuffer.push(...lines);
+    if (this.devLogBuffer.length > 200) {
+      this.devLogBuffer.splice(0, this.devLogBuffer.length - 200);
+    }
     this.broadcastToAll({ type: "devServerLog", text });
     this.fileLog.append(text);
+  }
+
+  getDevLogBuffer(): string[] {
+    return this.devLogBuffer;
   }
 
   async resolveCustomTextEditor(
@@ -144,6 +156,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
       context: this.context,
       post: (msg) => webviewPanel.webview.postMessage(msg),
       onDevServerCommand: this.onDevServerCommand,
+      getDevLogBuffer: () => this.devLogBuffer,
     };
 
     webviewPanel.webview.onDidReceiveMessage((msg: WebviewMessage) => {
