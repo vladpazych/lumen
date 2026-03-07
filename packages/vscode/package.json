@@ -74,16 +74,15 @@
               },
               "url": {
                 "type": "string",
-                "description": "Server URL (e.g. https://you--app-serve.modal.run)"
+                "description": "Server URL. Optional when source is set — auto-detected from Modal output."
               },
               "source": {
                 "type": "string",
-                "description": "Path to source directory. When set, the extension can start/stop the dev server via `bun dev`. Supports ${workspaceFolder}."
+                "description": "Path to source directory. When set, the extension can start/stop the dev server via `bun dev` and auto-detect the URL. Supports ${workspaceFolder}."
               }
             },
             "required": [
-              "name",
-              "url"
+              "name"
             ]
           },
           "default": [],

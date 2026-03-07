@@ -26,6 +26,9 @@ export function activate(context: vscode.ExtensionContext): void {
     (text) => {
       provider.broadcastDevServerLog(text);
     },
+    (source, url) => {
+      provider.onServerUrlDetected(source, url);
+    },
   );
 
   // Check for already-running dev server from a previous session
@@ -67,7 +70,7 @@ export function activate(context: vscode.ExtensionContext): void {
     const source = devSourcePath();
     if (cmd === "start") {
       const server = getServers().find((s) => s.source);
-      if (server && (await isServerReachable(server.url))) {
+      if (server?.url && (await isServerReachable(server.url))) {
         vscode.window.showInformationMessage(
           "Remote endpoint still alive — new process will replace it",
         );

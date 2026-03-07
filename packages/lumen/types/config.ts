@@ -9,7 +9,7 @@ export type LumenConfig = {
 
 export type ServerConfig = {
   name: string;
-  url: string;
+  url?: string;
   source?: string;
 };
 

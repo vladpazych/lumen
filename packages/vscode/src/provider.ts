@@ -40,6 +40,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   private serverStatuses: StatusCache = {};
   private devServerState: DevServerState = "stopped";
   private subscriptions: Map<string, () => void> = new Map();
+  private detectedUrls = new Map<string, string>();
   private service: EditorService;
   private providers: Record<string, ProviderPort> = {};
   private readonly log: vscode.OutputChannel;
@@ -79,28 +80,45 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     });
   }
 
+  private resolveUrl(server: {
+    url?: string;
+    source?: string;
+  }): string | undefined {
+    return (
+      server.url ||
+      (server.source ? this.detectedUrls.get(server.source) : undefined)
+    );
+  }
+
   private rebuildProviders(): void {
-    // Clear and rebuild provider map
     for (const key of Object.keys(this.providers)) {
       delete this.providers[key];
     }
     for (const s of getServers()) {
-      this.providers[s.url] = httpProvider(s.url);
+      const url = this.resolveUrl(s);
+      if (url) this.providers[url] = httpProvider(url);
     }
   }
 
-  private getDevServer() {
-    return getServers().find((s) => s.source) ?? null;
+  private getDevServer(): { name: string; url: string; source: string } | null {
+    const s = getServers().find((s) => s.source);
+    if (!s?.source) return null;
+    const url = this.resolveUrl(s);
+    if (!url) return null;
+    return { name: s.name, url, source: s.source };
   }
 
   private getAllServerUrls(): string[] {
-    return getServers().map((s) => s.url);
+    return getServers()
+      .map((s) => this.resolveUrl(s))
+      .filter((url): url is string => !!url);
   }
 
   private getServerNames(): Record<string, string> {
     const names: Record<string, string> = {};
     for (const s of getServers()) {
-      names[s.url] = s.name;
+      const url = this.resolveUrl(s);
+      if (url) names[url] = s.name;
     }
     return names;
   }
@@ -124,6 +142,11 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
       this.rebuildProviders();
       this.subscribeAll();
     }
+  }
+
+  onServerUrlDetected(source: string, url: string): void {
+    this.detectedUrls.set(source, url);
+    this.log.appendLine(`[modal] detected URL for ${source}: ${url}`);
   }
 
   broadcastDevServerLog(text: string): void {
@@ -727,7 +750,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   // --- Schema file export ---
 
   private writeSchemaFile(serverUrl: string): void {
-    const server = getServers().find((s) => s.url === serverUrl);
+    const server = getServers().find((s) => this.resolveUrl(s) === serverUrl);
     if (!server?.source) return;
     const dest = join(server.source, "lumen.schema.json");
     try {

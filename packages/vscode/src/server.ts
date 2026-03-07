@@ -60,6 +60,7 @@ function readPid(serverPath: string): number | null {
 // Modal stdout patterns for rebuild detection
 const REBUILD_START = /Creating objects|Initializing|Building image/;
 const REBUILD_DONE = /Created web function serve|Serving app/;
+const MODAL_URL_RE = /https:\/\/\S+\.modal\.run/;
 
 /** Check if a server URL is already reachable. */
 export async function isServerReachable(url: string): Promise<boolean> {
@@ -77,16 +78,19 @@ export class ServerManager {
   private readonly output: vscode.OutputChannel;
   private readonly onChange: () => void;
   private readonly onLog: (text: string) => void;
+  private readonly onUrl: (sourcePath: string, url: string) => void;
   private trackedState: DevServerState = "stopped";
 
   constructor(
     output: vscode.OutputChannel,
     onChange: () => void,
     onLog: (text: string) => void,
+    onUrl: (sourcePath: string, url: string) => void,
   ) {
     this.output = output;
     this.onChange = onChange;
     this.onLog = onLog;
+    this.onUrl = onUrl;
   }
 
   getState(sourcePath: string): DevServerState {
@@ -134,6 +138,8 @@ export class ServerManager {
       const text = chunk.toString();
       this.output.append(text);
       this.onLog(text);
+      const urlMatch = text.match(MODAL_URL_RE);
+      if (urlMatch) this.onUrl(sourcePath, urlMatch[0]);
       if (REBUILD_DONE.test(text)) {
         this.setState("running");
       } else if (REBUILD_START.test(text)) {
