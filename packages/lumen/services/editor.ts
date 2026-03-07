@@ -23,7 +23,6 @@ export type EditorService = {
   /** Health-check all non-virtual providers */
   pollHealth(
     serviceUrls: string[],
-    schemas: SchemaCache,
     statuses: StatusCache,
   ): Promise<{
     statuses: StatusCache;
@@ -85,7 +84,6 @@ export function editorService(ports: EditorPorts): EditorService {
 
   async function pollHealth(
     serviceUrls: string[],
-    schemas: SchemaCache,
     statuses: StatusCache,
   ): Promise<{
     statuses: StatusCache;
@@ -105,7 +103,11 @@ export function editorService(ports: EditorPorts): EditorService {
       if (!provider) continue;
 
       try {
-        await provider.fetchSchemas();
+        if (provider.ping) {
+          await provider.ping();
+        } else {
+          await provider.fetchSchemas();
+        }
         newStatuses[url] = "connected";
         if (prev !== "connected") reconnected.push(url);
       } catch {
@@ -132,7 +134,10 @@ export function editorService(ports: EditorPorts): EditorService {
       return {
         status: "failed",
         runId: "",
-        error: { code: "NO_PROVIDER", message: `No provider for ${serviceUrl}` },
+        error: {
+          code: "NO_PROVIDER",
+          message: `No provider for ${serviceUrl}`,
+        },
       };
     }
 

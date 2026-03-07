@@ -4,6 +4,11 @@ import type { GenerateResponse, PipelineConfig } from "@lumen/core/types";
 /** ProviderPort adapter for HTTP servers exposing the lumen REST contract */
 export function httpProvider(serverUrl: string): ProviderPort {
   return {
+    async ping(): Promise<void> {
+      const res = await fetch(`${serverUrl}/pipelines`);
+      if (!res.ok) throw new Error(`GET /pipelines failed: ${res.status}`);
+    },
+
     async fetchSchemas(): Promise<PipelineConfig[]> {
       const res = await fetch(`${serverUrl}/pipelines`);
       if (!res.ok) throw new Error(`GET /pipelines failed: ${res.status}`);
@@ -23,14 +28,11 @@ export function httpProvider(serverUrl: string): ProviderPort {
       pipelineId: string,
       params: Record<string, unknown>,
     ): Promise<GenerateResponse> {
-      const res = await fetch(
-        `${serverUrl}/pipelines/${pipelineId}/generate`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(params),
-        },
-      );
+      const res = await fetch(`${serverUrl}/pipelines/${pipelineId}/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(params),
+      });
       if (!res.ok) {
         const text = await res.text();
         throw new Error(
