@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+import secrets
+from pathlib import Path
 
 import modal
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.responses import StreamingResponse
 
@@ -14,7 +17,39 @@ from pipelines import app, registry
 
 registry.discover()
 
+# --- Auth ---
+
+AUTH_KEY_FILE = ".lumen/auth-key"
+_CONTAINER_AUTH_KEY_FILE = "/run/auth-key"
+
+
+def _ensure_auth_key() -> str:
+    """Read auth key from container mount or generate locally if missing."""
+    if os.path.exists(_CONTAINER_AUTH_KEY_FILE):
+        return Path(_CONTAINER_AUTH_KEY_FILE).read_text().strip()
+    path = Path(AUTH_KEY_FILE)
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(secrets.token_urlsafe(32))
+    return path.read_text().strip()
+
+
+_auth_key = _ensure_auth_key()
+
+# --- App ---
+
 web_app = FastAPI(title="Lumen Example")
+
+
+@web_app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Bearer ") or auth[7:] != _auth_key:
+        return JSONResponse(
+            status_code=401,
+            content={"code": "UNAUTHORIZED", "message": "Invalid or missing auth key"},
+        )
+    return await call_next(request)
 
 
 @web_app.get("/pipelines")
@@ -66,6 +101,7 @@ server_image = (
     modal.Image.debian_slim(python_version="3.12")
     .pip_install("fastapi>=0.115.0")
     .add_local_python_source("pipelines")
+    .add_local_file(AUTH_KEY_FILE, _CONTAINER_AUTH_KEY_FILE)
 )
 
 

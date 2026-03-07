@@ -128,6 +128,15 @@ The user must create the secret in the Modal dashboard before the pipeline will 
 
 The `dimensions` param arrives as `{"w": int, "h": int}`. Always type-check with `isinstance(dims, dict)` and provide fallback defaults.
 
+## Auth
+
+The server requires a Bearer token on every request. The key is auto-generated on first run and stored at `.lumen/auth-key` (gitignored). The VS Code extension reads this file and includes the token in all requests.
+
+- Key is generated automatically — no user action needed.
+- `app.py` mounts the key file into the Modal container via `add_local_file`.
+- Pipeline authors do not need to think about auth — middleware handles it.
+- Tests import the key from `app.py` and include it in the test client.
+
 ## What NOT to modify
 
 - `app.py` — auto-discovers pipelines, no changes needed

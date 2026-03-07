@@ -5,12 +5,24 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from app import web_app
+from app import _auth_key, web_app
 
 
 @pytest.fixture
 def client():
-    return TestClient(web_app)
+    return TestClient(web_app, headers={"Authorization": f"Bearer {_auth_key}"})
+
+
+class TestAuth:
+    def test_rejects_missing_token(self):
+        client = TestClient(web_app)
+        res = client.get("/pipelines")
+        assert res.status_code == 401
+
+    def test_rejects_bad_token(self):
+        client = TestClient(web_app, headers={"Authorization": "Bearer wrong"})
+        res = client.get("/pipelines")
+        assert res.status_code == 401
 
 
 class TestListPipelines:

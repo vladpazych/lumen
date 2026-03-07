@@ -17,3 +17,6 @@ __pycache__/
 *.vsix
 
 .local
+
+# Auth
+.lumen/auth-key
