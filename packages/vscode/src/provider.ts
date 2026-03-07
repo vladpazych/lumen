@@ -18,6 +18,11 @@ import { ServerConnection, type ConnectionEvents } from "./connection";
 import { handleMessage, type HandlerContext } from "./handlers";
 import { getServerSource } from "./server";
 
+const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\].*?\x07|\[[\d;]*[A-Za-z]/g;
+function stripAnsi(text: string): string {
+  return text.replace(ANSI_RE, "");
+}
+
 /** Detect tqdm-style progress bars: `Loading weights:  10%|█ | 41/398` */
 const PROGRESS_RE = /^(.*?)\d+%\|/;
 
@@ -110,8 +115,10 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
 
     const cleaned: string[] = [];
     for (const raw of text.split("\n")) {
+      // Strip ANSI escape codes first so regex matching works
+      const stripped = stripAnsi(raw);
       // Handle \r (carriage return): tqdm overwrites the line — keep last segment
-      const segments = raw.split("\r").filter((s) => s !== "");
+      const segments = stripped.split("\r").filter((s) => s !== "");
       const line = segments.length > 0 ? segments[segments.length - 1] : "";
       if (!line.trim()) continue;
 
