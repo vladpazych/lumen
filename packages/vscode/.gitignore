@@ -1,0 +1,3 @@
+# Override root .gitignore — vsce uses git ignore rules to determine
+# which files to include in the vsix package
+!dist/

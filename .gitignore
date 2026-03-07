@@ -1,6 +1,5 @@
 node_modules/
 dist/
-!packages/vscode/dist/
 .env
 .env.*
 !.env.example

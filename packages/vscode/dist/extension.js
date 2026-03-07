@@ -203,14 +203,6 @@ function fileLogger(getPath) {
       try {
         import_node_fs2.appendFileSync(path, text.replace(ANSI_RE, ""));
       } catch {}
-    },
-    clear() {
-      const path = getPath();
-      if (!path)
-        return;
-      try {
-        import_node_fs2.writeFileSync(path, "");
-      } catch {}
     }
   };
 }
@@ -500,14 +492,12 @@ class ServerManager {
   output;
   onChange;
   onLog;
-  onLogClear;
   onUrl;
   trackedState = "stopped";
-  constructor(output, onChange, onLog, onLogClear, onUrl) {
+  constructor(output, onChange, onLog, onUrl) {
     this.output = output;
     this.onChange = onChange;
     this.onLog = onLog;
-    this.onLogClear = onLogClear;
     this.onUrl = onUrl;
   }
   getState(sourcePath) {
@@ -533,7 +523,6 @@ class ServerManager {
       return;
     }
     ensureAuthKey(sourcePath);
-    this.onLogClear();
     this.output.appendLine(`[dev] Syncing deps and starting server in ${sourcePath}`);
     this.output.show(true);
     this.setState("starting");
@@ -969,20 +958,6 @@ async function handleReady(ctx) {
     ctx.post({ type: "devServerLog", text: bufferedLog.join(`
 `) });
   }
-  const configIds = new Set(configs.map((c) => c.id));
-  for (const [configId, job] of ctx.activeJobs) {
-    if (configIds.has(configId)) {
-      ctx.post({
-        type: "generateProgress",
-        requestId: "",
-        configId,
-        service: "",
-        pipeline: "",
-        progress: job.progress,
-        stage: job.stage
-      });
-    }
-  }
   const docDir = import_node_path5.dirname(document.uri.fsPath);
   const thumbs = collectThumbs(configs, docDir, panel.webview);
   if (Object.keys(thumbs).length > 0) {
@@ -1005,13 +980,8 @@ async function handleGenerate(ctx, msg) {
   const { requestId, configId, service: svc, pipeline, params } = msg;
   const docDir = import_node_path5.dirname(document.uri.fsPath);
   const resolved = resolveImageParams(connection.schemas, svc, pipeline, params, docDir);
-  ctx.activeJobs.set(configId, { progress: 0, stage: "queued" });
   try {
     const response = await service.generate(svc, pipeline, resolved, document.uri.fsPath, (info) => {
-      ctx.activeJobs.set(configId, {
-        progress: info.progress,
-        stage: info.stage
-      });
       ctx.post({
         type: "generateProgress",
         requestId,
@@ -1022,7 +992,6 @@ async function handleGenerate(ctx, msg) {
         stage: info.stage
       });
     });
-    ctx.activeJobs.delete(configId);
     if (response.status === "completed") {
       const meta = response.outputs[0]?.metadata;
       if (meta?.seed != null) {
@@ -1046,7 +1015,6 @@ async function handleGenerate(ctx, msg) {
       response
     });
   } catch (err) {
-    ctx.activeJobs.delete(configId);
     ctx.post({
       type: "generateResult",
       requestId,
@@ -1145,13 +1113,6 @@ async function handleUpdateName(ctx, msg) {
 }
 
 // src/provider.ts
-var ANSI_RE2 = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\].*?\x07|\[[\d;]*[A-Za-z]/g;
-function stripAnsi(text) {
-  return text.replace(/\x1b\[\d*A/g, `
-`).replace(ANSI_RE2, "");
-}
-var PROGRESS_RE = /^(.*?)\d+%\|/;
-
 class LumenEditorProvider {
   context;
   static viewType = "lumen.stateViewer";
@@ -1161,13 +1122,9 @@ class LumenEditorProvider {
   service;
   connection;
   devLogBuffer = [];
-  activeJobs = new Map;
   onDevServerCommand = null;
   static register(provider) {
-    return vscode5.window.registerCustomEditorProvider(LumenEditorProvider.viewType, provider, {
-      supportsMultipleEditorsPerDocument: false,
-      webviewOptions: { retainContextWhenHidden: true }
-    });
+    return vscode5.window.registerCustomEditorProvider(LumenEditorProvider.viewType, provider, { supportsMultipleEditorsPerDocument: false });
   }
   constructor(context) {
     this.context = context;
@@ -1221,40 +1178,15 @@ class LumenEditorProvider {
   onServerUrlDetected(source, url) {
     this.connection.onUrlDetected(source, url);
   }
-  clearDevLog() {
-    this.devLogBuffer.length = 0;
-    this.fileLog.clear();
-  }
   broadcastDevServerLog(text) {
-    this.fileLog.append(text);
-    const stripped = stripAnsi(text);
-    const cleaned = [];
-    for (const raw of stripped.split(`
-`)) {
-      const segments = raw.split("\r").filter((s) => s !== "");
-      const line = segments.length > 0 ? segments[segments.length - 1] : "";
-      if (!line.trim())
-        continue;
-      const match = line.match(PROGRESS_RE);
-      if (match && this.devLogBuffer.length > 0) {
-        const prev = this.devLogBuffer[this.devLogBuffer.length - 1];
-        const prevMatch = prev.match(PROGRESS_RE);
-        if (prevMatch && prevMatch[1].trim() === match[1].trim()) {
-          this.devLogBuffer[this.devLogBuffer.length - 1] = line;
-          cleaned.push(line);
-          continue;
-        }
-      }
-      this.devLogBuffer.push(line);
-      cleaned.push(line);
-    }
+    const lines = text.split(`
+`);
+    this.devLogBuffer.push(...lines);
     if (this.devLogBuffer.length > 200) {
       this.devLogBuffer.splice(0, this.devLogBuffer.length - 200);
     }
-    if (cleaned.length > 0) {
-      this.broadcastToAll({ type: "devServerLog", text: cleaned.join(`
-`) });
-    }
+    this.broadcastToAll({ type: "devServerLog", text });
+    this.fileLog.append(text);
   }
   getDevLogBuffer() {
     return this.devLogBuffer;
@@ -1293,8 +1225,7 @@ class LumenEditorProvider {
       context: this.context,
       post: (msg) => webviewPanel.webview.postMessage(msg),
       onDevServerCommand: this.onDevServerCommand,
-      getDevLogBuffer: () => this.devLogBuffer,
-      activeJobs: this.activeJobs
+      getDevLogBuffer: () => this.devLogBuffer
     };
     webviewPanel.webview.onDidReceiveMessage((msg) => {
       handlerCtx.onDevServerCommand = this.onDevServerCommand;
@@ -1369,8 +1300,6 @@ function activate(context) {
     provider.onDevServerStateChange(serverManager.getState(getServerSource()));
   }, (text) => {
     provider.broadcastDevServerLog(text);
-  }, () => {
-    provider.clearDevLog();
   }, (source2, url) => {
     provider.onServerUrlDetected(source2, url);
   });
@@ -1402,5 +1331,5 @@ function activate(context) {
 }
 function deactivate() {}
 
-//# debugId=D0472735CA93817064756E2164756E21
+//# debugId=DC983F3BDB04CAFC64756E2164756E21
 //# sourceMappingURL=extension.js.map
