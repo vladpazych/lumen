@@ -1,9 +1,8 @@
-"""CLI entry point — lumen-sdk serve | sync."""
+"""CLI entry point — lumen-sdk sync."""
 
 from __future__ import annotations
 
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 
@@ -11,7 +10,12 @@ ASSETS_DIR = Path(__file__).parent / "_assets"
 
 
 def sync() -> None:
-    """Copy framework assets (CLAUDE.md, skills) into the current project."""
+    """Copy framework assets (serve.py, CLAUDE.md, skills) into the current project."""
+    # serve.py → cwd (Modal entry point)
+    src_serve = ASSETS_DIR / "serve.py"
+    if src_serve.exists():
+        shutil.copy2(src_serve, "serve.py")
+
     # Server docs → CLAUDE.md in cwd
     src_claude = ASSETS_DIR / "CLAUDE.md"
     if src_claude.exists():
@@ -32,27 +36,13 @@ def sync() -> None:
                 shutil.copy2(f, dst / f.name)
 
 
-def serve() -> None:
-    """Run modal serve on the framework entry point."""
-    import lumen_sdk.serve  # noqa: F401 — ensure module is importable
-
-    serve_path = Path(lumen_sdk.serve.__file__)
-    result = subprocess.run(
-        [sys.executable, "-m", "modal", "serve", str(serve_path)],
-        cwd=Path.cwd(),
-    )
-    sys.exit(result.returncode)
-
-
 def main() -> None:
     if len(sys.argv) < 2:
-        print("Usage: lumen-sdk <serve|sync>", file=sys.stderr)
+        print("Usage: lumen-sdk sync", file=sys.stderr)
         sys.exit(1)
 
     cmd = sys.argv[1]
-    if cmd == "serve":
-        serve()
-    elif cmd == "sync":
+    if cmd == "sync":
         sync()
         print("Synced framework assets.")
     else:

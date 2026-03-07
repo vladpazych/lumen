@@ -128,7 +128,7 @@ export class ServerManager {
       [
         "-l",
         "-c",
-        "uv sync && uv run lumen-sdk sync && exec uv run lumen-sdk serve",
+        "uv sync && uv run lumen-sdk sync && exec uv run modal serve serve.py",
       ],
       {
         cwd: sourcePath,
