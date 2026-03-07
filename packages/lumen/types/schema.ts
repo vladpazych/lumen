@@ -74,6 +74,14 @@ export type PromptParam = BaseParam & {
   default?: string;
 };
 
+export type TagsParam = BaseParam & {
+  type: "tags";
+  options?: SelectOption[];
+  default?: string[];
+  allowCustom?: boolean;
+  max?: number;
+};
+
 export type ParamDefinition =
   | TextParam
   | NumberParam
@@ -84,7 +92,8 @@ export type ParamDefinition =
   | DimensionsParam
   | ImageParam
   | VideoParam
-  | PromptParam;
+  | PromptParam
+  | TagsParam;
 
 export type PipelineCategory = "image" | "video";
 

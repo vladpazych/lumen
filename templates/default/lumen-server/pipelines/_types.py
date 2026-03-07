@@ -151,6 +151,21 @@ class PromptParam(BaseModel):
     default: str | None = None
 
 
+class TagsParam(BaseModel):
+    type: Literal["tags"] = "tags"
+    name: str = ""
+    label: str | None = None
+    required: bool | None = None
+    group: str | None = None
+    placeholder: str | None = None
+    description: str | None = None
+    hidden: bool | None = None
+    options: list[SelectOption] | None = None
+    default: list[str] | None = None
+    allowCustom: bool | None = None
+    max: int | None = None
+
+
 ParamDefinition = (
     TextParam
     | NumberParam
@@ -162,6 +177,7 @@ ParamDefinition = (
     | ImageParam
     | VideoParam
     | PromptParam
+    | TagsParam
 )
 
 
@@ -236,6 +252,7 @@ __all__ = [
     "ImageParam",
     "VideoParam",
     "PromptParam",
+    "TagsParam",
     "ParamDefinition",
     # Pipeline
     "PipelineOutput",

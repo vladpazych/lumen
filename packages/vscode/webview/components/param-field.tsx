@@ -16,6 +16,7 @@ import { PlaceholderField } from "@/components/fields/placeholder-field";
 import { PromptField } from "@/components/fields/prompt-field";
 import { SeedField } from "@/components/fields/seed-field";
 import { SelectField } from "@/components/fields/select-field";
+import { TagsField } from "@/components/fields/tags-field";
 import { TextField } from "@/components/fields/text-field";
 
 type Props = {
@@ -166,5 +167,14 @@ function renderField(
       );
     case "video":
       return <PlaceholderField typeName="Video" />;
+    case "tags":
+      return (
+        <TagsField
+          param={param}
+          value={Array.isArray(value) ? (value as string[]) : []}
+          onChange={onChange}
+          id={id}
+        />
+      );
   }
 }

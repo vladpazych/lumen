@@ -11,6 +11,7 @@ export type {
   ImageParam,
   VideoParam,
   PromptParam,
+  TagsParam,
   ParamDefinition,
   PipelineCategory,
   PipelineManifest,
