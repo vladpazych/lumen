@@ -15,9 +15,8 @@ Schema-driven image/video generation editor. Provider-agnostic `.imagic` file fo
 
 ## Structure
 
-| Dir | Purpose |
-|:----|:--------|
-| apps/vscode/ | VS Code custom editor extension |
-| apps/pipelines/ | FastAPI + Modal inference server (Python) |
-| packages/lumen/ | Shared core (future) |
-| meta/ | Repo tooling (dexter-powered) |
+| Dir                           | Purpose                                           |
+| :---------------------------- | :------------------------------------------------ |
+| packages/vscode/              | VS Code custom editor extension                   |
+| packages/lumen-example-modal/ | Example FastAPI + Modal inference server (Python) |
+| meta/                         | Repo tooling (dexter-powered)                     |

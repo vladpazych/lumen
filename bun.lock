@@ -5,12 +5,22 @@
     "": {
       "name": "lumen-workspace",
     },
-    "apps/pipelines": {
-      "name": "@lumen/pipelines",
+    "meta": {
+      "name": "@lumen/meta",
+      "version": "0.0.0",
+      "dependencies": {
+        "@vladpazych/dexter": "^0.1.13",
+      },
+      "devDependencies": {
+        "@types/bun": "^1",
+      },
+    },
+    "packages/lumen-example-modal": {
+      "name": "@vladpazych/lumen-example-modal",
       "version": "0.1.0",
     },
-    "apps/vscode": {
-      "name": "lumen-vscode",
+    "packages/vscode": {
+      "name": "@vladpazych/lumen-vscode",
       "version": "0.0.0",
       "devDependencies": {
         "@base-ui/react": "^1.0.0",
@@ -27,23 +37,6 @@
         "tailwind-merge": "^3.4.0",
         "tailwindcss": "^4.1.0",
         "vite": "^6.3.0",
-      },
-    },
-    "meta": {
-      "name": "@lumen/meta",
-      "version": "0.0.0",
-      "dependencies": {
-        "@vladpazych/dexter": "^0.1.13",
-      },
-      "devDependencies": {
-        "@types/bun": "^1",
-      },
-    },
-    "packages/lumen": {
-      "name": "@vladpazych/lumen",
-      "version": "0.0.1",
-      "devDependencies": {
-        "@types/bun": "^1",
       },
     },
   },
@@ -164,8 +157,6 @@
 
     "@lumen/meta": ["@lumen/meta@workspace:meta"],
 
-    "@lumen/pipelines": ["@lumen/pipelines@workspace:apps/pipelines"],
-
     "@rolldown/pluginutils": ["@rolldown/pluginutils@1.0.0-beta.27", "", {}, "sha512-+d0F4MKMCbeVUJwG96uQ4SgAznZNSq93I3V+9NHA4OpvqG8mRCpGdKmK8l/dl02h2CCDHwW2FqilnTyDcAnqjA=="],
 
     "@rollup/rollup-android-arm-eabi": ["@rollup/rollup-android-arm-eabi@4.59.0", "", { "os": "android", "cpu": "arm" }, "sha512-upnNBkA6ZH2VKGcBj9Fyl9IGNPULcjXRlg0LLeaioQWueH30p6IXtJEbKAgvyv+mJaMxSm1l6xwDXYjpEMiLMg=="],
@@ -272,7 +263,9 @@
 
     "@vladpazych/dexter": ["@vladpazych/dexter@0.1.13", "", { "dependencies": { "zod": "^4.0.0" }, "bin": { "dexter": "bin/dexter" } }, "sha512-W1s9YTbgyYI6zj2Q1px+m7YHBUv8xVy/xjf6Up138T3nU0scE570ummisvDlJ4aCvbfLvo/j2YayuCCK/FGZxQ=="],
 
-    "@vladpazych/lumen": ["@vladpazych/lumen@workspace:packages/lumen"],
+    "@vladpazych/lumen-example-modal": ["@vladpazych/lumen-example-modal@workspace:packages/lumen-example-modal"],
+
+    "@vladpazych/lumen-vscode": ["@vladpazych/lumen-vscode@workspace:packages/vscode"],
 
     "baseline-browser-mapping": ["baseline-browser-mapping@2.10.0", "", { "bin": { "baseline-browser-mapping": "dist/cli.cjs" } }, "sha512-lIyg0szRfYbiy67j9KN8IyeD7q7hcmqnJ1ddWmNt19ItGpNN64mnllmxUNFIOdOm6by97jlL6wfpTTJrmnjWAA=="],
 
@@ -345,8 +338,6 @@
     "lru-cache": ["lru-cache@5.1.1", "", { "dependencies": { "yallist": "^3.0.2" } }, "sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w=="],
 
     "lucide-react": ["lucide-react@0.560.0", "", { "peerDependencies": { "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-NwKoUA/aBShsdL8WE5lukV2F/tjHzQRlonQs7fkNGI1sCT0Ay4a9Ap3ST2clUUkcY+9eQ0pBe2hybTQd2fmyDA=="],
-
-    "lumen-vscode": ["lumen-vscode@workspace:apps/vscode"],
 
     "magic-string": ["magic-string@0.30.21", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.5" } }, "sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ=="],
 
