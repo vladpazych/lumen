@@ -65,16 +65,19 @@ The `dimensions` param arrives as `{"w": int, "h": int}`. Always type-check with
 - Pipeline `id` must be a unique kebab-case slug.
 - Files starting with `_` are skipped by discovery.
 
-## Commands
+## Workflow
+
+The VS Code extension manages the dev server (`modal serve`) and hot-reloads automatically. You do NOT run the server yourself — just write code and validate.
 
 ```sh
-uv sync              # Install Python deps
-bun run dev          # modal serve (hot-reload dev server)
-bun run test         # pytest
+bun run test         # pytest — validate schema + contract compliance
 bun run lint         # ruff check
 ```
 
+After saving a pipeline file, the extension hot-reloads the server. Check `lumen.log` at the repo root for server output and errors.
+
 ## Gotchas
 
-- `modal serve` hot-reload silently fails when a new `@app.cls` with an unbuilt image is added. Restart the dev server manually after adding a new GPU pipeline. Subsequent file edits hot-reload normally.
+- Hot-reload silently fails when a new `@app.cls` with an unbuilt image is added. The user must restart the dev server from VS Code after adding a new GPU pipeline. Subsequent file edits hot-reload normally.
 - `ruff check` line-length limit is 100 chars. Long description strings need parenthesized multi-line concatenation.
+- Server logs go to `lumen.log` at the repo root — read this file to diagnose runtime errors.
