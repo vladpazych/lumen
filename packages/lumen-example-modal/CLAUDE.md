@@ -161,10 +161,10 @@ bun run test         # pytest — validate schema + contract compliance
 bun run lint         # ruff check
 ```
 
-After saving a pipeline file, the extension hot-reloads the server. Check `lumen.log` at the repo root for server output and errors.
+After saving a pipeline file, the extension hot-reloads the server. Check `lumen.log` in this directory for server output and errors.
 
 ## Gotchas
 
 - Hot-reload silently fails when a new `@app.cls` with an unbuilt image is added. The user must restart the dev server from VS Code after adding a new GPU pipeline. Subsequent file edits hot-reload normally.
 - `ruff check` line-length limit is 100 chars. Long description strings need parenthesized multi-line concatenation.
-- Server logs go to `lumen.log` at the repo root — read this file to diagnose runtime errors.
+- Server logs go to `lumen.log` in this directory — read this file to diagnose runtime errors.
