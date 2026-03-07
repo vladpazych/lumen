@@ -1,10 +1,3 @@
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -53,31 +46,14 @@ export function SelectField({ param, value, onChange, id }: Props) {
     );
   }
 
-  // dropdown display
-  if (param.allowCustom) {
-    return (
-      <Combobox
-        options={param.options}
-        value={value}
-        onValueChange={onChange}
-        placeholder={param.placeholder}
-        id={id}
-      />
-    );
-  }
-
   return (
-    <Select value={value || null} onValueChange={(v) => v && onChange(v)}>
-      <SelectTrigger id={id}>
-        <SelectValue placeholder={param.placeholder ?? "Select..."} />
-      </SelectTrigger>
-      <SelectContent>
-        {param.options.map((opt) => (
-          <SelectItem key={opt.value} value={opt.value}>
-            {opt.label ?? opt.value}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <Combobox
+      options={param.options}
+      value={value}
+      onValueChange={onChange}
+      placeholder={param.placeholder}
+      allowCustom={param.allowCustom}
+      id={id}
+    />
   );
 }

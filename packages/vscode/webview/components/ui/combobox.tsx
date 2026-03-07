@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { Check, ChevronDown } from "lucide-react";
 import { Popover } from "@base-ui/react/popover";
 
 import { cn } from "@/lib/utils";
@@ -10,6 +11,7 @@ type ComboboxProps = {
   value: string;
   onValueChange: (value: string) => void;
   placeholder?: string;
+  allowCustom?: boolean;
   id?: string;
 };
 
@@ -18,6 +20,7 @@ export function Combobox({
   value,
   onValueChange,
   placeholder,
+  allowCustom = false,
   id,
 }: ComboboxProps) {
   const [open, setOpen] = useState(false);
@@ -36,6 +39,7 @@ export function Combobox({
     onValueChange(val);
     setQuery("");
     setOpen(false);
+    inputRef.current?.blur();
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,12 +51,15 @@ export function Combobox({
     if (e.key === "Enter") {
       e.preventDefault();
       const q = query.trim();
-      if (q) {
+      if (allowCustom && q) {
         handleSelect(q);
+      } else if (filtered.length > 0) {
+        handleSelect(filtered[0].value);
       }
     } else if (e.key === "Escape") {
       setQuery("");
       setOpen(false);
+      inputRef.current?.blur();
     }
   };
 
@@ -62,9 +69,8 @@ export function Combobox({
   };
 
   const handleBlur = () => {
-    // Delay to allow click on option
     setTimeout(() => {
-      if (query.trim() && query.trim() !== displayValue) {
+      if (allowCustom && query.trim() && query.trim() !== displayValue) {
         onValueChange(query.trim());
       }
       setQuery("");
@@ -76,19 +82,27 @@ export function Combobox({
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger
         render={
-          <input
-            ref={inputRef}
-            id={id}
-            type="text"
-            value={open ? query : displayValue}
-            placeholder={placeholder ?? "Search or type..."}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            className="flex h-7 w-full rounded-md bg-surface-3 px-2 py-1 text-[12px] text-text-primary transition-colors outline-none placeholder:text-text-tertiary hover:bg-surface-3/80 focus-visible:ring-1 focus-visible:ring-ring"
-            autoComplete="off"
-          />
+          <div className="relative">
+            <input
+              ref={inputRef}
+              id={id}
+              type="text"
+              value={open ? query : displayValue}
+              placeholder={
+                placeholder ?? (allowCustom ? "Search or type..." : "Search...")
+              }
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              className={cn(
+                "flex h-7 w-full rounded-md bg-surface-3 px-2 py-1 text-[12px] text-text-primary transition-colors outline-none placeholder:text-text-tertiary hover:bg-surface-3/80 focus-visible:ring-1 focus-visible:ring-ring",
+                "pr-6",
+              )}
+              autoComplete="off"
+            />
+            <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 size-3 text-text-secondary" />
+          </div>
         }
       />
       {filtered.length > 0 && (
@@ -96,7 +110,7 @@ export function Combobox({
           <Popover.Positioner sideOffset={4} side="bottom" align="start">
             <Popover.Popup
               className={cn(
-                "bg-surface-raised text-text-primary z-50 min-w-36 max-h-48 overflow-y-auto rounded-md border border-border shadow-md p-1",
+                "bg-surface-raised text-text-primary z-50 min-w-[var(--anchor-width)] max-h-48 overflow-y-auto rounded-md border border-border shadow-md p-1",
                 "data-[open]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[open]:fade-in-0 data-[closed]:zoom-out-95 data-[open]:zoom-in-95",
               )}
             >
@@ -106,7 +120,7 @@ export function Combobox({
                   role="option"
                   aria-selected={opt.value === value}
                   className={cn(
-                    "flex w-full cursor-default select-none items-center rounded-sm py-1 px-2 text-[12px] outline-none",
+                    "relative flex w-full cursor-default select-none items-center rounded-sm py-1 pl-2 pr-7 text-[12px] outline-none",
                     "hover:bg-hover hover:text-text-primary",
                     opt.value === value && "text-primary",
                   )}
@@ -116,6 +130,9 @@ export function Combobox({
                   }}
                 >
                   {opt.label ?? opt.value}
+                  {opt.value === value && (
+                    <Check className="absolute right-2 size-3" />
+                  )}
                 </div>
               ))}
             </Popover.Popup>
