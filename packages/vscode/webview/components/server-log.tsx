@@ -21,7 +21,11 @@ export function ServerLog({ lines }: Props) {
   if (lines.length === 0) return null;
 
   const cleaned = lines.map((l) => stripAnsi(l));
-  const lastLine = cleaned[cleaned.length - 1] ?? "";
+  const lastLine =
+    [...cleaned]
+      .reverse()
+      .find((l) => l.trim().length > 0)
+      ?.trim() ?? "";
 
   return (
     <div className="border-t border-border">
