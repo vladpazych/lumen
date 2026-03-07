@@ -126,7 +126,7 @@ export function ConfigCard({
 
       {/* Body */}
       {open && (
-        <div className="px-3 pb-3">
+        <div className="px-3 pt-3 pb-3">
           {schema ? (
             <div className="flex flex-col gap-4">
               {description && (
