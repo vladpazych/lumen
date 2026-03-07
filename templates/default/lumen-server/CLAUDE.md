@@ -27,7 +27,7 @@ That's it. No imports in `app.py`, no registration calls. The server auto-discov
 | `VideoParam`      | `maxItems`                                                             | File upload + drag-drop              |
 | `TagsParam`       | `options`, `default`, `allowCustom`, `max`                             | Chip list + input                    |
 
-All param types share: `name` (required, key in params dict), `label`, `required`, `group`, `placeholder`, `hidden`.
+All param types share: `name` (required, key in params dict), `label`, `required`, `group`, `placeholder`, `hint`, `hidden`.
 
 ### Display hints
 
@@ -38,8 +38,8 @@ Some param types accept a `display` field to control UI rendering:
 
 ### Common fields
 
-- `placeholder` — hint text shown in empty inputs
-
+- `placeholder` — ghost text inside empty inputs (disappears on focus)
+- `hint` — helper text shown below the field (always visible)
 - `hidden` — param sent in generate but not shown in UI (for fixed pipeline constants)
 
 ### Generate function contract

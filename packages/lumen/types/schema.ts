@@ -6,6 +6,7 @@ type BaseParam = {
   required?: boolean;
   group?: string;
   placeholder?: string;
+  hint?: string;
   hidden?: boolean;
 };
 

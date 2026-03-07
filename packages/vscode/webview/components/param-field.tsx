@@ -54,6 +54,9 @@ export function ParamField({
         imageThumbs,
         onDropUri,
       )}
+      {param.hint && (
+        <p className="text-[11px] text-text-tertiary">{param.hint}</p>
+      )}
     </div>
   );
 }
