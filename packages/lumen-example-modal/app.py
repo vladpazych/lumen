@@ -11,6 +11,7 @@ from pipelines.types import config_to_dict, manifest_to_dict, result_to_dict
 
 # Import pipelines to trigger registration
 import pipelines.echo  # noqa: F401
+import pipelines.z_image_turbo  # noqa: F401
 
 web_app = FastAPI(title="Lumen Example")
 
