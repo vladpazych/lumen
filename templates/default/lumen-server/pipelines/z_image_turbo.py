@@ -24,10 +24,6 @@ from pipelines import (
 config = PipelineConfig(
     id="z-image-turbo",
     name="Z-Image Turbo",
-    description=(
-        "Fast image generation with Alibaba's Z-Image-Turbo 6B model."
-        " 8 NFE steps, sub-second on H800."
-    ),
     category="image",
     params=[
         PromptParam(name="prompt", label="Prompt", required=True, group="basic"),

@@ -14,7 +14,6 @@ class TextParam(BaseModel):
     required: bool | None = None
     group: str | None = None
     placeholder: str | None = None
-    description: str | None = None
     hidden: bool | None = None
     default: str | None = None
     multiline: bool | None = None
@@ -27,7 +26,6 @@ class NumberParam(BaseModel):
     required: bool | None = None
     group: str | None = None
     placeholder: str | None = None
-    description: str | None = None
     hidden: bool | None = None
     default: float | None = None
     min: float | None = None
@@ -43,7 +41,6 @@ class IntegerParam(BaseModel):
     required: bool | None = None
     group: str | None = None
     placeholder: str | None = None
-    description: str | None = None
     hidden: bool | None = None
     default: int | None = None
     min: int | None = None
@@ -58,7 +55,6 @@ class BooleanParam(BaseModel):
     required: bool | None = None
     group: str | None = None
     placeholder: str | None = None
-    description: str | None = None
     hidden: bool | None = None
     default: bool | None = None
 
@@ -75,7 +71,6 @@ class SelectParam(BaseModel):
     required: bool | None = None
     group: str | None = None
     placeholder: str | None = None
-    description: str | None = None
     hidden: bool | None = None
     options: list[SelectOption] = []
     default: str | None = None
@@ -90,7 +85,6 @@ class SeedParam(BaseModel):
     required: bool | None = None
     group: str | None = None
     placeholder: str | None = None
-    description: str | None = None
     hidden: bool | None = None
     default: int | None = None
 
@@ -113,7 +107,6 @@ class DimensionsParam(BaseModel):
     required: bool | None = None
     group: str | None = None
     placeholder: str | None = None
-    description: str | None = None
     hidden: bool | None = None
     default: Dimensions | None = None
     presets: list[DimensionPreset] | None = None
@@ -126,7 +119,6 @@ class ImageParam(BaseModel):
     required: bool | None = None
     group: str | None = None
     placeholder: str | None = None
-    description: str | None = None
     hidden: bool | None = None
     maxItems: int | None = None
 
@@ -138,7 +130,6 @@ class VideoParam(BaseModel):
     required: bool | None = None
     group: str | None = None
     placeholder: str | None = None
-    description: str | None = None
     hidden: bool | None = None
     maxItems: int | None = None
 
@@ -150,7 +141,6 @@ class PromptParam(BaseModel):
     required: bool | None = None
     group: str | None = None
     placeholder: str | None = None
-    description: str | None = None
     hidden: bool | None = None
     default: str | None = None
 
@@ -162,7 +152,6 @@ class TagsParam(BaseModel):
     required: bool | None = None
     group: str | None = None
     placeholder: str | None = None
-    description: str | None = None
     hidden: bool | None = None
     options: list[SelectOption] | None = None
     default: list[str] | None = None
@@ -196,20 +185,13 @@ class PipelineOutput(BaseModel):
 class PipelineConfig(BaseModel):
     id: str = ""
     name: str = ""
-    description: str | None = None
     category: Literal["image", "video"] = "image"
     params: list[ParamDefinition] = []
     output: PipelineOutput = Field(default_factory=PipelineOutput)
 
     def to_wire(self) -> dict[str, Any]:
-        """Full schema for GET /pipelines/{id} and SSE events."""
+        """Full schema for JSON responses and SSE events."""
         return self.model_dump(exclude_none=True)
-
-    def to_manifest(self) -> dict[str, Any]:
-        """Lightweight listing for GET /pipelines."""
-        return self.model_dump(
-            include={"id", "name", "description", "category"}, exclude_none=True
-        )
 
 
 # --- Generation ---

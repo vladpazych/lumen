@@ -21,7 +21,6 @@ from pipelines import (
 config = PipelineConfig(
     id="my-pipeline",
     name="My Pipeline",
-    description="Does something useful.",
     category="image",
     params=[
         PromptParam(name="prompt", label="Prompt", required=True, group="basic"),
@@ -49,7 +48,7 @@ config = PipelineConfig(
         #     label="Reference Image", group="basic"),
         # BooleanParam(name="upscale", label="Upscale",
         #     default=False,
-        #     description="2x upscale via ESRGAN",
+        #
         #     group="advanced"),
     ],
     output=PipelineOutput(type="image", format="png"),

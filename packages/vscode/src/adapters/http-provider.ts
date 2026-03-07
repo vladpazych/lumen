@@ -104,18 +104,7 @@ export function httpProvider(
         headers: authHeaders,
       });
       if (!res.ok) throw new Error(`GET /pipelines failed: ${res.status}`);
-      const manifests = (await res.json()) as { id: string }[];
-
-      return Promise.all(
-        manifests.map(async (m) => {
-          const r = await fetch(`${serverUrl}/pipelines/${m.id}`, {
-            headers: authHeaders,
-          });
-          if (!r.ok)
-            throw new Error(`GET /pipelines/${m.id} failed: ${r.status}`);
-          return (await r.json()) as PipelineConfig;
-        }),
-      );
+      return (await res.json()) as PipelineConfig[];
     },
 
     async generate(

@@ -17,7 +17,6 @@ from pipelines._fal import run_fal, shared_params
 config = PipelineConfig(
     id="fal-nano-banana-2",
     name="Nano Banana 2",
-    description="Gemini 3.1 Flash image generation via fal.ai",
     category="image",
     params=[
         PromptParam(

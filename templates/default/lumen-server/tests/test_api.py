@@ -33,16 +33,15 @@ class TestListPipelines:
         assert isinstance(data, list)
         assert len(data) > 0
 
-    def test_manifest_shape(self, client: TestClient):
+    def test_config_shape(self, client: TestClient):
         res = client.get("/pipelines")
-        manifest = res.json()[0]
-        assert "id" in manifest
-        assert "name" in manifest
-        assert "category" in manifest
-        assert manifest["category"] in ("image", "video")
-        # Manifest should NOT include params or output
-        assert "params" not in manifest
-        assert "output" not in manifest
+        config = res.json()[0]
+        assert "id" in config
+        assert "name" in config
+        assert "category" in config
+        assert config["category"] in ("image", "video")
+        assert "params" in config
+        assert "output" in config
 
 
 class TestGetPipeline:

@@ -6,7 +6,6 @@ type BaseParam = {
   required?: boolean;
   group?: string;
   placeholder?: string;
-  description?: string;
   hidden?: boolean;
 };
 
@@ -106,13 +105,6 @@ export type ParamDefinition =
 
 export type PipelineCategory = "image" | "video";
 
-export type PipelineManifest = {
-  id: string;
-  name: string;
-  description?: string;
-  category: PipelineCategory;
-};
-
 export type PipelineOutput = {
   type: "image" | "video" | "image[]" | "video[]";
   format?: string;
@@ -121,7 +113,6 @@ export type PipelineOutput = {
 export type PipelineConfig = {
   id: string;
   name: string;
-  description?: string;
   category: PipelineCategory;
   params: ParamDefinition[];
   output: PipelineOutput;

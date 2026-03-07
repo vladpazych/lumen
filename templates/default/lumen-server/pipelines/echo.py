@@ -16,7 +16,6 @@ from pipelines import (
 config = PipelineConfig(
     id="echo",
     name="Echo",
-    description="Returns a placeholder image with the prompt overlaid. No GPU required.",
     category="image",
     params=[
         PromptParam(name="prompt", label="Prompt", required=True, group="basic"),

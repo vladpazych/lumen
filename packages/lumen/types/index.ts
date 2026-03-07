@@ -14,7 +14,6 @@ export type {
   TagsParam,
   ParamDefinition,
   PipelineCategory,
-  PipelineManifest,
   PipelineOutput,
   PipelineConfig,
 } from "./schema";

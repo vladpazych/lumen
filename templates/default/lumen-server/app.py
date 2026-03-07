@@ -50,7 +50,7 @@ async def auth_middleware(request: Request, call_next):
 
 @web_app.get("/pipelines")
 async def list_pipelines():
-    return [e.config.to_manifest() for e in registry.list_all()]
+    return [e.config.to_wire() for e in registry.list_all()]
 
 
 @web_app.get("/pipelines/events")

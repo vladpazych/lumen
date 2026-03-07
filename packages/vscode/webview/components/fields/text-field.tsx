@@ -25,7 +25,7 @@ export function TextField({ param, value, onChange, id }: Props) {
     <Input
       id={id}
       type="text"
-      placeholder={param.default}
+      placeholder={param.placeholder ?? param.default}
       value={value}
       onChange={(e) => onChange(e.target.value)}
     />

@@ -53,7 +53,6 @@ export function ConfigCard({
   const fallbackTitle = schema?.name ?? config.pipeline;
   const title = config.name ?? fallbackTitle;
   const pipelineName = schema?.name ?? config.pipeline;
-  const description = schema?.description ?? null;
 
   const [draft, setDraft] = useState(title);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -129,9 +128,6 @@ export function ConfigCard({
         <div className="px-3 pt-3 pb-3">
           {schema ? (
             <div className="flex flex-col gap-4">
-              {description && (
-                <p className="text-[11px] text-text-secondary">{description}</p>
-              )}
               <PipelineForm
                 pipeline={schema}
                 values={config.params}
