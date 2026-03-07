@@ -1,0 +1,38 @@
+name: Publish VS Code Extension
+
+on:
+  push:
+    tags: ["vscode-v*"]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: vsce-publish
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Require version tag
+        run: |
+          tag=$(git tag --points-at HEAD | grep '^vscode-v' || true)
+          if [ -z "$tag" ]; then
+            echo "::error::HEAD has no vscode-v* tag"
+            exit 1
+          fi
+          echo "Publishing $tag"
+
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run --cwd packages/vscode typecheck
+
+      - name: Publish to Marketplace
+        run: bunx @vscode/vsce publish --no-dependencies
+        working-directory: packages/vscode
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
