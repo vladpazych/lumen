@@ -20,16 +20,6 @@ export type EditorService = {
     statuses: StatusCache,
   ): Promise<{ schemas: SchemaCache; statuses: StatusCache }>;
 
-  /** Health-check all non-virtual providers */
-  pollHealth(
-    serviceUrls: string[],
-    statuses: StatusCache,
-  ): Promise<{
-    statuses: StatusCache;
-    changed: { url: string; status: ServerStatus }[];
-    reconnected: string[];
-  }>;
-
   /** Run generation, poll if async, save assets */
   generate(
     serviceUrl: string,
@@ -82,46 +72,6 @@ export function editorService(ports: EditorPorts): EditorService {
     return { schemas: s, statuses: st };
   }
 
-  async function pollHealth(
-    serviceUrls: string[],
-    statuses: StatusCache,
-  ): Promise<{
-    statuses: StatusCache;
-    changed: { url: string; status: ServerStatus }[];
-    reconnected: string[];
-  }> {
-    const newStatuses = { ...statuses };
-    const changed: { url: string; status: ServerStatus }[] = [];
-    const reconnected: string[] = [];
-
-    for (const url of serviceUrls) {
-      // Virtual providers (provider://) don't need health checks
-      if (url.startsWith("provider://")) continue;
-
-      const prev = statuses[url];
-      const provider = providers[url];
-      if (!provider) continue;
-
-      try {
-        if (provider.ping) {
-          await provider.ping();
-        } else {
-          await provider.fetchSchemas();
-        }
-        newStatuses[url] = "connected";
-        if (prev !== "connected") reconnected.push(url);
-      } catch {
-        newStatuses[url] = "disconnected";
-      }
-
-      if (newStatuses[url] !== prev) {
-        changed.push({ url, status: newStatuses[url] });
-      }
-    }
-
-    return { statuses: newStatuses, changed, reconnected };
-  }
-
   async function generate(
     serviceUrl: string,
     pipelineId: string,
@@ -165,5 +115,5 @@ export function editorService(ports: EditorPorts): EditorService {
     return response;
   }
 
-  return { refreshSchemas, refreshAllSchemas, pollHealth, generate };
+  return { refreshSchemas, refreshAllSchemas, generate };
 }
