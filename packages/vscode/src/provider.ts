@@ -481,7 +481,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
           this.log.appendLine(`[sse] ${url} schemas: ${ids}`);
           this.appendToLogFile(`[sse] ${url} schemas: ${ids}\n`);
           this.schemas[url] = schemas;
-          this.writeSchemaFile();
+          this.writeSchemaFile(url);
           this.broadcastToAll({
             type: "schemaRefresh",
             serverUrl: url,
@@ -537,7 +537,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     );
     this.schemas = result.schemas;
     this.serverStatuses = result.statuses;
-    this.writeSchemaFile();
+    this.writeSchemaFile(serverUrl);
     this.broadcastToAll({
       type: "schemaRefresh",
       serverUrl,
@@ -726,18 +726,13 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
 
   // --- Schema file export ---
 
-  private getSchemaFilePath(): string | undefined {
-    const p = vscode.workspace
-      .getConfiguration("lumen")
-      .get<string>("schemaFile");
-    return p || undefined;
-  }
-
-  private writeSchemaFile(): void {
-    const schemaFile = this.getSchemaFilePath();
-    if (!schemaFile) return;
+  private writeSchemaFile(serverUrl: string): void {
+    const server = getServers().find((s) => s.url === serverUrl);
+    if (!server?.source) return;
+    const dest = join(server.source, "lumen.schema.json");
     try {
-      writeFileSync(schemaFile, JSON.stringify(this.schemas, null, 2) + "\n");
+      const schemas = this.schemas[serverUrl] ?? [];
+      writeFileSync(dest, JSON.stringify(schemas, null, 2) + "\n");
     } catch {}
   }
 

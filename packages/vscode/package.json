@@ -63,11 +63,6 @@
           "default": "",
           "description": "Absolute path to mirror all Lumen logs (extension + dev server). Useful for LLM-assisted debugging. Leave empty to disable."
         },
-        "lumen.schemaFile": {
-          "type": "string",
-          "default": "",
-          "description": "Absolute path to write pipeline schemas as JSON. Updated live when servers publish new schemas. Useful for LLM-assisted .lumen editing. Leave empty to disable."
-        },
         "lumen.servers": {
           "type": "array",
           "items": {
