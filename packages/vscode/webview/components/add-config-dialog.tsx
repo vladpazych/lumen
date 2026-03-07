@@ -1,12 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import type { PipelineConfig } from "@lumen/core/types";
 
 type Props = {
@@ -18,34 +12,26 @@ type Props = {
 export function AddConfigDialog({ pipelines, onAdd, onCancel }: Props) {
   const [pipeline, setPipeline] = useState<string | null>(null);
 
+  const options = pipelines.map((p) => ({ value: p.id, label: p.name }));
+
   return (
     <div className="rounded-md border border-border bg-card p-3">
       <div className="flex flex-col gap-3">
-        <Select
-          value={pipeline ?? undefined}
-          onValueChange={(v) => {
-            if (v) setPipeline(v);
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select pipeline..." />
-          </SelectTrigger>
-          <SelectContent>
-            {pipelines.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Combobox
+          options={options}
+          value={pipeline ?? ""}
+          onValueChange={setPipeline}
+          placeholder="Select pipeline..."
+        />
 
-        <div className="flex justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={onCancel}>
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" grow onClick={onCancel}>
             Cancel
           </Button>
           <Button
             variant="accent"
             size="sm"
+            grow
             disabled={!pipeline}
             onClick={() => pipeline && onAdd(pipeline)}
           >
