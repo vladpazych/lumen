@@ -21,11 +21,6 @@ export function ServerLog({ lines }: Props) {
   if (lines.length === 0) return null;
 
   const cleaned = lines.map((l) => stripAnsi(l));
-  const lastLine =
-    [...cleaned]
-      .reverse()
-      .find((l) => l.trim().length > 0)
-      ?.trim() ?? "";
 
   return (
     <div className="border-t border-border">
@@ -37,15 +32,21 @@ export function ServerLog({ lines }: Props) {
       )}
       <button
         type="button"
-        className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-[10px] text-text-tertiary hover:text-text-secondary ${open ? "border-t border-border" : ""}`}
+        className={`flex w-full items-center justify-center gap-1.5 px-3 py-1.5 text-[10px] text-text-tertiary hover:text-text-secondary ${open ? "border-t border-border" : ""}`}
         onClick={() => setOpen((v) => !v)}
       >
-        {!open && <span className="min-w-0 flex-1 truncate">{lastLine}</span>}
-        {open && <span className="flex-1">Hide logs</span>}
         {open ? (
-          <ChevronUp className="size-3 shrink-0" />
+          <>
+            <ChevronUp className="size-3" />
+            <span>Hide logs</span>
+            <ChevronUp className="size-3" />
+          </>
         ) : (
-          <ChevronDown className="size-3 shrink-0" />
+          <>
+            <ChevronDown className="size-3" />
+            <span>Show logs</span>
+            <ChevronDown className="size-3" />
+          </>
         )}
       </button>
     </div>
