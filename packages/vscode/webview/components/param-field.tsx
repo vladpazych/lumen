@@ -26,6 +26,7 @@ type Props = {
   onPickImage?: () => void;
   isPicking?: boolean;
   thumbnailUri?: string;
+  imageThumbs?: Record<string, string>;
   onDropUri?: (uri: string) => void;
 };
 
@@ -36,6 +37,7 @@ export function ParamField({
   onPickImage,
   isPicking,
   thumbnailUri,
+  imageThumbs,
   onDropUri,
 }: Props) {
   if (param.hidden) return null;
@@ -67,6 +69,7 @@ export function ParamField({
         onPickImage,
         isPicking,
         thumbnailUri,
+        imageThumbs,
         onDropUri,
       )}
     </div>
@@ -81,6 +84,7 @@ function renderField(
   onPickImage?: () => void,
   isPicking?: boolean,
   thumbnailUri?: string,
+  imageThumbs?: Record<string, string>,
   onDropUri?: (uri: string) => void,
 ) {
   switch (param.type) {
@@ -154,7 +158,29 @@ function renderField(
           onChange={onChange}
         />
       );
-    case "image":
+    case "image": {
+      const isMulti = (param.maxItems ?? 1) > 1;
+      if (isMulti) {
+        const arr = Array.isArray(value) ? (value as string[]) : [];
+        return (
+          <ImageField
+            multi
+            value={arr}
+            onChange={onChange}
+            onPick={onPickImage ?? (() => {})}
+            isPicking={isPicking ?? false}
+            thumbnails={imageThumbs ?? {}}
+            onDropUri={
+              onDropUri
+                ? (uri) => {
+                    onChange([...arr, uri]);
+                  }
+                : undefined
+            }
+            maxItems={param.maxItems}
+          />
+        );
+      }
       return (
         <ImageField
           value={(value as string) ?? ""}
@@ -165,6 +191,7 @@ function renderField(
           onDropUri={onDropUri}
         />
       );
+    }
     case "video":
       return <PlaceholderField typeName="Video" />;
     case "tags":

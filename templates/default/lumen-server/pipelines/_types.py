@@ -128,6 +128,7 @@ class ImageParam(BaseModel):
     placeholder: str | None = None
     description: str | None = None
     hidden: bool | None = None
+    maxItems: int | None = None
 
 
 class VideoParam(BaseModel):
@@ -139,6 +140,7 @@ class VideoParam(BaseModel):
     placeholder: str | None = None
     description: str | None = None
     hidden: bool | None = None
+    maxItems: int | None = None
 
 
 class PromptParam(BaseModel):

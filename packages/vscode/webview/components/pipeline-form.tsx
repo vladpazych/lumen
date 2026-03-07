@@ -57,6 +57,7 @@ export function PipelineForm({
                 }
                 isPicking={param.type === "image" ? isPickingImage : undefined}
                 thumbnailUri={imgValue ? imageThumbs[imgValue] : undefined}
+                imageThumbs={param.type === "image" ? imageThumbs : undefined}
                 onDropUri={
                   param.type === "image"
                     ? (uri) => onPickImageByUri(param.name, uri)

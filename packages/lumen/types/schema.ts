@@ -68,8 +68,15 @@ export type DimensionsParam = BaseParam & {
   presets?: DimensionPreset[];
 };
 
-export type ImageParam = BaseParam & { type: "image" };
-export type VideoParam = BaseParam & { type: "video" };
+export type ImageParam = BaseParam & {
+  type: "image";
+  maxItems?: number;
+};
+
+export type VideoParam = BaseParam & {
+  type: "video";
+  maxItems?: number;
+};
 
 export type PromptParam = BaseParam & {
   type: "prompt";
