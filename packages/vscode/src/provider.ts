@@ -39,8 +39,6 @@ import { vscodeLogger } from "./adapters/vscode-logger";
 import { vscodeSecretStore } from "./adapters/vscode-secrets";
 import { type DevServerState, getServers } from "./server";
 
-const HEALTH_POLL_MS = 10_000;
-
 export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   private static readonly viewType = "lumen.stateViewer";
   private readonly panels: Set<vscode.WebviewPanel> = new Set();
@@ -48,7 +46,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   private schemas: SchemaCache = {};
   private serverStatuses: StatusCache = {};
   private devServerState: DevServerState = "stopped";
-  private healthTimer: ReturnType<typeof setInterval> | null = null;
+  private subscriptions: Map<string, () => void> = new Map();
   private falApiKey: string | null = null;
   private service: EditorService;
   private providers: Record<string, ProviderPort> = {};
@@ -150,8 +148,9 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     this.devServerState = state;
     this.broadcastToAll({ type: "devServerStatus", state });
     if (state === "running") {
+      this.unsubscribeAll();
       this.rebuildProviders();
-      for (const url of this.getAllServerUrls()) this.refreshSchemas(url);
+      this.subscribeAll();
     }
   }
 
@@ -200,12 +199,8 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
       this.postMessage(webviewPanel, { type: "configsUpdated", configs });
     };
 
-    // Fetch schemas for all configured servers on first open
-    for (const url of this.getAllServerUrls()) {
-      if (!this.schemas[url]) this.refreshSchemas(url);
-    }
-
-    if (this.panels.size === 1) this.startHealthPolling();
+    // Subscribe to all servers on first panel open
+    if (this.panels.size === 1) this.subscribeAll();
 
     webviewPanel.webview.onDidReceiveMessage(async (msg: WebviewMessage) => {
       switch (msg.type) {
@@ -476,10 +471,9 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     const configListener = vscode.workspace.onDidChangeConfiguration(
       (event) => {
         if (event.affectsConfiguration("lumen.servers")) {
+          this.unsubscribeAll();
           this.rebuildProviders();
-          for (const url of this.getAllServerUrls()) {
-            if (!this.schemas[url]) this.refreshSchemas(url);
-          }
+          this.subscribeAll();
         }
       },
     );
@@ -508,37 +502,48 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
       docWatcher.dispose();
       distListener.dispose();
       distWatcher.dispose();
-      if (this.panels.size === 0) this.stopHealthPolling();
+      if (this.panels.size === 0) this.unsubscribeAll();
     });
   }
 
-  // --- Health polling ---
+  // --- SSE subscriptions ---
 
-  private startHealthPolling(): void {
-    if (this.healthTimer) return;
-    this.pollHealth();
-    this.healthTimer = setInterval(() => this.pollHealth(), HEALTH_POLL_MS);
-  }
-
-  private stopHealthPolling(): void {
-    if (this.healthTimer) {
-      clearInterval(this.healthTimer);
-      this.healthTimer = null;
+  private subscribeAll(): void {
+    for (const url of this.getAllServerUrls()) {
+      this.subscribeTo(url);
     }
   }
 
-  private async pollHealth(): Promise<void> {
-    const result = await this.service.pollHealth(
-      this.getAllServerUrls(),
-      this.serverStatuses,
-    );
-    this.serverStatuses = result.statuses;
-    for (const { url, status } of result.changed) {
-      this.broadcastToAll({ type: "serverStatus", serverUrl: url, status });
-    }
-    for (const url of result.reconnected) {
+  private subscribeTo(url: string): void {
+    if (this.subscriptions.has(url)) return;
+    const provider = this.providers[url];
+    if (!provider) return;
+
+    if (provider.subscribe) {
+      const dispose = provider.subscribe({
+        onSchemas: (schemas) => {
+          this.schemas[url] = schemas;
+          this.broadcastToAll({
+            type: "schemaRefresh",
+            serverUrl: url,
+            pipelines: schemas,
+          });
+        },
+        onStatus: (status) => {
+          this.serverStatuses[url] = status;
+          this.broadcastToAll({ type: "serverStatus", serverUrl: url, status });
+        },
+      });
+      this.subscriptions.set(url, dispose);
+    } else {
+      // Non-SSE providers (e.g. fal) — one-shot schema fetch
       this.refreshSchemas(url);
     }
+  }
+
+  private unsubscribeAll(): void {
+    for (const dispose of this.subscriptions.values()) dispose();
+    this.subscriptions.clear();
   }
 
   // --- Schema refresh ---

@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
+
 import modal
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+from starlette.responses import StreamingResponse
 
 from pipelines import app, registry
 from pipelines.types import config_to_dict, manifest_to_dict, result_to_dict
@@ -20,6 +24,21 @@ web_app = FastAPI(title="Lumen Example")
 async def list_pipelines():
     entries = registry.list_all()
     return [manifest_to_dict(e.config) for e in entries]
+
+
+@web_app.get("/pipelines/events")
+async def pipeline_events():
+    async def event_stream():
+        configs = [config_to_dict(e.config) for e in registry.list_all()]
+        yield f"event: schemas\ndata: {json.dumps(configs)}\n\n"
+        try:
+            while True:
+                await asyncio.sleep(15)
+                yield ": keepalive\n\n"
+        except asyncio.CancelledError:
+            return
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
 @web_app.get("/pipelines/{pipeline_id}")
