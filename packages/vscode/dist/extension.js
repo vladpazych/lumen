@@ -299,12 +299,16 @@ var import_node_fs2 = require("node:fs");
 var import_node_path2 = require("node:path");
 var import_node_child_process = require("node:child_process");
 var vscode2 = __toESM(require("vscode"));
-function resolveServerPath() {
-  const raw = vscode2.workspace.getConfiguration("lumen").get("serverPath", "");
-  if (!raw)
-    return "";
+function resolveSource(raw) {
   const root = vscode2.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
   return raw.replace(/\$\{workspaceFolder\}/g, root);
+}
+function getServers() {
+  const raw = vscode2.workspace.getConfiguration("lumen").get("servers", []);
+  return raw.map((s) => ({
+    ...s,
+    source: s.source ? resolveSource(s.source) : undefined
+  }));
 }
 function pidFile(serverPath) {
   return import_node_path2.join(serverPath, ".dev.pid");
@@ -338,57 +342,57 @@ class ServerManager {
     this.output = output;
     this.onChange = onChange;
   }
-  getState() {
-    const serverPath = resolveServerPath();
-    if (!serverPath)
+  getState(sourcePath) {
+    if (!sourcePath)
       return "stopped";
-    return readPid(serverPath) !== null ? "running" : "stopped";
+    return readPid(sourcePath) !== null ? "running" : "stopped";
   }
-  start() {
-    const serverPath = resolveServerPath();
-    if (!serverPath) {
-      vscode2.window.showErrorMessage("Set lumen.serverPath first");
+  start(sourcePath) {
+    if (!sourcePath) {
+      vscode2.window.showErrorMessage("No server with source configured in lumen.servers");
       return;
     }
-    if (readPid(serverPath) !== null) {
+    if (readPid(sourcePath) !== null) {
       vscode2.window.showWarningMessage("Dev server is already running");
       return;
     }
-    this.output.appendLine(`[dev] Starting bun dev in ${serverPath}`);
+    this.output.appendLine(`[dev] Starting bun dev in ${sourcePath}`);
     this.output.show(true);
     const child = import_node_child_process.spawn("bun", ["dev"], {
-      cwd: serverPath,
+      cwd: sourcePath,
       stdio: ["ignore", "pipe", "pipe"],
       detached: true,
-      env: { ...process.env, PATH: `${process.env.PATH}:${process.env.HOME}/.bun/bin` }
+      env: {
+        ...process.env,
+        PATH: `${process.env.PATH}:${process.env.HOME}/.bun/bin`
+      }
     });
     if (child.pid) {
-      import_node_fs2.writeFileSync(pidFile(serverPath), String(child.pid));
+      import_node_fs2.writeFileSync(pidFile(sourcePath), String(child.pid));
     }
     child.stdout?.on("data", (d) => this.output.append(d.toString()));
     child.stderr?.on("data", (d) => this.output.append(d.toString()));
     child.on("close", (code) => {
       this.output.appendLine(`[dev] Exited with code ${code}`);
       try {
-        import_node_fs2.unlinkSync(pidFile(serverPath));
+        import_node_fs2.unlinkSync(pidFile(sourcePath));
       } catch {}
       this.onChange();
     });
     child.on("error", (err) => {
       this.output.appendLine(`[dev] Error: ${err.message}`);
       try {
-        import_node_fs2.unlinkSync(pidFile(serverPath));
+        import_node_fs2.unlinkSync(pidFile(sourcePath));
       } catch {}
       this.onChange();
     });
     child.unref();
     this.onChange();
   }
-  stop() {
-    const serverPath = resolveServerPath();
-    if (!serverPath)
+  stop(sourcePath) {
+    if (!sourcePath)
       return;
-    const pid = readPid(serverPath);
+    const pid = readPid(sourcePath);
     if (pid === null) {
       vscode2.window.showWarningMessage("Dev server is not running");
       return;
@@ -400,7 +404,7 @@ class ServerManager {
       process.kill(pid, "SIGTERM");
     }
     try {
-      import_node_fs2.unlinkSync(pidFile(serverPath));
+      import_node_fs2.unlinkSync(pidFile(sourcePath));
     } catch {}
     this.onChange();
   }
@@ -428,18 +432,21 @@ class LumenEditorProvider {
   constructor(context) {
     this.context = context;
   }
-  getDevServerUrl() {
-    const path = resolveServerPath();
-    const url = vscode3.workspace.getConfiguration("lumen").get("devServerUrl", "");
-    return path && url ? url : null;
+  getDevServer() {
+    return getServers().find((s) => s.source) ?? null;
   }
   getAllServerUrls() {
-    const devUrl = this.getDevServerUrl();
-    const deployed = vscode3.workspace.getConfiguration("lumen").get("serverUrls", []);
-    const urls = devUrl ? [devUrl, ...deployed] : [...deployed];
+    const urls = getServers().map((s) => s.url);
     if (this.falApiKey)
       urls.push(FAL_PROVIDER_URL);
     return urls;
+  }
+  getServerNames() {
+    const names = {};
+    for (const s of getServers()) {
+      names[s.url] = s.name;
+    }
+    return names;
   }
   async refreshFalApiKey() {
     const prev = this.falApiKey;
@@ -449,7 +456,11 @@ class LumenEditorProvider {
     } else if (!this.falApiKey && prev) {
       delete this.schemas[FAL_PROVIDER_URL];
       delete this.serverStatuses[FAL_PROVIDER_URL];
-      this.broadcastToAll({ type: "schemaRefresh", serverUrl: FAL_PROVIDER_URL, pipelines: [] });
+      this.broadcastToAll({
+        type: "schemaRefresh",
+        serverUrl: FAL_PROVIDER_URL,
+        pipelines: []
+      });
     }
   }
   onDevServerStateChange(state) {
@@ -467,7 +478,10 @@ class LumenEditorProvider {
       vscode3.Uri.file(import_node_path3.dirname(document.uri.fsPath)),
       ...(vscode3.workspace.workspaceFolders ?? []).map((f) => f.uri)
     ];
-    webviewPanel.webview.options = { enableScripts: true, localResourceRoots: resourceRoots };
+    webviewPanel.webview.options = {
+      enableScripts: true,
+      localResourceRoots: resourceRoots
+    };
     webviewPanel.webview.html = this.getHtml(webviewPanel.webview);
     let updatingFromWebview = false;
     const postConfigs = () => {
@@ -497,13 +511,15 @@ class LumenEditorProvider {
             if (!this.schemas[url])
               this.schemas[url] = [];
           }
+          const devServer = this.getDevServer();
           this.postMessage(webviewPanel, {
             type: "init",
             schemas: this.schemas,
             configs,
             serverStatuses: this.serverStatuses,
+            serverNames: this.getServerNames(),
             devServerState: this.devServerState,
-            devServerUrl: this.getDevServerUrl()
+            devServerUrl: devServer?.url ?? null
           });
           const docDir = import_node_path3.dirname(document.uri.fsPath);
           const thumbs = {};
@@ -525,7 +541,10 @@ class LumenEditorProvider {
           const configs = this.parseDocument(document);
           const idx = configs.findIndex((c) => c.id === msg.configId);
           if (idx >= 0) {
-            configs[idx] = { ...configs[idx], params: { ...configs[idx].params, [msg.paramName]: msg.value } };
+            configs[idx] = {
+              ...configs[idx],
+              params: { ...configs[idx].params, [msg.paramName]: msg.value }
+            };
             updatingFromWebview = true;
             await this.writeDocument(document, configs);
             updatingFromWebview = false;
@@ -544,7 +563,10 @@ class LumenEditorProvider {
                 const configs = this.parseDocument(document);
                 const idx = configs.findIndex((c) => c.id === configId);
                 if (idx >= 0) {
-                  configs[idx] = { ...configs[idx], params: { ...configs[idx].params, seed: meta.seed } };
+                  configs[idx] = {
+                    ...configs[idx],
+                    params: { ...configs[idx].params, seed: meta.seed }
+                  };
                   updatingFromWebview = true;
                   await this.writeDocument(document, configs);
                   updatingFromWebview = false;
@@ -701,7 +723,7 @@ class LumenEditorProvider {
       }
     });
     const configListener = vscode3.workspace.onDidChangeConfiguration((event) => {
-      if (event.affectsConfiguration("lumen.serverUrls") || event.affectsConfiguration("lumen.devServerUrl") || event.affectsConfiguration("lumen.serverPath")) {
+      if (event.affectsConfiguration("lumen.servers")) {
         for (const url of this.getAllServerUrls()) {
           if (!this.schemas[url]) {
             this.refreshSchemas(url);
@@ -742,7 +764,9 @@ class LumenEditorProvider {
         continue;
       const prev = this.serverStatuses[url];
       try {
-        const res = await fetch(`${url}/pipelines`, { signal: AbortSignal.timeout(5000) });
+        const res = await fetch(`${url}/pipelines`, {
+          signal: AbortSignal.timeout(5000)
+        });
         if (res.ok) {
           this.serverStatuses[url] = "connected";
           if (prev !== "connected")
@@ -754,7 +778,11 @@ class LumenEditorProvider {
         this.serverStatuses[url] = "disconnected";
       }
       if (this.serverStatuses[url] !== prev) {
-        this.broadcastToAll({ type: "serverStatus", serverUrl: url, status: this.serverStatuses[url] });
+        this.broadcastToAll({
+          type: "serverStatus",
+          serverUrl: url,
+          status: this.serverStatuses[url]
+        });
       }
     }
   }
@@ -762,8 +790,16 @@ class LumenEditorProvider {
     if (serverUrl === FAL_PROVIDER_URL) {
       this.schemas[serverUrl] = falPipelines;
       this.serverStatuses[serverUrl] = "connected";
-      this.broadcastToAll({ type: "schemaRefresh", serverUrl, pipelines: falPipelines });
-      this.broadcastToAll({ type: "serverStatus", serverUrl, status: "connected" });
+      this.broadcastToAll({
+        type: "schemaRefresh",
+        serverUrl,
+        pipelines: falPipelines
+      });
+      this.broadcastToAll({
+        type: "serverStatus",
+        serverUrl,
+        status: "connected"
+      });
       return;
     }
     try {
@@ -771,7 +807,11 @@ class LumenEditorProvider {
       this.schemas[serverUrl] = pipelines;
       this.serverStatuses[serverUrl] = "connected";
       this.broadcastToAll({ type: "schemaRefresh", serverUrl, pipelines });
-      this.broadcastToAll({ type: "serverStatus", serverUrl, status: "connected" });
+      this.broadcastToAll({
+        type: "serverStatus",
+        serverUrl,
+        status: "connected"
+      });
     } catch (err) {
       log.appendLine(`[schema] Failed to fetch from ${serverUrl}: ${err}`);
       this.serverStatuses[serverUrl] = "error";
@@ -859,7 +899,9 @@ class LumenEditorProvider {
         resolve2(path);
       };
       const buildItems = () => {
-        const items = [{ label: "$(arrow-up) ../", alwaysShow: true, dirName: ".." }];
+        const items = [
+          { label: "$(arrow-up) ../", alwaysShow: true, dirName: ".." }
+        ];
         try {
           const entries = import_node_fs3.readdirSync(currentDir, { withFileTypes: true }).filter((e) => !e.name.startsWith(".")).sort((a, b) => {
             if (a.isDirectory() !== b.isDirectory())
@@ -868,12 +910,21 @@ class LumenEditorProvider {
           });
           for (const entry of entries) {
             if (entry.isDirectory()) {
-              items.push({ label: `$(folder) ${entry.name}`, alwaysShow: true, dirName: entry.name });
+              items.push({
+                label: `$(folder) ${entry.name}`,
+                alwaysShow: true,
+                dirName: entry.name
+              });
             } else if (IMAGE_EXT.test(entry.name)) {
               const abs = import_node_path3.join(currentDir, entry.name);
               const rel = import_node_path3.relative(docDir, abs);
               const norm = rel.startsWith(".") ? rel : `./${rel}`;
-              items.push({ label: entry.name, description: norm, alwaysShow: true, imagePath: norm });
+              items.push({
+                label: entry.name,
+                description: norm,
+                alwaysShow: true,
+                imagePath: norm
+              });
             }
           }
         } catch {}
@@ -972,14 +1023,18 @@ function activeDocumentUri() {
     return tab.input.uri;
   return;
 }
+function devSourcePath() {
+  return getServers().find((s) => s.source)?.source ?? "";
+}
 function activate(context) {
   const output = vscode4.window.createOutputChannel("Lumen Server");
   const provider = new LumenEditorProvider(context);
   const serverManager = new ServerManager(output, () => {
-    provider.onDevServerStateChange(serverManager.getState());
+    provider.onDevServerStateChange(serverManager.getState(devSourcePath()));
   });
-  if (resolveServerPath()) {
-    provider.onDevServerStateChange(serverManager.getState());
+  const initialSource = devSourcePath();
+  if (initialSource) {
+    provider.onDevServerStateChange(serverManager.getState(initialSource));
   }
   provider.refreshFalApiKey();
   context.subscriptions.push(LumenEditorProvider.register(provider), vscode4.commands.registerCommand("lumen.openPreview", () => {
@@ -992,19 +1047,20 @@ function activate(context) {
     if (!uri)
       return;
     vscode4.commands.executeCommand("vscode.openWith", uri, "default");
-  }), vscode4.commands.registerCommand("lumen.startServer", () => serverManager.start()), vscode4.commands.registerCommand("lumen.stopServer", () => serverManager.stop()), vscode4.commands.registerCommand("lumen.setFalApiKey", async () => {
+  }), vscode4.commands.registerCommand("lumen.startServer", () => serverManager.start(devSourcePath())), vscode4.commands.registerCommand("lumen.stopServer", () => serverManager.stop(devSourcePath())), vscode4.commands.registerCommand("lumen.setFalApiKey", async () => {
     const set = await promptAndStoreApiKey(context.secrets);
     if (set)
       await provider.refreshFalApiKey();
   }), output);
   provider.onDevServerCommand = (cmd) => {
+    const source = devSourcePath();
     if (cmd === "start")
-      serverManager.start();
+      serverManager.start(source);
     else
-      serverManager.stop();
+      serverManager.stop(source);
   };
 }
 function deactivate() {}
 
-//# debugId=D7CA4E7AD26BA48A64756E2164756E21
+//# debugId=EE196DF14CE80CB964756E2164756E21
 //# sourceMappingURL=extension.js.map
