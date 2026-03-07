@@ -78,56 +78,56 @@ export function ConfigCard({
       {/* Header */}
       <button
         type="button"
-        className="flex w-full items-center gap-2 px-3 py-2.5 text-left group"
+        className="flex w-full items-start gap-2 px-3 py-2.5 text-left group"
         onClick={onToggle}
       >
         <ChevronDownIcon
-          className={`size-3.5 shrink-0 text-text-tertiary transition-transform duration-150 ${open ? "rotate-0" : "-rotate-90"}`}
+          className={`size-3.5 shrink-0 text-text-tertiary transition-transform duration-150 mt-0.5 ${open ? "rotate-0" : "-rotate-90"}`}
         />
         <div className="flex-1 min-w-0">
-          {editing ? (
-            <input
-              ref={inputRef}
-              className="w-full bg-transparent text-[13px] font-medium text-text-primary outline-none border-b border-border"
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") commitRename();
-                if (e.key === "Escape") cancelRename();
-                e.stopPropagation();
-              }}
-              onBlur={commitRename}
-              onClick={(e) => e.stopPropagation()}
-            />
-          ) : (
+          <div className="flex items-center gap-1">
+            {editing ? (
+              <input
+                ref={inputRef}
+                className="flex-1 bg-transparent text-[13px] font-medium text-text-primary outline-none border-b border-border"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") commitRename();
+                  if (e.key === "Escape") cancelRename();
+                  e.stopPropagation();
+                }}
+                onBlur={commitRename}
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <span
+                className="flex-1 text-[13px] font-medium text-text-primary truncate"
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  setDraft(title);
+                  setEditing(true);
+                }}
+              >
+                {title}
+              </span>
+            )}
             <span
-              className="block text-[13px] font-medium text-text-primary truncate"
-              onDoubleClick={(e) => {
+              className="text-[11px] text-text-tertiary hover:text-text-primary opacity-0 group-hover:opacity-100 transition-opacity px-1 shrink-0"
+              role="button"
+              tabIndex={-1}
+              onClick={(e) => {
                 e.stopPropagation();
-                setDraft(title);
-                setEditing(true);
+                onRemove();
               }}
             >
-              {title}
+              ✕
             </span>
-          )}
-          {!open && description && (
-            <span className="block text-[11px] text-text-tertiary truncate">
-              {description}
-            </span>
-          )}
+          </div>
+          <span className="block text-[11px] text-text-tertiary truncate h-4">
+            {description ?? "\u00A0"}
+          </span>
         </div>
-        <span
-          className="text-[11px] text-text-tertiary hover:text-text-primary opacity-0 group-hover:opacity-100 transition-opacity px-1 shrink-0"
-          role="button"
-          tabIndex={-1}
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove();
-          }}
-        >
-          ✕
-        </span>
       </button>
 
       {/* Body */}
@@ -135,9 +135,6 @@ export function ConfigCard({
         <div className="px-3 pb-3">
           {schema ? (
             <div className="flex flex-col gap-4">
-              {description && (
-                <p className="text-[11px] text-text-secondary">{description}</p>
-              )}
               <PipelineForm
                 pipeline={schema}
                 values={config.params}
