@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { LumenEditorProvider } from "./provider";
 import { promptAndStoreApiKey } from "./adapters/fal-provider";
-import { ServerManager, getServers } from "./server";
+import { ServerManager, getServers, isServerReachable } from "./server";
 
 function activeDocumentUri(): vscode.Uri | undefined {
   const textUri = vscode.window.activeTextEditor?.document.uri;
@@ -66,10 +66,22 @@ export function activate(context: vscode.ExtensionContext): void {
     output,
   );
 
-  provider.onDevServerCommand = (cmd: "start" | "stop") => {
+  provider.onDevServerCommand = async (cmd: "start" | "stop" | "restart") => {
     const source = devSourcePath();
-    if (cmd === "start") serverManager.start(source);
-    else serverManager.stop(source);
+    if (cmd === "start") {
+      const server = getServers().find((s) => s.source);
+      if (server && (await isServerReachable(server.url))) {
+        vscode.window.showWarningMessage(
+          "Server is already reachable — not starting a new instance",
+        );
+        return;
+      }
+      serverManager.start(source);
+    } else if (cmd === "restart") {
+      serverManager.restart(source);
+    } else {
+      serverManager.stop(source);
+    }
   };
 }
 

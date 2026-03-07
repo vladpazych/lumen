@@ -28,6 +28,7 @@ type Props = {
   devServerState: DevServerState;
   onStartServer: () => void;
   onStopServer: () => void;
+  onRestartServer: () => void;
   onParamChange: (
     configId: string,
     service: string,
@@ -89,6 +90,7 @@ export function ServerGroup({
   devServerState,
   onStartServer,
   onStopServer,
+  onRestartServer,
   onParamChange,
   onGenerate,
   onPickImage,
@@ -100,7 +102,14 @@ export function ServerGroup({
 }: Props) {
   const label = serverName ?? shortenUrl(serverUrl);
   const canStart = devServerState === "stopped" || devServerState === "error";
-  const canStop = devServerState === "running" || devServerState === "starting";
+  const canStop =
+    devServerState === "running" ||
+    devServerState === "starting" ||
+    devServerState === "rebuilding";
+  const canRestart =
+    devServerState === "running" || devServerState === "rebuilding";
+  const isRebuilding = devServerState === "rebuilding";
+  const serverAlreadyUp = canStart && status === "connected";
 
   const focusedConfig = configs[focusIndex - globalIndexOffset];
   const initialKey = focusedConfig?.id ?? null;
@@ -116,14 +125,24 @@ export function ServerGroup({
         </div>
         {isDevServer && (
           <div className="flex items-center gap-1">
-            {canStart && (
+            {isRebuilding && (
+              <span className="text-[10px] text-warning animate-pulse">
+                Rebuilding…
+              </span>
+            )}
+            {canStart && !serverAlreadyUp && (
               <Button variant="ghost" size="xs" onClick={onStartServer}>
                 Start
               </Button>
             )}
+            {canRestart && (
+              <Button variant="ghost" size="xs" onClick={onRestartServer}>
+                Restart
+              </Button>
+            )}
             {canStop && (
               <Button variant="ghost" size="xs" onClick={onStopServer}>
-                {devServerState === "starting" ? "Starting..." : "Stop"}
+                {devServerState === "starting" ? "Starting…" : "Stop"}
               </Button>
             )}
           </div>

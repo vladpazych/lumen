@@ -5,7 +5,12 @@ import * as vscode from "vscode";
 
 import type { ServerConfig } from "@lumen/core/types";
 
-export type DevServerState = "stopped" | "starting" | "running" | "error";
+export type DevServerState =
+  | "stopped"
+  | "starting"
+  | "rebuilding"
+  | "running"
+  | "error";
 
 /** Expand ${workspaceFolder} in a path string. */
 export function resolveSource(raw: string): string {
@@ -50,9 +55,26 @@ function readPid(serverPath: string): number | null {
   return pid;
 }
 
+// Modal stdout patterns for rebuild detection
+const REBUILD_START = /Creating objects|Initializing|Building image/;
+const REBUILD_DONE = /Created web function serve|Serving app/;
+
+/** Check if a server URL is already reachable. */
+export async function isServerReachable(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${url}/pipelines`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 export class ServerManager {
   private readonly output: vscode.OutputChannel;
   private readonly onChange: () => void;
+  private trackedState: DevServerState = "stopped";
 
   constructor(output: vscode.OutputChannel, onChange: () => void) {
     this.output = output;
@@ -61,7 +83,16 @@ export class ServerManager {
 
   getState(sourcePath: string): DevServerState {
     if (!sourcePath) return "stopped";
+    // Use tracked state if process is managed by us
+    if (this.trackedState !== "stopped") return this.trackedState;
+    // Fall back to PID check for externally started servers
     return readPid(sourcePath) !== null ? "running" : "stopped";
+  }
+
+  private setState(state: DevServerState): void {
+    if (this.trackedState === state) return;
+    this.trackedState = state;
+    this.onChange();
   }
 
   start(sourcePath: string): void {
@@ -78,6 +109,7 @@ export class ServerManager {
 
     this.output.appendLine(`[dev] Starting bun dev in ${sourcePath}`);
     this.output.show(true);
+    this.setState("starting");
 
     const shell = process.env.SHELL || "/bin/zsh";
     const child = spawn(shell, ["-l", "-c", "exec bun dev"], {
@@ -90,15 +122,25 @@ export class ServerManager {
       writeFileSync(pidFile(sourcePath), String(child.pid));
     }
 
-    child.stdout?.on("data", (d: Buffer) => this.output.append(d.toString()));
-    child.stderr?.on("data", (d: Buffer) => this.output.append(d.toString()));
+    const handleOutput = (chunk: Buffer) => {
+      const text = chunk.toString();
+      this.output.append(text);
+      if (REBUILD_DONE.test(text)) {
+        this.setState("running");
+      } else if (REBUILD_START.test(text)) {
+        this.setState("rebuilding");
+      }
+    };
+
+    child.stdout?.on("data", handleOutput);
+    child.stderr?.on("data", handleOutput);
 
     child.on("close", (code) => {
       this.output.appendLine(`[dev] Exited with code ${code}`);
       try {
         unlinkSync(pidFile(sourcePath));
       } catch {}
-      this.onChange();
+      this.setState("stopped");
     });
 
     child.on("error", (err) => {
@@ -106,11 +148,10 @@ export class ServerManager {
       try {
         unlinkSync(pidFile(sourcePath));
       } catch {}
-      this.onChange();
+      this.setState("error");
     });
 
     child.unref();
-    this.onChange();
   }
 
   stop(sourcePath: string): void {
@@ -129,6 +170,25 @@ export class ServerManager {
     try {
       unlinkSync(pidFile(sourcePath));
     } catch {}
-    this.onChange();
+    this.setState("stopped");
+  }
+
+  restart(sourcePath: string): void {
+    if (!sourcePath) return;
+    const pid = readPid(sourcePath);
+    if (pid !== null) {
+      this.output.appendLine(`[dev] Restarting — killing PID ${pid}`);
+      try {
+        process.kill(-pid, "SIGTERM");
+      } catch {
+        process.kill(pid, "SIGTERM");
+      }
+      try {
+        unlinkSync(pidFile(sourcePath));
+      } catch {}
+    }
+    this.setState("stopped");
+    // Brief delay to let the process fully exit
+    setTimeout(() => this.start(sourcePath), 500);
   }
 }

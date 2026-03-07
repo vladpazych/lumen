@@ -26,6 +26,7 @@ export function App() {
     requestGenerate,
     startDevServer,
     stopDevServer,
+    restartDevServer,
     isDevServer,
     pickImage,
     pickImageByUri,
@@ -113,6 +114,7 @@ export function App() {
                 devServerState={devServerState}
                 onStartServer={startDevServer}
                 onStopServer={stopDevServer}
+                onRestartServer={restartDevServer}
                 onParamChange={(
                   configId,
                   service,

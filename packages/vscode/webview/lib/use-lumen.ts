@@ -336,6 +336,10 @@ export function useLumen() {
     vscode.postMessage({ type: "stopDevServer" });
   }, []);
 
+  const restartDevServer = useCallback(() => {
+    vscode.postMessage({ type: "restartDevServer" });
+  }, []);
+
   const isDevServer = useCallback(
     (url: string) => url === state.devServerUrl,
     [state.devServerUrl],
@@ -419,6 +423,7 @@ export function useLumen() {
     refreshSchemas,
     startDevServer,
     stopDevServer,
+    restartDevServer,
     pickImage,
     pickImageByUri,
   };

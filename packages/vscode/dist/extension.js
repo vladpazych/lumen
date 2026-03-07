@@ -76,16 +76,32 @@ function serializeConfigs(configs) {
 }
 function ensureIds(configs) {
   let assigned = false;
+  const existingIds = new Set(configs.map((c) => c.id).filter(Boolean));
   for (const config of configs) {
     if (!config.id) {
-      config.id = crypto.randomUUID();
+      config.id = generateSlugId(config.pipeline, existingIds);
+      existingIds.add(config.id);
       assigned = true;
     }
   }
   return assigned;
 }
+function generateSlugId(base, existingIds) {
+  const slug = toKebab(base);
+  if (!existingIds.has(slug))
+    return slug;
+  for (let i = 2;; i++) {
+    const candidate = `${slug}-${i}`;
+    if (!existingIds.has(candidate))
+      return candidate;
+  }
+}
+function toKebab(s) {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
 function migrateOldFormat(raw) {
   const configs = [];
+  const existingIds = new Set;
   for (const [key, value] of Object.entries(raw)) {
     if (key.startsWith("_") || typeof value !== "object" || value === null)
       continue;
@@ -93,8 +109,10 @@ function migrateOldFormat(raw) {
     for (const [pipelineId, params] of Object.entries(pipelines)) {
       if (typeof params !== "object" || params === null)
         continue;
+      const id = generateSlugId(pipelineId, existingIds);
+      existingIds.add(id);
       configs.push({
-        id: crypto.randomUUID(),
+        id,
         service: key,
         pipeline: pipelineId,
         params
@@ -156,7 +174,7 @@ function editorService(ports) {
     }
     return { schemas: s, statuses: st };
   }
-  async function pollHealth(serviceUrls, schemas, statuses) {
+  async function pollHealth(serviceUrls, statuses) {
     const newStatuses = { ...statuses };
     const changed = [];
     const reconnected = [];
@@ -168,7 +186,11 @@ function editorService(ports) {
       if (!provider)
         continue;
       try {
-        await provider.fetchSchemas();
+        if (provider.ping) {
+          await provider.ping();
+        } else {
+          await provider.fetchSchemas();
+        }
         newStatuses[url] = "connected";
         if (prev !== "connected")
           reconnected.push(url);
@@ -187,7 +209,10 @@ function editorService(ports) {
       return {
         status: "failed",
         runId: "",
-        error: { code: "NO_PROVIDER", message: `No provider for ${serviceUrl}` }
+        error: {
+          code: "NO_PROVIDER",
+          message: `No provider for ${serviceUrl}`
+        }
       };
     }
     let response = await provider.generate(pipelineId, params);
@@ -207,6 +232,11 @@ function editorService(ports) {
 // src/adapters/http-provider.ts
 function httpProvider(serverUrl) {
   return {
+    async ping() {
+      const res = await fetch(`${serverUrl}/pipelines`);
+      if (!res.ok)
+        throw new Error(`GET /pipelines failed: ${res.status}`);
+    },
     async fetchSchemas() {
       const res = await fetch(`${serverUrl}/pipelines`);
       if (!res.ok)
@@ -610,10 +640,23 @@ function readPid(serverPath) {
   }
   return pid;
 }
+var REBUILD_START = /Creating objects|Initializing|Building image/;
+var REBUILD_DONE = /Created web function serve|Serving app/;
+async function isServerReachable(url) {
+  try {
+    const res = await fetch(`${url}/pipelines`, {
+      signal: AbortSignal.timeout(3000)
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
 
 class ServerManager {
   output;
   onChange;
+  trackedState = "stopped";
   constructor(output, onChange) {
     this.output = output;
     this.onChange = onChange;
@@ -621,7 +664,15 @@ class ServerManager {
   getState(sourcePath) {
     if (!sourcePath)
       return "stopped";
+    if (this.trackedState !== "stopped")
+      return this.trackedState;
     return readPid(sourcePath) !== null ? "running" : "stopped";
+  }
+  setState(state) {
+    if (this.trackedState === state)
+      return;
+    this.trackedState = state;
+    this.onChange();
   }
   start(sourcePath) {
     if (!sourcePath) {
@@ -634,36 +685,42 @@ class ServerManager {
     }
     this.output.appendLine(`[dev] Starting bun dev in ${sourcePath}`);
     this.output.show(true);
-    const child = import_node_child_process.spawn("bun", ["dev"], {
+    this.setState("starting");
+    const shell = process.env.SHELL || "/bin/zsh";
+    const child = import_node_child_process.spawn(shell, ["-l", "-c", "exec bun dev"], {
       cwd: sourcePath,
       stdio: ["ignore", "pipe", "pipe"],
-      detached: true,
-      env: {
-        ...process.env,
-        PATH: `${process.env.PATH}:${process.env.HOME}/.bun/bin`
-      }
+      detached: true
     });
     if (child.pid) {
       import_node_fs3.writeFileSync(pidFile(sourcePath), String(child.pid));
     }
-    child.stdout?.on("data", (d) => this.output.append(d.toString()));
-    child.stderr?.on("data", (d) => this.output.append(d.toString()));
+    const handleOutput = (chunk) => {
+      const text = chunk.toString();
+      this.output.append(text);
+      if (REBUILD_DONE.test(text)) {
+        this.setState("running");
+      } else if (REBUILD_START.test(text)) {
+        this.setState("rebuilding");
+      }
+    };
+    child.stdout?.on("data", handleOutput);
+    child.stderr?.on("data", handleOutput);
     child.on("close", (code) => {
       this.output.appendLine(`[dev] Exited with code ${code}`);
       try {
         import_node_fs3.unlinkSync(pidFile(sourcePath));
       } catch {}
-      this.onChange();
+      this.setState("stopped");
     });
     child.on("error", (err) => {
       this.output.appendLine(`[dev] Error: ${err.message}`);
       try {
         import_node_fs3.unlinkSync(pidFile(sourcePath));
       } catch {}
-      this.onChange();
+      this.setState("error");
     });
     child.unref();
-    this.onChange();
   }
   stop(sourcePath) {
     if (!sourcePath)
@@ -682,7 +739,25 @@ class ServerManager {
     try {
       import_node_fs3.unlinkSync(pidFile(sourcePath));
     } catch {}
-    this.onChange();
+    this.setState("stopped");
+  }
+  restart(sourcePath) {
+    if (!sourcePath)
+      return;
+    const pid = readPid(sourcePath);
+    if (pid !== null) {
+      this.output.appendLine(`[dev] Restarting — killing PID ${pid}`);
+      try {
+        process.kill(-pid, "SIGTERM");
+      } catch {
+        process.kill(pid, "SIGTERM");
+      }
+      try {
+        import_node_fs3.unlinkSync(pidFile(sourcePath));
+      } catch {}
+    }
+    this.setState("stopped");
+    setTimeout(() => this.start(sourcePath), 500);
   }
 }
 
@@ -1002,6 +1077,16 @@ class LumenEditorProvider {
           updatingFromWebview = false;
           break;
         }
+        case "removeConfig": {
+          const configs = parseConfigs(document.getText());
+          const filtered = configs.filter((c) => c.id !== msg.configId);
+          if (filtered.length !== configs.length) {
+            updatingFromWebview = true;
+            await this.writeDocument(document, filtered);
+            updatingFromWebview = false;
+          }
+          break;
+        }
         case "updateName": {
           const configs = parseConfigs(document.getText());
           const idx = configs.findIndex((c) => c.id === msg.configId);
@@ -1019,6 +1104,9 @@ class LumenEditorProvider {
         case "stopDevServer":
           this.onDevServerCommand?.("stop");
           break;
+        case "restartDevServer":
+          this.onDevServerCommand?.("restart");
+          break;
       }
     });
     const changeListener = vscode3.workspace.onDidChangeTextDocument((event) => {
@@ -1035,6 +1123,8 @@ class LumenEditorProvider {
         }
       }
     });
+    const docWatcher = vscode3.workspace.createFileSystemWatcher(document.uri.fsPath);
+    const docListener = docWatcher.onDidChange(() => postConfigs());
     const distPath = import_node_path4.join(this.context.extensionPath, "dist", "webview");
     const distWatcher = vscode3.workspace.createFileSystemWatcher(import_node_path4.join(distPath, "**/*"));
     const distListener = distWatcher.onDidChange(() => {
@@ -1044,6 +1134,8 @@ class LumenEditorProvider {
       this.panels.delete(webviewPanel);
       changeListener.dispose();
       configListener.dispose();
+      docListener.dispose();
+      docWatcher.dispose();
       distListener.dispose();
       distWatcher.dispose();
       if (this.panels.size === 0)
@@ -1063,7 +1155,7 @@ class LumenEditorProvider {
     }
   }
   async pollHealth() {
-    const result = await this.service.pollHealth(this.getAllServerUrls(), this.schemas, this.serverStatuses);
+    const result = await this.service.pollHealth(this.getAllServerUrls(), this.serverStatuses);
     this.serverStatuses = result.statuses;
     for (const { url, status } of result.changed) {
       this.broadcastToAll({ type: "serverStatus", serverUrl: url, status });
@@ -1236,15 +1328,23 @@ function activate(context) {
     if (set)
       await provider.refreshFalApiKey();
   }), output);
-  provider.onDevServerCommand = (cmd) => {
+  provider.onDevServerCommand = async (cmd) => {
     const source = devSourcePath();
-    if (cmd === "start")
+    if (cmd === "start") {
+      const server = getServers().find((s) => s.source);
+      if (server && await isServerReachable(server.url)) {
+        vscode4.window.showWarningMessage("Server is already reachable — not starting a new instance");
+        return;
+      }
       serverManager.start(source);
-    else
+    } else if (cmd === "restart") {
+      serverManager.restart(source);
+    } else {
       serverManager.stop(source);
+    }
   };
 }
 function deactivate() {}
 
-//# debugId=FFF96F2B600A641164756E2164756E21
+//# debugId=F23E9C1A2E80C07764756E2164756E21
 //# sourceMappingURL=extension.js.map

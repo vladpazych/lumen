@@ -47,8 +47,9 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   private providers: Record<string, ProviderPort> = {};
   private readonly log: vscode.OutputChannel;
 
-  /** Set by extension.ts to route webview start/stop commands to ServerManager */
-  onDevServerCommand: ((cmd: "start" | "stop") => void) | null = null;
+  /** Set by extension.ts to route webview start/stop/restart commands to ServerManager */
+  onDevServerCommand: ((cmd: "start" | "stop" | "restart") => void) | null =
+    null;
 
   static register(provider: LumenEditorProvider): vscode.Disposable {
     return vscode.window.registerCustomEditorProvider(
@@ -433,6 +434,10 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
         case "stopDevServer":
           this.onDevServerCommand?.("stop");
           break;
+
+        case "restartDevServer":
+          this.onDevServerCommand?.("restart");
+          break;
       }
     });
 
@@ -498,7 +503,6 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   private async pollHealth(): Promise<void> {
     const result = await this.service.pollHealth(
       this.getAllServerUrls(),
-      this.schemas,
       this.serverStatuses,
     );
     this.serverStatuses = result.statuses;

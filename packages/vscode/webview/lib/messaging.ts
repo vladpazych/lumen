@@ -5,7 +5,12 @@ import type {
   ServerStatus,
 } from "@lumen/core/types";
 
-export type DevServerState = "stopped" | "starting" | "running" | "error";
+export type DevServerState =
+  | "stopped"
+  | "starting"
+  | "rebuilding"
+  | "running"
+  | "error";
 
 // --- Extension → Webview ---
 
@@ -119,6 +124,7 @@ export type SelectConfigMessage = {
 
 export type StartDevServerMessage = { type: "startDevServer" };
 export type StopDevServerMessage = { type: "stopDevServer" };
+export type RestartDevServerMessage = { type: "restartDevServer" };
 
 export type PickImageMessage = {
   type: "pickImage";
@@ -163,6 +169,7 @@ export type WebviewMessage =
   | SelectConfigMessage
   | StartDevServerMessage
   | StopDevServerMessage
+  | RestartDevServerMessage
   | PickImageMessage
   | PickImageByUriMessage
   | AddConfigMessage
