@@ -98,6 +98,8 @@ gpu=["H100", "A100", "any"]  # Fallback chain
 
 Pipelines that call external APIs (Replicate, OpenAI, Stability, etc.) need secrets. Modal manages these securely — never hardcode keys in pipeline code.
 
+Modal secrets have two independent names: the **secret name** (what you pass to `from_name()`) and the **environment variable name(s)** stored inside it (what you read from `os.environ`). These are configured separately in the Modal dashboard.
+
 In code, attach secrets to the function or class and read them from `os.environ`:
 
 ```python
