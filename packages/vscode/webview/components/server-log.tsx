@@ -39,9 +39,9 @@ export function ServerLog({ lines }: Props) {
         {!open && <span className="min-w-0 flex-1 truncate">{lastLine}</span>}
         {open && <span className="flex-1">Hide logs</span>}
         {open ? (
-          <ChevronDown className="size-3 shrink-0" />
-        ) : (
           <ChevronUp className="size-3 shrink-0" />
+        ) : (
+          <ChevronDown className="size-3 shrink-0" />
         )}
       </button>
     </div>
