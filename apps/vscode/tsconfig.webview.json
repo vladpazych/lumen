@@ -1,9 +1,0 @@
-{
-  "extends": "@asombro/toolchain/tsconfig/react.json",
-  "compilerOptions": {
-    "rootDir": ".",
-    "outDir": "dist/webview"
-  },
-  "include": ["webview/**/*.ts", "webview/**/*.tsx", "shared/**/*.ts"],
-  "exclude": ["node_modules", "dist"]
-}

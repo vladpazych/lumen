@@ -1,9 +1,0 @@
-{
-  "extends": "@asombro/toolchain/tsconfig/node.json",
-  "compilerOptions": {
-    "rootDir": ".",
-    "outDir": "dist"
-  },
-  "include": ["src/**/*.ts", "shared/**/*.ts", "vite.config.ts", "dev.ts"],
-  "exclude": ["node_modules", "dist", "webview"]
-}
