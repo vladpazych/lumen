@@ -69,6 +69,7 @@ export type GenerateProgressMessage = {
   service: string;
   pipeline: string;
   progress: number;
+  stage?: "queued" | "running";
 };
 
 export type ImagePickedMessage = {

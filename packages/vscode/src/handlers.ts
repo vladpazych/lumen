@@ -131,14 +131,15 @@ async function handleGenerate(
       pipeline,
       resolved,
       document.uri.fsPath,
-      (progress) => {
+      (info) => {
         ctx.post({
           type: "generateProgress",
           requestId,
           configId,
           service: svc,
           pipeline,
-          progress,
+          progress: info.progress,
+          stage: info.stage,
         });
       },
     );

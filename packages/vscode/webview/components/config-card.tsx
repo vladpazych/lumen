@@ -17,6 +17,7 @@ type Props = {
   onToggle: () => void;
   isGenerating: boolean;
   progress?: number;
+  stage?: "queued" | "running";
   result?: {
     imageUrl?: string;
     error?: string;
@@ -40,6 +41,7 @@ export function ConfigCard({
   onToggle,
   isGenerating,
   progress,
+  stage,
   result,
   onParamChange,
   onGenerate,
@@ -55,6 +57,7 @@ export function ConfigCard({
   const pipelineName = schema?.name ?? config.pipeline;
 
   const [draft, setDraft] = useState(title);
+  const [hasErrors, setHasErrors] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const commitRename = () => {
@@ -136,11 +139,14 @@ export function ConfigCard({
                 isPickingImage={isPickingImage}
                 imageThumbs={imageThumbs}
                 onPickImageByUri={onPickImageByUri}
+                onValidation={setHasErrors}
               />
               <GenerateSection
                 loading={isGenerating}
                 progress={progress}
+                stage={stage}
                 hasQuality={schema.params.some((p) => p.name === "quality")}
+                disabled={hasErrors}
                 onPreview={() =>
                   onGenerate({ ...config.params, quality: "preview" })
                 }

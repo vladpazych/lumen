@@ -18,6 +18,7 @@ type State = {
   focusIndex: number;
   generating: Record<string, boolean>;
   progress: Record<string, number>;
+  stage: Record<string, "queued" | "running">;
   results: Record<
     string,
     { imageUrl?: string; error?: string; metadata?: Record<string, unknown> }
@@ -47,7 +48,12 @@ type Action =
   | { type: "updateName"; configId: string; name: string }
   | { type: "setFocus"; index: number }
   | { type: "generateStart"; key: string }
-  | { type: "generateProgress"; key: string; progress: number }
+  | {
+      type: "generateProgress";
+      key: string;
+      progress: number;
+      stage?: "queued" | "running";
+    }
   | {
       type: "generateResult";
       key: string;
@@ -124,6 +130,7 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         progress: { ...state.progress, [action.key]: action.progress },
+        stage: { ...state.stage, [action.key]: action.stage ?? "running" },
       };
     case "generateResult":
       return {
@@ -168,6 +175,7 @@ const initialState: State = {
   focusIndex: 0,
   generating: {},
   progress: {},
+  stage: {},
   results: {},
   imageThumbs: {},
   devServerLog: [],
@@ -220,6 +228,7 @@ export function useLumen() {
             type: "generateProgress",
             key: msg.configId,
             progress: msg.progress,
+            stage: msg.stage,
           });
           break;
         case "generateResult": {

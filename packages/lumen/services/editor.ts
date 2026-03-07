@@ -1,6 +1,6 @@
 import type { GenerateResponse, PipelineConfig, ServerStatus } from "../types";
 import type { EditorPorts } from "../ports";
-import { pollUntilDone } from "../domain/generation";
+import { pollUntilDone, type PollProgress } from "../domain/generation";
 
 export type SchemaCache = Record<string, PipelineConfig[]>;
 export type StatusCache = Record<string, ServerStatus>;
@@ -26,7 +26,7 @@ export type EditorService = {
     pipelineId: string,
     params: Record<string, unknown>,
     documentUri: string,
-    onProgress?: (progress: number) => void,
+    onProgress?: (info: PollProgress) => void,
   ): Promise<GenerateResponse>;
 };
 
@@ -77,7 +77,7 @@ export function editorService(ports: EditorPorts): EditorService {
     pipelineId: string,
     params: Record<string, unknown>,
     documentUri: string,
-    onProgress?: (progress: number) => void,
+    onProgress?: (info: PollProgress) => void,
   ): Promise<GenerateResponse> {
     const provider = providers[serviceUrl];
     if (!provider) {

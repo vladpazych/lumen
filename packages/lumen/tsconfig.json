@@ -11,5 +11,11 @@
     "isolatedModules": true,
     "noEmit": true
   },
-  "include": ["types/**/*.ts", "ports/**/*.ts", "domain/**/*.ts", "services/**/*.ts"]
+  "include": [
+    "env.d.ts",
+    "types/**/*.ts",
+    "ports/**/*.ts",
+    "domain/**/*.ts",
+    "services/**/*.ts"
+  ]
 }

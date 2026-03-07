@@ -5,23 +5,32 @@ import { Progress } from "@/components/ui/progress";
 type Props = {
   loading: boolean;
   progress?: number;
+  stage?: "queued" | "running";
   hasQuality?: boolean;
+  disabled?: boolean;
   onPreview?: () => void;
   onGenerate: () => void;
 };
 
-function formatStatus(elapsed: number, progress?: number): string {
+function formatStatus(
+  elapsed: number,
+  progress?: number,
+  stage?: "queued" | "running",
+): string {
+  const label = stage === "queued" ? "Queued" : "Generating";
   if (progress && progress > 0) {
     const pct = Math.round(progress * 100);
-    return `${pct}% · ${elapsed}s`;
+    return `${label}... ${pct}% · ${elapsed}s`;
   }
-  return `${elapsed}s`;
+  return `${label}... ${elapsed}s`;
 }
 
 export function GenerateSection({
   loading,
   progress,
+  stage,
   hasQuality,
+  disabled,
   onPreview,
   onGenerate,
 }: Props) {
@@ -41,24 +50,38 @@ export function GenerateSection({
   }, [loading]);
 
   const showProgress = loading && progress !== undefined && progress > 0;
+  const statusText = formatStatus(elapsed, progress, stage);
 
   return (
     <div className="flex flex-col gap-2">
       {showProgress && <Progress value={progress * 100} />}
       {hasQuality && onPreview ? (
         <div className="flex gap-2">
-          <Button variant="outline" grow disabled={loading} onClick={onPreview}>
-            {loading ? formatStatus(elapsed, progress) : "Preview"}
+          <Button
+            variant="outline"
+            grow
+            disabled={loading || disabled}
+            onClick={onPreview}
+          >
+            {loading ? statusText : "Preview"}
           </Button>
-          <Button variant="accent" grow disabled={loading} onClick={onGenerate}>
-            {loading ? formatStatus(elapsed, progress) : "Generate"}
+          <Button
+            variant="accent"
+            grow
+            disabled={loading || disabled}
+            onClick={onGenerate}
+          >
+            {loading ? statusText : "Generate"}
           </Button>
         </div>
       ) : (
-        <Button variant="accent" grow disabled={loading} onClick={onGenerate}>
-          {loading
-            ? `Generating... ${formatStatus(elapsed, progress)}`
-            : "Generate"}
+        <Button
+          variant="accent"
+          grow
+          disabled={loading || disabled}
+          onClick={onGenerate}
+        >
+          {loading ? statusText : "Generate"}
         </Button>
       )}
     </div>

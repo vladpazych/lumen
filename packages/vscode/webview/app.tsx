@@ -35,6 +35,7 @@ export function App() {
     devServerUrl,
     generating,
     progress,
+    stage,
     results,
     ready,
     addConfig,
@@ -154,6 +155,7 @@ export function App() {
           const schema = pipelines.find((p) => p.id === config.pipeline);
           const isGen = generating[config.id] ?? false;
           const prog = progress[config.id];
+          const stg = stage[config.id];
           const result = results[config.id];
 
           return (
@@ -169,6 +171,7 @@ export function App() {
               }}
               isGenerating={isGen}
               progress={prog}
+              stage={stg}
               result={result}
               onParamChange={(paramName, value) =>
                 updateParam(
