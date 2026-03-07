@@ -20,7 +20,8 @@ import { getServerSource } from "./server";
 
 const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\].*?\x07|\[[\d;]*[A-Za-z]/g;
 function stripAnsi(text: string): string {
-  return text.replace(ANSI_RE, "");
+  // Replace cursor-up (used by tqdm to overwrite) with \n to preserve line boundaries
+  return text.replace(/\x1b\[\d*A/g, "\n").replace(ANSI_RE, "");
 }
 
 /** Detect tqdm-style progress bars: `Loading weights:  10%|█ | 41/398` */
@@ -120,12 +121,13 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   broadcastDevServerLog(text: string): void {
     this.fileLog.append(text);
 
+    // Strip ANSI on full text first — cursor-up codes become \n line boundaries
+    const stripped = stripAnsi(text);
+
     const cleaned: string[] = [];
-    for (const raw of text.split("\n")) {
-      // Strip ANSI escape codes first so regex matching works
-      const stripped = stripAnsi(raw);
+    for (const raw of stripped.split("\n")) {
       // Handle \r (carriage return): tqdm overwrites the line — keep last segment
-      const segments = stripped.split("\r").filter((s) => s !== "");
+      const segments = raw.split("\r").filter((s) => s !== "");
       const line = segments.length > 0 ? segments[segments.length - 1] : "";
       if (!line.trim()) continue;
 
