@@ -77,6 +77,11 @@ Match param values to their schema type:
 
 HTTP servers expose schemas via a REST contract. Discover available pipelines and their params before writing the `.lumen` file.
 
+#### Finding the server URL
+
+1. Check existing configs in the `.lumen` file — the `service` field is the URL.
+2. Check `.vscode/settings.json` for `lumen.servers` — each entry has `url` and `name`.
+
 #### Discovery steps
 
 1. List pipelines: `GET <serverUrl>/pipelines` → `[{ "id": "echo", "name": "Echo", ... }]`
