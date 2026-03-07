@@ -1,0 +1,95 @@
+@import "tailwindcss";
+@source "./kit";
+
+/* All tokens derive from two VS Code anchors via color-mix.
+   Surfaces mix toward foreground (lighter on dark, darker on light).
+   Text hierarchy mixes toward background (fades into the surface).
+   No dark/light conditionals — adapts to any VS Code theme. */
+
+:root {
+  --bg: var(--vscode-editor-background, #1e1e1e);
+  --fg: var(--vscode-editor-foreground, #d4d4d4);
+
+  /* --- Surfaces (toward foreground for depth) --- */
+  --surface-0: var(--bg);
+  --surface-1: color-mix(in oklch, var(--bg) 96%, var(--fg));
+  --surface-2: color-mix(in oklch, var(--bg) 92%, var(--fg));
+  --surface-3: color-mix(in oklch, var(--bg) 88%, var(--fg));
+  --surface-4: color-mix(in oklch, var(--bg) 84%, var(--fg));
+  --surface-5: color-mix(in oklch, var(--bg) 80%, var(--fg));
+  --surface-raised: color-mix(in oklch, var(--bg) 98%, var(--fg));
+
+  /* --- Text (toward background for hierarchy) --- */
+  --text-primary: var(--fg);
+  --text-secondary: color-mix(in oklch, var(--fg) 72%, var(--bg));
+  --text-tertiary: color-mix(in oklch, var(--fg) 52%, var(--bg));
+  --text-disabled: color-mix(in oklch, var(--fg) 36%, var(--bg));
+
+  /* --- Semantic (from VS Code theme) --- */
+  --primary: var(--vscode-textLink-foreground, oklch(0.55 0.14 175));
+  --primary-foreground: var(--bg);
+  --destructive: var(--vscode-testing-iconFailed, var(--vscode-errorForeground, oklch(0.55 0.2 25)));
+  --success: var(--vscode-testing-iconPassed, oklch(0.65 0.16 155));
+  --warning: var(--vscode-notificationsWarningIcon-foreground, oklch(0.75 0.13 75));
+  --info: var(--vscode-textLink-foreground, oklch(0.6 0.14 245));
+
+  /* --- Borders (subtle foreground mix) --- */
+  --border: color-mix(in oklch, var(--fg) 12%, var(--bg));
+  --border-strong: color-mix(in oklch, var(--fg) 20%, var(--bg));
+
+  /* --- Interactive (semi-transparent overlays) --- */
+  --hover: color-mix(in oklch, var(--fg) 6%, transparent);
+  --active: color-mix(in oklch, var(--fg) 10%, transparent);
+  --selection: color-mix(in oklch, var(--primary) 15%, transparent);
+
+  /* --- Ring --- */
+  --ring: var(--vscode-focusBorder, var(--primary));
+}
+
+@theme inline {
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-4: var(--surface-4);
+  --color-surface-5: var(--surface-5);
+  --color-surface-raised: var(--surface-raised);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-disabled: var(--text-disabled);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-ring: var(--ring);
+
+  --color-hover: var(--hover);
+  --color-active: var(--active);
+  --color-selection: var(--selection);
+}
+
+body {
+  margin: 0;
+  background: var(--surface-0);
+  color: var(--text-primary);
+  font-family: var(--vscode-font-family, ui-sans-serif, system-ui, sans-serif);
+  font-size: var(--vscode-font-size, 13px);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}

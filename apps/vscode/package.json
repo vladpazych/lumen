@@ -1,0 +1,109 @@
+{
+  "name": "lumen-vscode",
+  "displayName": "Lumen",
+  "description": "Schema-driven editor for .imagic files",
+  "version": "0.0.0",
+  "private": true,
+  "publisher": "vladpazych",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Visualization"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "imagic.openPreview",
+        "title": "Imagic: Open Preview"
+      },
+      {
+        "command": "imagic.startServer",
+        "title": "Imagic: Start Server"
+      },
+      {
+        "command": "imagic.stopServer",
+        "title": "Imagic: Stop Server"
+      },
+      {
+        "command": "imagic.openAsJson",
+        "title": "Imagic: Open as JSON"
+      },
+      {
+        "command": "imagic.setFalApiKey",
+        "title": "Imagic: Set fal.ai API Key"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "imagic.openPreview",
+          "when": "resourceFilename =~ /\\.imagic$/"
+        },
+        {
+          "command": "imagic.openAsJson",
+          "when": "resourceFilename =~ /\\.imagic$/"
+        }
+      ]
+    },
+    "customEditors": [
+      {
+        "viewType": "imagic.stateViewer",
+        "displayName": "Imagic",
+        "selector": [
+          {
+            "filenamePattern": "*.imagic"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "configuration": {
+      "title": "Imagic",
+      "properties": {
+        "imagic.serverUrls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Deployed Imagic server URLs (grab yours from https://modal.com/apps)"
+        },
+        "imagic.serverPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to modal-pipelines directory (for local dev). Requires imagic.devServerUrl to be set."
+        },
+        "imagic.devServerUrl": {
+          "type": "string",
+          "default": "",
+          "description": "URL of the local dev server (e.g. http://localhost:8000). Required alongside imagic.serverPath for dev server to appear."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "dev": "bun run dev.ts",
+    "watch": "bun build src/extension.ts --outdir dist --target node --format cjs --external vscode --sourcemap=linked --watch & vite build --watch",
+    "build": "bun build src/extension.ts --outdir dist --target node --format cjs --external vscode --sourcemap=linked && vite build",
+    "package": "bun run build && bunx @vscode/vsce package --no-dependencies -o dist/imagic-vscode.vsix",
+    "reinstall": "bun run package && code --install-extension dist/imagic-vscode.vsix",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.webview.json"
+  },
+  "devDependencies": {
+    "@base-ui/react": "^1.0.0",
+    "@tailwindcss/vite": "^4.1.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.560.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss": "^4.1.0",
+    "vite": "^6.3.0"
+  }}

@@ -5,3 +5,13 @@ dist/
 !.env.example
 *.log
 .DS_Store
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.ruff_cache/
+.pytest_cache/
+
+# VS Code extension
+*.vsix
