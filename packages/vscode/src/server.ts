@@ -154,6 +154,24 @@ export class ServerManager {
     child.unref();
   }
 
+  /** Send SIGINT (Ctrl+C) so Modal can tear down the remote app, then SIGTERM as fallback. */
+  private killProcess(pid: number): void {
+    const signal = (sig: NodeJS.Signals) => {
+      try {
+        process.kill(-pid, sig);
+      } catch {
+        try {
+          process.kill(pid, sig);
+        } catch {}
+      }
+    };
+    signal("SIGINT");
+    // SIGTERM fallback if still alive after 3s
+    setTimeout(() => {
+      if (isAlive(pid)) signal("SIGTERM");
+    }, 3000);
+  }
+
   stop(sourcePath: string): void {
     if (!sourcePath) return;
     const pid = readPid(sourcePath);
@@ -161,12 +179,8 @@ export class ServerManager {
       vscode.window.showWarningMessage("Dev server is not running");
       return;
     }
-    this.output.appendLine(`[dev] Killing PID ${pid}`);
-    try {
-      process.kill(-pid, "SIGTERM");
-    } catch {
-      process.kill(pid, "SIGTERM");
-    }
+    this.output.appendLine(`[dev] Stopping PID ${pid} (SIGINT)`);
+    this.killProcess(pid);
     try {
       unlinkSync(pidFile(sourcePath));
     } catch {}
@@ -177,18 +191,14 @@ export class ServerManager {
     if (!sourcePath) return;
     const pid = readPid(sourcePath);
     if (pid !== null) {
-      this.output.appendLine(`[dev] Restarting — killing PID ${pid}`);
-      try {
-        process.kill(-pid, "SIGTERM");
-      } catch {
-        process.kill(pid, "SIGTERM");
-      }
+      this.output.appendLine(`[dev] Restarting — stopping PID ${pid}`);
+      this.killProcess(pid);
       try {
         unlinkSync(pidFile(sourcePath));
       } catch {}
     }
     this.setState("stopped");
-    // Brief delay to let the process fully exit
-    setTimeout(() => this.start(sourcePath), 500);
+    // Wait for Modal to finish cleanup before restarting
+    setTimeout(() => this.start(sourcePath), 2000);
   }
 }

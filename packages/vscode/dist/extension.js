@@ -722,6 +722,22 @@ class ServerManager {
     });
     child.unref();
   }
+  killProcess(pid) {
+    const signal = (sig) => {
+      try {
+        process.kill(-pid, sig);
+      } catch {
+        try {
+          process.kill(pid, sig);
+        } catch {}
+      }
+    };
+    signal("SIGINT");
+    setTimeout(() => {
+      if (isAlive(pid))
+        signal("SIGTERM");
+    }, 3000);
+  }
   stop(sourcePath) {
     if (!sourcePath)
       return;
@@ -730,12 +746,8 @@ class ServerManager {
       vscode2.window.showWarningMessage("Dev server is not running");
       return;
     }
-    this.output.appendLine(`[dev] Killing PID ${pid}`);
-    try {
-      process.kill(-pid, "SIGTERM");
-    } catch {
-      process.kill(pid, "SIGTERM");
-    }
+    this.output.appendLine(`[dev] Stopping PID ${pid} (SIGINT)`);
+    this.killProcess(pid);
     try {
       import_node_fs3.unlinkSync(pidFile(sourcePath));
     } catch {}
@@ -746,18 +758,14 @@ class ServerManager {
       return;
     const pid = readPid(sourcePath);
     if (pid !== null) {
-      this.output.appendLine(`[dev] Restarting — killing PID ${pid}`);
-      try {
-        process.kill(-pid, "SIGTERM");
-      } catch {
-        process.kill(pid, "SIGTERM");
-      }
+      this.output.appendLine(`[dev] Restarting — stopping PID ${pid}`);
+      this.killProcess(pid);
       try {
         import_node_fs3.unlinkSync(pidFile(sourcePath));
       } catch {}
     }
     this.setState("stopped");
-    setTimeout(() => this.start(sourcePath), 500);
+    setTimeout(() => this.start(sourcePath), 2000);
   }
 }
 
@@ -1346,5 +1354,5 @@ function activate(context) {
 }
 function deactivate() {}
 
-//# debugId=F23E9C1A2E80C07764756E2164756E21
+//# debugId=98FA3ED8ADBB146064756E2164756E21
 //# sourceMappingURL=extension.js.map
