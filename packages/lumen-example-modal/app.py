@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
-import secrets
 from pathlib import Path
 
 import modal
@@ -19,22 +17,20 @@ registry.discover()
 
 # --- Auth ---
 
-AUTH_KEY_FILE = ".lumen/auth-key"
-_CONTAINER_AUTH_KEY_FILE = "/run/auth-key"
+AUTH_KEY_FILE = ".authkey"
+_CONTAINER_AUTH_KEY_FILE = "/run/authkey"
 
 
-def _ensure_auth_key() -> str:
-    """Read auth key from container mount or generate locally if missing."""
-    if os.path.exists(_CONTAINER_AUTH_KEY_FILE):
-        return Path(_CONTAINER_AUTH_KEY_FILE).read_text().strip()
-    path = Path(AUTH_KEY_FILE)
-    if not path.exists():
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(secrets.token_urlsafe(32))
-    return path.read_text().strip()
+def _read_auth_key() -> str:
+    """Read auth key from container mount or local file. Extension generates the key."""
+    for path in [_CONTAINER_AUTH_KEY_FILE, AUTH_KEY_FILE]:
+        p = Path(path)
+        if p.exists():
+            return p.read_text().strip()
+    raise RuntimeError(f"Auth key not found at {AUTH_KEY_FILE} — extension must generate it")
 
 
-_auth_key = _ensure_auth_key()
+_auth_key = _read_auth_key()
 
 # --- App ---
 
@@ -108,7 +104,7 @@ server_image = (
     modal.Image.debian_slim(python_version="3.12")
     .pip_install("fastapi>=0.115.0", "httpx>=0.28.0")
     .add_local_python_source("pipelines")
-    .add_local_file(AUTH_KEY_FILE, _CONTAINER_AUTH_KEY_FILE)
+    .add_local_file(AUTH_KEY_FILE, _CONTAINER_AUTH_KEY_FILE, copy=True)
 )
 
 

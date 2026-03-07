@@ -4,6 +4,7 @@ dist/
 .env.*
 !.env.example
 *.log
+lumen.schema.json
 .DS_Store
 
 # Python
@@ -19,4 +20,4 @@ __pycache__/
 .local
 
 # Auth
-.lumen/auth-key
+.authkey

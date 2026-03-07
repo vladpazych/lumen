@@ -130,12 +130,12 @@ The `dimensions` param arrives as `{"w": int, "h": int}`. Always type-check with
 
 ## Auth
 
-The server requires a Bearer token on every request. The key is auto-generated on first run and stored at `.lumen/auth-key` (gitignored). The VS Code extension reads this file and includes the token in all requests.
+The server requires a Bearer token on every request. The VS Code extension generates the key at `.authkey` in the engine root (gitignored) before starting `modal serve`. The server reads this file — it never generates the key itself.
 
-- Key is generated automatically — no user action needed.
-- `app.py` mounts the key file into the Modal container via `add_local_file`.
+- `app.py` mounts `.authkey` into the Modal container via `add_local_file`.
 - Pipeline authors do not need to think about auth — middleware handles it.
 - Tests import the key from `app.py` and include it in the test client.
+- If `.authkey` is missing, the server fails loudly at startup.
 
 ## What NOT to modify
 
