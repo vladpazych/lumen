@@ -25,6 +25,7 @@ export type HandlerContext = {
   post(message: ExtensionMessage): void;
   onDevServerCommand: ((cmd: "start" | "stop" | "restart") => void) | null;
   getDevLogBuffer(): string[];
+  activeJobs: Map<string, { progress: number; stage: "queued" | "running" }>;
 };
 
 export async function handleMessage(
@@ -88,6 +89,22 @@ async function handleReady(ctx: HandlerContext): Promise<void> {
     ctx.post({ type: "devServerLog", text: bufferedLog.join("\n") });
   }
 
+  // Restore active generation state
+  const configIds = new Set(configs.map((c) => c.id));
+  for (const [configId, job] of ctx.activeJobs) {
+    if (configIds.has(configId)) {
+      ctx.post({
+        type: "generateProgress",
+        requestId: "",
+        configId,
+        service: "",
+        pipeline: "",
+        progress: job.progress,
+        stage: job.stage,
+      });
+    }
+  }
+
   const docDir = dirname(document.uri.fsPath);
   const thumbs = collectThumbs(configs, docDir, panel.webview);
   if (Object.keys(thumbs).length > 0) {
@@ -125,6 +142,8 @@ async function handleGenerate(
     docDir,
   );
 
+  ctx.activeJobs.set(configId, { progress: 0, stage: "queued" });
+
   try {
     const response = await service.generate(
       svc,
@@ -132,6 +151,10 @@ async function handleGenerate(
       resolved,
       document.uri.fsPath,
       (info) => {
+        ctx.activeJobs.set(configId, {
+          progress: info.progress,
+          stage: info.stage,
+        });
         ctx.post({
           type: "generateProgress",
           requestId,
@@ -143,6 +166,8 @@ async function handleGenerate(
         });
       },
     );
+
+    ctx.activeJobs.delete(configId);
 
     if (response.status === "completed") {
       const meta = response.outputs[0]?.metadata;
@@ -168,6 +193,7 @@ async function handleGenerate(
       response,
     });
   } catch (err) {
+    ctx.activeJobs.delete(configId);
     ctx.post({
       type: "generateResult",
       requestId,

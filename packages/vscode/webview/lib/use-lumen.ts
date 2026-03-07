@@ -132,6 +132,7 @@ function reducer(state: State, action: Action): State {
     case "generateProgress":
       return {
         ...state,
+        generating: { ...state.generating, [action.key]: true },
         progress: { ...state.progress, [action.key]: action.progress },
         stage: { ...state.stage, [action.key]: action.stage ?? "running" },
       };

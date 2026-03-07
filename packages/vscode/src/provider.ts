@@ -34,6 +34,10 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   private readonly service: EditorService;
   readonly connection: ServerConnection;
   private readonly devLogBuffer: string[] = [];
+  readonly activeJobs = new Map<
+    string,
+    { progress: number; stage: "queued" | "running" }
+  >();
 
   /** Set by extension.ts to route webview start/stop/restart commands to ServerManager */
   onDevServerCommand: ((cmd: "start" | "stop" | "restart") => void) | null =
@@ -43,7 +47,10 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     return vscode.window.registerCustomEditorProvider(
       LumenEditorProvider.viewType,
       provider,
-      { supportsMultipleEditorsPerDocument: false },
+      {
+        supportsMultipleEditorsPerDocument: false,
+        webviewOptions: { retainContextWhenHidden: true },
+      },
     );
   }
 
@@ -191,6 +198,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
       post: (msg) => webviewPanel.webview.postMessage(msg),
       onDevServerCommand: this.onDevServerCommand,
       getDevLogBuffer: () => this.devLogBuffer,
+      activeJobs: this.activeJobs,
     };
 
     webviewPanel.webview.onDidReceiveMessage((msg: WebviewMessage) => {
