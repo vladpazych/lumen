@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ProviderPort } from "@lumen/core/ports";
 import type { PipelineConfig, ServerStatus } from "@lumen/core/types";
@@ -39,7 +39,9 @@ export class ServerConnection {
     private readonly log: { info(msg: string): void },
     private readonly fileLog: FileLogger,
     private readonly getServerSource: () => string,
-  ) {}
+  ) {
+    this.loadCachedSchemas();
+  }
 
   /** Set after construction to break the circular dependency with EditorService. */
   setService(service: EditorService): void {
@@ -159,7 +161,23 @@ export class ServerConnection {
     }
   }
 
-  // --- Schema file export ---
+  // --- Schema file ---
+
+  /** Load cached schemas from lumen.schema.json when no live data exists. */
+  loadCachedSchemas(): void {
+    if (Object.keys(this.schemas).length > 0) return;
+    const source = this.getServerSource();
+    if (!source) return;
+    const file = join(source, "lumen.schema.json");
+    if (!existsSync(file)) return;
+    try {
+      const data = JSON.parse(readFileSync(file, "utf-8")) as PipelineConfig[];
+      if (Array.isArray(data) && data.length > 0) {
+        const key = "_cached";
+        this.schemas[key] = data;
+      }
+    } catch {}
+  }
 
   private writeSchemaFile(serverUrl: string): void {
     const source = this.getServerSource();

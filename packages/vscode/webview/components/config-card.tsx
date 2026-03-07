@@ -52,6 +52,7 @@ export function ConfigCard({
 }: Props) {
   const fallbackTitle = schema?.name ?? config.pipeline;
   const title = config.name ?? fallbackTitle;
+  const pipelineName = schema?.name ?? config.pipeline;
   const description = schema?.description ?? null;
 
   const [editing, setEditing] = useState(false);
@@ -77,7 +78,7 @@ export function ConfigCard({
     <div className="rounded-md border border-border bg-card">
       {/* Header */}
       <div
-        className="flex w-full items-start gap-2 px-3 py-2.5 cursor-pointer group hover:bg-hover rounded-t-md"
+        className={`flex w-full items-start gap-2 px-3 py-2.5 cursor-pointer group hover:bg-hover rounded-t-md ${open ? "border-b border-border" : ""}`}
         onClick={onToggle}
       >
         <ChevronDownIcon
@@ -123,7 +124,7 @@ export function ConfigCard({
             </span>
           </div>
           <span className="block text-[11px] text-text-tertiary truncate h-4">
-            {description ?? "\u00A0"}
+            {pipelineName}
           </span>
         </div>
       </div>
@@ -133,6 +134,9 @@ export function ConfigCard({
         <div className="px-3 pb-3">
           {schema ? (
             <div className="flex flex-col gap-4">
+              {description && (
+                <p className="text-[11px] text-text-secondary">{description}</p>
+              )}
               <PipelineForm
                 pipeline={schema}
                 values={config.params}
