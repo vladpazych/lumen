@@ -76,9 +76,8 @@ export function ConfigCard({
   return (
     <div className="rounded-md border border-border bg-card">
       {/* Header */}
-      <button
-        type="button"
-        className="flex w-full items-start gap-2 px-3 py-2.5 text-left group"
+      <div
+        className="flex w-full items-start gap-2 px-3 py-2.5 cursor-pointer group hover:bg-hover rounded-t-md"
         onClick={onToggle}
       >
         <ChevronDownIcon
@@ -89,21 +88,20 @@ export function ConfigCard({
             {editing ? (
               <input
                 ref={inputRef}
-                className="flex-1 bg-transparent text-[13px] font-medium text-text-primary outline-none border-b border-border"
+                className="flex-1 bg-transparent text-[13px] font-medium text-text-primary outline-none border-b border-border cursor-text"
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") commitRename();
                   if (e.key === "Escape") cancelRename();
-                  e.stopPropagation();
                 }}
                 onBlur={commitRename}
                 onClick={(e) => e.stopPropagation()}
               />
             ) : (
               <span
-                className="flex-1 text-[13px] font-medium text-text-primary truncate"
-                onDoubleClick={(e) => {
+                className="flex-1 text-[13px] font-medium text-text-primary truncate cursor-text"
+                onClick={(e) => {
                   e.stopPropagation();
                   setDraft(title);
                   setEditing(true);
@@ -113,7 +111,7 @@ export function ConfigCard({
               </span>
             )}
             <span
-              className="text-[11px] text-text-tertiary hover:text-text-primary opacity-0 group-hover:opacity-100 transition-opacity px-1 shrink-0"
+              className="text-[11px] text-text-tertiary hover:text-text-primary opacity-0 group-hover:opacity-100 transition-opacity px-1 shrink-0 cursor-pointer"
               role="button"
               tabIndex={-1}
               onClick={(e) => {
@@ -128,7 +126,7 @@ export function ConfigCard({
             {description ?? "\u00A0"}
           </span>
         </div>
-      </button>
+      </div>
 
       {/* Body */}
       {open && (
