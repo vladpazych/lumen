@@ -57,6 +57,7 @@ config = PipelineConfig(
         ),
     ],
     output=PipelineOutput(type="image", format="png"),
+    tier=3,
 )
 
 MODEL_ID = "Tongyi-MAI/Z-Image-Turbo"

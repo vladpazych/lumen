@@ -21,6 +21,7 @@ config = PipelineConfig(
         PromptParam(name="prompt", label="Prompt", required=True, group="basic"),
     ],
     output=PipelineOutput(type="image", format="png"),
+    tier=1,
 )
 
 

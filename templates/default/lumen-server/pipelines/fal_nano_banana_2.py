@@ -38,6 +38,7 @@ config = PipelineConfig(
         ]),
     ],
     output=PipelineOutput(type="image", format="png"),
+    tier=2,
 )
 
 

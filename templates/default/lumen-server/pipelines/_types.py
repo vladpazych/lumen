@@ -199,6 +199,7 @@ class PipelineConfig(BaseModel):
     category: Literal["image", "video"] = "image"
     params: list[ParamDefinition] = []
     output: PipelineOutput = Field(default_factory=PipelineOutput)
+    tier: int | None = None  # 1-5 cost tier (1=free, 5=ultra)
 
     def to_wire(self) -> dict[str, Any]:
         """Full schema for JSON responses and SSE events."""

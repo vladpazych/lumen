@@ -117,4 +117,5 @@ export type PipelineConfig = {
   category: PipelineCategory;
   params: ParamDefinition[];
   output: PipelineOutput;
+  tier?: number; // 1-5 cost tier (1=free, 5=ultra)
 };

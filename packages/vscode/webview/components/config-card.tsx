@@ -145,6 +145,7 @@ export function ConfigCard({
                 loading={isGenerating}
                 progress={progress}
                 stage={stage}
+                tier={schema.tier}
                 hasQuality={schema.params.some((p) => p.name === "quality")}
                 disabled={hasErrors}
                 onPreview={() =>

@@ -7,6 +7,7 @@ type Props = {
   loading: boolean;
   progress?: number;
   stage?: "queued" | "running";
+  tier?: number;
   hasQuality?: boolean;
   disabled?: boolean;
   onPreview?: () => void;
@@ -23,6 +24,7 @@ export function GenerateSection({
   loading,
   progress,
   stage,
+  tier,
   hasQuality,
   disabled,
   onPreview,
@@ -44,6 +46,7 @@ export function GenerateSection({
   }, [loading]);
 
   const hasProgress = progress !== undefined && progress > 0;
+  const tierLabel = tier && tier > 0 ? "$".repeat(tier) : null;
 
   if (loading) {
     const label = stage === "queued" ? "Queued" : "Generating";
@@ -85,11 +88,13 @@ export function GenerateSection({
             onClick={onGenerate}
           >
             Generate
+            {tierLabel && <span className="ml-1 opacity-60">{tierLabel}</span>}
           </Button>
         </div>
       ) : (
         <Button variant="accent" grow disabled={disabled} onClick={onGenerate}>
           Generate
+          {tierLabel && <span className="ml-1 opacity-60">{tierLabel}</span>}
         </Button>
       )}
     </div>
