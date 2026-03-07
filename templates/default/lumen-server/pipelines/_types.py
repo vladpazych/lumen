@@ -77,6 +77,8 @@ class SelectParam(BaseModel):
     hidden: bool | None = None
     options: list[SelectOption] = []
     default: str | None = None
+    allowCustom: bool | None = None
+    display: Literal["dropdown", "radio", "toggle"] | None = None
 
 
 class SeedParam(BaseModel):

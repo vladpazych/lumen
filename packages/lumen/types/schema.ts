@@ -45,6 +45,8 @@ export type SelectParam = BaseParam & {
   type: "select";
   options: SelectOption[];
   default?: string;
+  allowCustom?: boolean;
+  display?: "dropdown" | "radio" | "toggle";
 };
 
 export type SeedParam = BaseParam & {
