@@ -18,6 +18,9 @@ import { ServerConnection, type ConnectionEvents } from "./connection";
 import { handleMessage, type HandlerContext } from "./handlers";
 import { getServerSource } from "./server";
 
+/** Detect tqdm-style progress bars: `Loading weights:  10%|█ | 41/398` */
+const PROGRESS_RE = /^(.*?)\d+%\|/;
+
 export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   private static readonly viewType = "lumen.stateViewer";
   private readonly panels: Set<vscode.WebviewPanel> = new Set();
@@ -103,13 +106,37 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   }
 
   broadcastDevServerLog(text: string): void {
-    const lines = text.split("\n");
-    this.devLogBuffer.push(...lines);
+    this.fileLog.append(text);
+
+    const cleaned: string[] = [];
+    for (const raw of text.split("\n")) {
+      // Handle \r (carriage return): tqdm overwrites the line — keep last segment
+      const segments = raw.split("\r").filter((s) => s !== "");
+      const line = segments.length > 0 ? segments[segments.length - 1] : "";
+      if (!line.trim()) continue;
+
+      // Collapse progress bars: replace last buffer entry if same progress prefix
+      const match = line.match(PROGRESS_RE);
+      if (match && this.devLogBuffer.length > 0) {
+        const prev = this.devLogBuffer[this.devLogBuffer.length - 1];
+        const prevMatch = prev.match(PROGRESS_RE);
+        if (prevMatch && prevMatch[1].trim() === match[1].trim()) {
+          this.devLogBuffer[this.devLogBuffer.length - 1] = line;
+          cleaned.push(line);
+          continue;
+        }
+      }
+
+      this.devLogBuffer.push(line);
+      cleaned.push(line);
+    }
+
     if (this.devLogBuffer.length > 200) {
       this.devLogBuffer.splice(0, this.devLogBuffer.length - 200);
     }
-    this.broadcastToAll({ type: "devServerLog", text });
-    this.fileLog.append(text);
+    if (cleaned.length > 0) {
+      this.broadcastToAll({ type: "devServerLog", text: cleaned.join("\n") });
+    }
   }
 
   getDevLogBuffer(): string[] {

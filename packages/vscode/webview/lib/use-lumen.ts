@@ -9,6 +9,9 @@ import type { DevServerState } from "./messaging";
 import type { ExtensionMessage } from "./messaging";
 import { vscode } from "./vscode";
 
+/** Detect tqdm-style progress bars: `Loading weights:  10%|█ | 41/398` */
+const PROGRESS_RE = /^(.*?)\d+%\|/;
+
 type State = {
   schemas: Record<string, PipelineConfig[]>;
   configs: LumenConfig[];
@@ -156,8 +159,20 @@ function reducer(state: State, action: Action): State {
         imageThumbs: { ...state.imageThumbs, ...action.thumbs },
       };
     case "devServerLog": {
-      const lines = [...state.devServerLog, ...action.text.split("\n")];
-      // Rolling buffer — keep last 200 lines
+      const incoming = action.text.split("\n").filter((l) => l.trim() !== "");
+      const lines = [...state.devServerLog];
+      for (const line of incoming) {
+        const match = line.match(PROGRESS_RE);
+        if (match && lines.length > 0) {
+          const prev = lines[lines.length - 1];
+          const prevMatch = prev.match(PROGRESS_RE);
+          if (prevMatch && prevMatch[1].trim() === match[1].trim()) {
+            lines[lines.length - 1] = line;
+            continue;
+          }
+        }
+        lines.push(line);
+      }
       return {
         ...state,
         devServerLog: lines.length > 200 ? lines.slice(-200) : lines,
