@@ -79,14 +79,11 @@ export class ServerManager {
     this.output.appendLine(`[dev] Starting bun dev in ${sourcePath}`);
     this.output.show(true);
 
-    const child = spawn("bun", ["dev"], {
+    const shell = process.env.SHELL || "/bin/zsh";
+    const child = spawn(shell, ["-l", "-c", "exec bun dev"], {
       cwd: sourcePath,
       stdio: ["ignore", "pipe", "pipe"],
       detached: true,
-      env: {
-        ...process.env,
-        PATH: `${process.env.PATH}:${process.env.HOME}/.bun/bin:/opt/homebrew/bin:/usr/local/bin:${process.env.HOME}/.local/bin`,
-      },
     });
 
     if (child.pid) {
