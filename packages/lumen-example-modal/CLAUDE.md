@@ -131,14 +131,14 @@ The `dimensions` param arrives as `{"w": int, "h": int}`. Always type-check with
 ## What NOT to modify
 
 - `app.py` — auto-discovers pipelines, no changes needed
-- `pipelines/types.py` — Pydantic models shared with the VS Code client
-- `pipelines/registry.py` — framework code
-- `pipelines/__init__.py` — Modal app definition
+- `pipelines/_types.py` — Pydantic models shared with the VS Code client
+- `pipelines/_registry.py` — framework code
+- `pipelines/__init__.py` — Modal app + re-exports
 - `tests/test_api.py` — contract tests (validates all pipelines automatically)
 
 ## Rules
 
-- Types are Pydantic models in `pipelines/types.py`. Do not add new param types without also updating `packages/lumen/types/schema.ts`.
+- Types are Pydantic models in `pipelines/_types.py`, re-exported from `pipelines`. Import as `from pipelines import PipelineConfig, ...`. Do not add new param types without also updating `packages/lumen/types/schema.ts`.
 - JSON responses use camelCase `runId` (not `run_id`) — handled by `GenerateResult.to_wire()`.
 - Pipeline `id` must be a unique kebab-case slug.
 - Files starting with `_` are skipped by discovery.

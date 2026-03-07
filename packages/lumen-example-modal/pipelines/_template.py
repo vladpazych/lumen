@@ -10,7 +10,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from pipelines.types import (
+from pipelines import (
     GenerateResult,
     OutputAsset,
     PipelineConfig,

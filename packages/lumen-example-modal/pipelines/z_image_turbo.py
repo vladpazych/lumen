@@ -7,8 +7,7 @@ from typing import Any
 
 import modal
 
-from pipelines import app
-from pipelines.types import (
+from pipelines import (
     DimensionPreset,
     Dimensions,
     DimensionsParam,
@@ -19,6 +18,7 @@ from pipelines.types import (
     PipelineOutput,
     PromptParam,
     SeedParam,
+    app,
 )
 
 config = PipelineConfig(
