@@ -73,9 +73,46 @@ Match param values to their schema type:
 | `nano-banana-2`   | Gemini 3.1 Flash (supports reference image) | prompt, image_urls, aspect_ratio, num_images, seed, output_format, resolution, enable_web_search |
 | `nano-banana-pro` | Gemini 3 Pro                                | prompt, aspect_ratio, num_images, seed, output_format, resolution, enable_web_search             |
 
-### HTTP servers
+### HTTP servers (including custom Modal pipelines)
 
-Pipeline IDs and params depend on the server. When unknown, set `params` to `{}` — the editor will populate from the server's schema.
+HTTP servers expose schemas via a REST contract. Discover available pipelines and their params before writing the `.lumen` file.
+
+#### Discovery steps
+
+1. List pipelines: `GET <serverUrl>/pipelines` → `[{ "id": "echo", "name": "Echo", ... }]`
+2. Get full schema: `GET <serverUrl>/pipelines/<id>` → `PipelineConfig` with `params[]` array
+3. Read each param's `type`, `name`, `required`, `default`, `options` (for select), `min`/`max` (for number/integer)
+4. Use the param `name` fields as keys in your `.lumen` `params` object
+
+#### Example: discovering a server's schema
+
+```sh
+# List available pipelines
+curl http://localhost:8000/pipelines
+# [{"id":"echo","name":"Echo","category":"image"}]
+
+# Get full schema for "echo"
+curl http://localhost:8000/pipelines/echo
+# {"id":"echo","name":"Echo","category":"image",
+#  "params":[{"type":"prompt","name":"prompt","label":"Prompt","required":true,"group":"basic"}],
+#  "output":{"type":"image","format":"png"}}
+```
+
+Then write:
+```json
+[
+  {
+    "id": "echo",
+    "service": "http://localhost:8000",
+    "pipeline": "echo",
+    "params": {
+      "prompt": "a cat"
+    }
+  }
+]
+```
+
+When the server is unavailable or params are unknown, set `params` to `{}` — the editor will populate from the server's schema once connected.
 
 ## Examples
 
