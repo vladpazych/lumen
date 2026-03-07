@@ -21,6 +21,18 @@ T5-based models (Flux, SD3): respond to natural language descriptions. Flowing s
 
 Dual-encoder models: each encoder has different strengths. CLIP anchors visual style, T5 handles semantic complexity.
 
+### Prompt weighting
+
+Some pipelines support token-level weight adjustments:
+
+- `(concept)` or `(concept:1.3)` — increases influence (multiplier, default 1.1 per nesting level)
+- `[concept]` or `(concept:0.7)` — decreases influence
+- Weighting modifies the attention weight for those tokens during cross-attention, not the token embeddings themselves
+
+Over-weighting (above 1.5) distorts the embedding space and produces artifacts. Subtle adjustments (0.8-1.3) are most effective.
+
+Weighting syntax varies by pipeline/UI. Not all inference APIs expose it — check the specific pipeline's documentation.
+
 ### Common prompt patterns
 
 - **Subject first**: "A cat sitting on a windowsill" not "On a windowsill, there sits a cat"
