@@ -103,8 +103,8 @@ async def generate(pipeline_id: str, params: dict | None = None):
 server_image = (
     modal.Image.debian_slim(python_version="3.12")
     .pip_install("fastapi>=0.115.0", "httpx>=0.28.0")
-    .add_local_python_source("pipelines")
     .add_local_file(AUTH_KEY_FILE, _CONTAINER_AUTH_KEY_FILE, copy=True)
+    .add_local_python_source("pipelines")
 )
 
 
