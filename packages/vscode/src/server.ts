@@ -85,7 +85,7 @@ export class ServerManager {
       detached: true,
       env: {
         ...process.env,
-        PATH: `${process.env.PATH}:${process.env.HOME}/.bun/bin`,
+        PATH: `${process.env.PATH}:${process.env.HOME}/.bun/bin:/opt/homebrew/bin:/usr/local/bin:${process.env.HOME}/.local/bin`,
       },
     });
 
