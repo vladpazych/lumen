@@ -16,6 +16,7 @@ import { TextField } from "@/components/fields/text-field";
 type Props = {
   param: ParamDefinition;
   value: unknown;
+  error?: string;
   onChange: (value: unknown) => void;
   onPickImage?: () => void;
   isPicking?: boolean;
@@ -27,6 +28,7 @@ type Props = {
 export function ParamField({
   param,
   value,
+  error,
   onChange,
   onPickImage,
   isPicking,
@@ -54,8 +56,12 @@ export function ParamField({
         imageThumbs,
         onDropUri,
       )}
-      {param.hint && (
-        <p className="text-[11px] text-text-tertiary">{param.hint}</p>
+      {error ? (
+        <p className="text-[11px] text-destructive">{error}</p>
+      ) : (
+        param.hint && (
+          <p className="text-[11px] text-text-tertiary">{param.hint}</p>
+        )
       )}
     </div>
   );

@@ -39,8 +39,73 @@ Some param types accept a `display` field to control UI rendering:
 ### Common fields
 
 - `placeholder` — ghost text inside empty inputs (disappears on focus)
-- `hint` — helper text shown below the field (always visible)
+- `hint` — helper text shown below the field (always visible, explains what the param does)
 - `hidden` — param sent in generate but not shown in UI (for fixed pipeline constants)
+
+### Client-side validation
+
+The client validates params against the schema before sending. These constraints are enforced automatically:
+
+- `required` — blocks Generate if empty
+- `min` / `max` on `NumberParam` / `IntegerParam` — range check
+- `IntegerParam` — must be a whole number
+- `TagsParam` `max` — limits tag count
+- `SelectParam` without `allowCustom` — value must be in `options`
+
+Set constraints in the schema — the client handles the rest. Errors show inline below the field and disable the Generate button.
+
+### Writing user-friendly schemas
+
+Group related params, set sensible defaults, and use hints to teach:
+
+```python
+config = PipelineConfig(
+    id="my-pipeline",
+    name="My Pipeline",
+    category="image",
+    params=[
+        PromptParam(
+            name="prompt", label="Prompt",
+            required=True,
+            placeholder="A photo of...",
+            group="basic",
+        ),
+        NumberParam(
+            name="strength", label="Strength",
+            default=0.7, min=0, max=1, step=0.05,
+            display="slider",
+            hint="Lower values preserve more of the original",
+            group="basic",
+        ),
+        IntegerParam(
+            name="steps", label="Steps",
+            default=30, min=1, max=100,
+            display="slider",
+            hint="More steps = higher quality, slower",
+            group="advanced",
+        ),
+        SelectParam(
+            name="style", label="Style",
+            options=[
+                SelectOption(value="photo", label="Photo"),
+                SelectOption(value="anime", label="Anime"),
+            ],
+            display="toggle",
+            group="basic",
+        ),
+    ],
+    output=PipelineOutput(type="image"),
+)
+```
+
+**Guidelines:**
+
+- Always set `default` — empty fields confuse users
+- Always set `min`/`max` on numbers — enables slider display and client validation
+- Use `group` to separate "basic" from "advanced" params
+- Use `hint` for non-obvious params — one line explaining the effect
+- Use `placeholder` for format hints ("e.g. 512" or "A photo of...")
+- Use `required=True` only for params that truly cannot be omitted (usually just prompt)
 
 ### Generate function contract
 

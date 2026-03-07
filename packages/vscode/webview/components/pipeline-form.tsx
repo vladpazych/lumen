@@ -1,5 +1,7 @@
+import { useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import type { PipelineConfig } from "@lumen/core/types";
+import { validateParams } from "@lumen/core/domain/validation";
 import { ParamField } from "@/components/param-field";
 
 type Props = {
@@ -10,6 +12,7 @@ type Props = {
   isPickingImage: boolean;
   imageThumbs: Record<string, string>;
   onPickImageByUri: (paramName: string, uri: string) => void;
+  onValidation?: (hasErrors: boolean) => void;
 };
 
 export function PipelineForm({
@@ -20,7 +23,13 @@ export function PipelineForm({
   isPickingImage,
   imageThumbs,
   onPickImageByUri,
+  onValidation,
 }: Props) {
+  const errors = useMemo(() => {
+    const e = validateParams(pipeline.params, values);
+    onValidation?.(Object.keys(e).length > 0);
+    return e;
+  }, [pipeline.params, values]);
   const groups = new Map<string, typeof pipeline.params>();
   for (const param of pipeline.params) {
     if (param.name === "quality") continue;
@@ -49,6 +58,7 @@ export function PipelineForm({
                 key={param.name}
                 param={param}
                 value={values[param.name]}
+                error={errors[param.name]}
                 onChange={(v) => onParamChange(param.name, v)}
                 onPickImage={
                   param.type === "image"
