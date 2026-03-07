@@ -1,4 +1,4 @@
-"""Lumen inference server — FastAPI on Modal."""
+"""Lumen example inference server — FastAPI on Modal."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ _auth_key = _read_auth_key()
 
 # --- App ---
 
-web_app = FastAPI(title="Lumen")
+web_app = FastAPI(title="Lumen Example")
 
 
 @web_app.middleware("http")

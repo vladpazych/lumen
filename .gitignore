@@ -6,18 +6,5 @@ dist/
 *.log
 lumen.schema.json
 .DS_Store
-
-# Python
-__pycache__/
-*.pyc
-.venv/
-.ruff_cache/
-.pytest_cache/
-
-# VS Code extension
 *.vsix
-
 .local
-
-# Auth
-.authkey

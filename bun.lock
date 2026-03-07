@@ -18,6 +18,9 @@
     "packages/lumen": {
       "name": "@lumen/core",
       "version": "0.0.0",
+      "devDependencies": {
+        "@typescript-eslint/parser": "^8.56.1",
+      },
     },
     "packages/lumen-example-modal": {
       "name": "@vladpazych/lumen-example-modal",

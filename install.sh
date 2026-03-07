@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="Asombro/lumen"
+REPO="vladpazych/lumen"
 BRANCH="main"
 TEMPLATE_DIR="templates/default"
 

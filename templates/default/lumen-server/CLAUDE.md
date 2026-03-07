@@ -1,6 +1,6 @@
-# lumen-server/CLAUDE.md
+# packages/lumen-example-modal/CLAUDE.md
 
-Lumen inference server — FastAPI on Modal. Pipelines are auto-discovered from `pipelines/` directory.
+Lumen inference server template — FastAPI on Modal. Pipelines are auto-discovered from `pipelines/` directory.
 
 ## Adding a pipeline
 
@@ -9,7 +9,7 @@ Create a single file in `pipelines/` that exports two things:
 1. `config` — a `PipelineConfig` defining the schema (id, name, params, output)
 2. `generate` — an `async def generate(params: dict[str, Any]) -> GenerateResult`
 
-No imports in `app.py`, no registration calls. The server auto-discovers all pipeline modules on startup. Copy `pipelines/_template.py` as a starting point.
+That's it. No imports in `app.py`, no registration calls. The server auto-discovers all pipeline modules on startup. Copy `pipelines/_template.py` as a starting point.
 
 ### Available param types
 
@@ -36,7 +36,7 @@ All param types share: `name` (required, key in params dict), `label`, `required
 
 ### GPU pipelines
 
-The `serve` function runs on a lightweight image (no torch). GPU inference runs in a separate `@app.cls` with its own image.
+The `serve` function runs on a lightweight image (no torch). GPU inference runs in a separate `@app.cls` with its own image. See `pipelines/z_image_turbo.py` for a complete reference.
 
 - Define a `gpu_image` with torch, diffusers, and model-specific deps.
 - Download model weights at image build time via `.run_commands()` with `snapshot_download`. Loads once, cached across deploys.
@@ -48,7 +48,7 @@ The `serve` function runs on a lightweight image (no torch). GPU inference runs 
 
 ## Modal patterns
 
-This server runs on [Modal](https://modal.com) — a serverless cloud platform. The Modal app is defined in `pipelines/__init__.py`.
+This server runs on [Modal](https://modal.com) — a serverless cloud platform. The Modal app is defined in `pipelines/__init__.py`. Key concepts for pipeline authors:
 
 ### Images — define deps per function, not globally
 
@@ -96,7 +96,11 @@ gpu=["H100", "A100", "any"]  # Fallback chain
 
 ### Secrets — API keys and credentials
 
+Pipelines that call external APIs (Replicate, OpenAI, Stability, etc.) need secrets. Modal manages these securely — never hardcode keys in pipeline code.
+
 Modal secrets have two independent names: the **secret name** (what you pass to `from_name()`) and the **environment variable name(s)** stored inside it (what you read from `os.environ`). These are configured separately in the Modal dashboard.
+
+In code, attach secrets to the function or class and read them from `os.environ`:
 
 ```python
 @app.cls(image=gpu_image, gpu="A10G", secrets=[modal.Secret.from_name("replicate-api-key")])
@@ -107,13 +111,20 @@ class MyModel:
         self.api_key = os.environ["REPLICATE_API_TOKEN"]
 ```
 
-Setup: Modal dashboard > Secrets > Create new secret > name it (kebab-case) > add env vars.
+The user must create the secret in the Modal dashboard before the pipeline will work. When a pipeline needs a secret, tell the user:
+
+1. Go to https://modal.com/secrets
+2. Click "Create new secret"
+3. Name it (kebab-case, e.g. `replicate-api-key`)
+4. Add the required environment variable(s) and values
+5. Restart the dev server from VS Code
 
 ### Style rules
 
 - Always `import modal` then use qualified names: `modal.Image`, `modal.enter()`.
-- Names use kebab-case: `modal.App("lumen")`.
-- Never use deprecated Modal features.
+- Names use kebab-case: `modal.App("lumen-example")`.
+- Never use deprecated Modal features — Modal prints warnings when they're used.
+- Docs: [modal.com/docs](https://modal.com/docs), examples: [modal.com/docs/examples](https://modal.com/docs/examples).
 
 ### `dimensions` param handling
 
@@ -121,10 +132,12 @@ The `dimensions` param arrives as `{"w": int, "h": int}`. Always type-check with
 
 ## Auth
 
-The server requires a Bearer token on every request. The VS Code extension generates the key at `.authkey` (gitignored) before starting `modal serve`. The server reads this file — it never generates the key itself.
+The server requires a Bearer token on every request. The VS Code extension generates the key at `.authkey` in the engine root (gitignored) before starting `modal serve`. The server reads this file — it never generates the key itself.
 
+- `app.py` mounts `.authkey` into the Modal container via `add_local_file`.
 - Pipeline authors do not need to think about auth — middleware handles it.
 - Tests import the key from `app.py` and include it in the test client.
+- If `.authkey` is missing, the server fails loudly at startup.
 
 ## What NOT to modify
 
@@ -136,7 +149,7 @@ The server requires a Bearer token on every request. The VS Code extension gener
 
 ## Rules
 
-- Types are Pydantic models in `pipelines/_types.py`, re-exported from `pipelines`. Import as `from pipelines import PipelineConfig, ...`.
+- Types are Pydantic models in `pipelines/_types.py`, re-exported from `pipelines`. Import as `from pipelines import PipelineConfig, ...`. Do not add new param types without also updating `packages/lumen/types/schema.ts`.
 - JSON responses use camelCase `runId` (not `run_id`) — handled by `GenerateResult.to_wire()`.
 - Pipeline `id` must be a unique kebab-case slug.
 - Files starting with `_` are skipped by discovery.
@@ -146,14 +159,14 @@ The server requires a Bearer token on every request. The VS Code extension gener
 The VS Code extension manages the dev server (`modal serve`) and hot-reloads automatically. You do NOT run the server yourself — just write code and validate.
 
 ```sh
-uv run pytest tests/         # validate schema + contract compliance
-uv run ruff check .          # lint
+bun run test         # pytest — validate schema + contract compliance
+bun run lint         # ruff check
 ```
 
 After saving a pipeline file, the extension hot-reloads the server. Check `lumen.log` in this directory for server output and errors.
 
 ## Gotchas
 
-- Hot-reload silently fails when a new `@app.cls` with an unbuilt image is added. Restart the dev server from VS Code after adding a new GPU pipeline. Subsequent file edits hot-reload normally.
+- Hot-reload silently fails when a new `@app.cls` with an unbuilt image is added. The user must restart the dev server from VS Code after adding a new GPU pipeline. Subsequent file edits hot-reload normally.
 - `ruff check` line-length limit is 100 chars. Long description strings need parenthesized multi-line concatenation.
 - Server logs go to `lumen.log` in this directory — read this file to diagnose runtime errors.

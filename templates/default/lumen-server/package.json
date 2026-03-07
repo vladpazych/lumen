@@ -1,7 +1,7 @@
 {
-  "name": "@vladpazych/lumen-example-modal",
+  "name": "@vladpazych/lumen-server",
   "version": "0.1.0",
-  "private": true,
+  "license": "MIT",
   "scripts": {
     "dev": "uv run modal serve app.py",
     "test": "uv run pytest tests/",

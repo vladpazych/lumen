@@ -5,6 +5,8 @@ dist/
 !.env.example
 *.log
 lumen.schema.json
+.authkey
+.dev.pid
 .DS_Store
 
 # Python
@@ -13,7 +15,3 @@ __pycache__/
 .venv/
 .ruff_cache/
 .pytest_cache/
-
-# Auth
-.authkey
-.dev.pid

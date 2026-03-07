@@ -9,5 +9,5 @@
     "**/dist": true,
     "**/.vite": true
   },
-  "lumen.server": "${workspaceFolder}/packages/lumen-example-modal"
+  "lumen.server": "${workspaceFolder}/templates/default/lumen-server"
 }
