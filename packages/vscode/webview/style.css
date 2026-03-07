@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@source "./kit";
 
 /* All tokens derive from two VS Code anchors via color-mix.
    Surfaces mix toward foreground (lighter on dark, darker on light).
@@ -10,7 +9,15 @@
   --bg: var(--vscode-editor-background, #1e1e1e);
   --fg: var(--vscode-editor-foreground, #d4d4d4);
 
-  /* --- Surfaces (toward foreground for depth) --- */
+  /* --- Surfaces (shadcn naming) --- */
+  --background: var(--bg);
+  --foreground: var(--fg);
+  --card: color-mix(in oklch, var(--bg) 96%, var(--fg));
+  --muted: color-mix(in oklch, var(--bg) 92%, var(--fg));
+  --muted-foreground: color-mix(in oklch, var(--fg) 52%, var(--bg));
+  --accent: color-mix(in oklch, var(--bg) 88%, var(--fg));
+
+  /* Keep surface scale for fine-grained depth */
   --surface-0: var(--bg);
   --surface-1: color-mix(in oklch, var(--bg) 96%, var(--fg));
   --surface-2: color-mix(in oklch, var(--bg) 92%, var(--fg));
@@ -28,14 +35,21 @@
   /* --- Semantic (from VS Code theme) --- */
   --primary: var(--vscode-textLink-foreground, oklch(0.55 0.14 175));
   --primary-foreground: var(--bg);
-  --destructive: var(--vscode-testing-iconFailed, var(--vscode-errorForeground, oklch(0.55 0.2 25)));
+  --destructive: var(
+    --vscode-testing-iconFailed,
+    var(--vscode-errorForeground, oklch(0.55 0.2 25))
+  );
   --success: var(--vscode-testing-iconPassed, oklch(0.65 0.16 155));
-  --warning: var(--vscode-notificationsWarningIcon-foreground, oklch(0.75 0.13 75));
+  --warning: var(
+    --vscode-notificationsWarningIcon-foreground,
+    oklch(0.75 0.13 75)
+  );
   --info: var(--vscode-textLink-foreground, oklch(0.6 0.14 245));
 
   /* --- Borders (subtle foreground mix) --- */
   --border: color-mix(in oklch, var(--fg) 12%, var(--bg));
   --border-strong: color-mix(in oklch, var(--fg) 20%, var(--bg));
+  --input: color-mix(in oklch, var(--fg) 12%, var(--bg));
 
   /* --- Interactive (semi-transparent overlays) --- */
   --hover: color-mix(in oklch, var(--fg) 6%, transparent);
@@ -47,6 +61,13 @@
 }
 
 @theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-destructive: var(--destructive);
@@ -69,6 +90,7 @@
 
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
 
   --color-ring: var(--ring);
 
