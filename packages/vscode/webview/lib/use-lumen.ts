@@ -123,12 +123,15 @@ function reducer(state: State, action: Action): State {
       );
       return { ...state, configs };
     }
-    case "generateStart":
+    case "generateStart": {
+      const { [action.key]: _, ...restResults } = state.results;
       return {
         ...state,
         generating: { ...state.generating, [action.key]: true },
         progress: { ...state.progress, [action.key]: 0 },
+        results: restResults,
       };
+    }
     case "generateProgress":
       return {
         ...state,
