@@ -725,23 +725,39 @@ class ServerManager {
     });
     child.unref();
   }
-  killProcess(pid) {
-    const signal = (sig) => {
+  sendSignal(pid, sig) {
+    try {
+      process.kill(-pid, sig);
+    } catch {
       try {
-        process.kill(-pid, sig);
-      } catch {
-        try {
-          process.kill(pid, sig);
-        } catch {}
-      }
-    };
-    signal("SIGINT");
-    setTimeout(() => {
-      if (isAlive(pid))
-        signal("SIGTERM");
-    }, 3000);
+        process.kill(pid, sig);
+      } catch {}
+    }
   }
-  stop(sourcePath) {
+  killProcess(pid) {
+    this.sendSignal(pid, "SIGINT");
+    return new Promise((resolve) => {
+      let elapsed = 0;
+      const interval = setInterval(() => {
+        elapsed += 500;
+        if (!isAlive(pid)) {
+          clearInterval(interval);
+          resolve();
+          return;
+        }
+        if (elapsed === 4000)
+          this.sendSignal(pid, "SIGTERM");
+        if (elapsed === 8000)
+          this.sendSignal(pid, "SIGKILL");
+        if (elapsed >= 1e4) {
+          clearInterval(interval);
+          this.output.appendLine(`[dev] PID ${pid} did not exit after 10s`);
+          resolve();
+        }
+      }, 500);
+    });
+  }
+  async stop(sourcePath) {
     if (!sourcePath)
       return;
     const pid = readPid(sourcePath);
@@ -749,26 +765,28 @@ class ServerManager {
       vscode2.window.showWarningMessage("Dev server is not running");
       return;
     }
-    this.output.appendLine(`[dev] Stopping PID ${pid} (SIGINT)`);
-    this.killProcess(pid);
+    this.output.appendLine(`[dev] Stopping PID ${pid}`);
     try {
       import_node_fs3.unlinkSync(pidFile(sourcePath));
     } catch {}
     this.setState("stopped");
+    await this.killProcess(pid);
+    this.output.appendLine("[dev] Process stopped");
   }
-  restart(sourcePath) {
+  async restart(sourcePath) {
     if (!sourcePath)
       return;
     const pid = readPid(sourcePath);
     if (pid !== null) {
       this.output.appendLine(`[dev] Restarting — stopping PID ${pid}`);
-      this.killProcess(pid);
       try {
         import_node_fs3.unlinkSync(pidFile(sourcePath));
       } catch {}
+      await this.killProcess(pid);
+      this.output.appendLine("[dev] Old process stopped");
     }
     this.setState("stopped");
-    setTimeout(() => this.start(sourcePath), 2000);
+    this.start(sourcePath);
   }
 }
 
@@ -1361,5 +1379,5 @@ function activate(context) {
 }
 function deactivate() {}
 
-//# debugId=18FFC099966B88B864756E2164756E21
+//# debugId=3762946D1749CFA864756E2164756E21
 //# sourceMappingURL=extension.js.map

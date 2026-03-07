@@ -161,51 +161,73 @@ export class ServerManager {
     child.unref();
   }
 
-  /** Send SIGINT (Ctrl+C) so Modal can tear down the remote app, then SIGTERM as fallback. */
-  private killProcess(pid: number): void {
-    const signal = (sig: NodeJS.Signals) => {
+  /** Send signal to process group, falling back to direct PID. */
+  private sendSignal(pid: number, sig: NodeJS.Signals): void {
+    try {
+      process.kill(-pid, sig);
+    } catch {
       try {
-        process.kill(-pid, sig);
-      } catch {
-        try {
-          process.kill(pid, sig);
-        } catch {}
-      }
-    };
-    signal("SIGINT");
-    // SIGTERM fallback if still alive after 3s
-    setTimeout(() => {
-      if (isAlive(pid)) signal("SIGTERM");
-    }, 3000);
+        process.kill(pid, sig);
+      } catch {}
+    }
   }
 
-  stop(sourcePath: string): void {
+  /**
+   * Kill a process: SIGINT first (lets Modal tear down the remote app),
+   * escalate to SIGTERM after 4s, SIGKILL after 8s.
+   * Returns a promise that resolves once the process is dead.
+   */
+  private killProcess(pid: number): Promise<void> {
+    this.sendSignal(pid, "SIGINT");
+
+    return new Promise((resolve) => {
+      let elapsed = 0;
+      const interval = setInterval(() => {
+        elapsed += 500;
+        if (!isAlive(pid)) {
+          clearInterval(interval);
+          resolve();
+          return;
+        }
+        if (elapsed === 4000) this.sendSignal(pid, "SIGTERM");
+        if (elapsed === 8000) this.sendSignal(pid, "SIGKILL");
+        if (elapsed >= 10000) {
+          clearInterval(interval);
+          this.output.appendLine(`[dev] PID ${pid} did not exit after 10s`);
+          resolve();
+        }
+      }, 500);
+    });
+  }
+
+  async stop(sourcePath: string): Promise<void> {
     if (!sourcePath) return;
     const pid = readPid(sourcePath);
     if (pid === null) {
       vscode.window.showWarningMessage("Dev server is not running");
       return;
     }
-    this.output.appendLine(`[dev] Stopping PID ${pid} (SIGINT)`);
-    this.killProcess(pid);
+    this.output.appendLine(`[dev] Stopping PID ${pid}`);
     try {
       unlinkSync(pidFile(sourcePath));
     } catch {}
     this.setState("stopped");
+    await this.killProcess(pid);
+    this.output.appendLine("[dev] Process stopped");
   }
 
-  restart(sourcePath: string): void {
+  async restart(sourcePath: string): Promise<void> {
     if (!sourcePath) return;
     const pid = readPid(sourcePath);
     if (pid !== null) {
       this.output.appendLine(`[dev] Restarting — stopping PID ${pid}`);
-      this.killProcess(pid);
       try {
         unlinkSync(pidFile(sourcePath));
       } catch {}
+      await this.killProcess(pid);
+      this.output.appendLine("[dev] Old process stopped");
     }
     this.setState("stopped");
-    // Wait for Modal to finish cleanup before restarting
-    setTimeout(() => this.start(sourcePath), 2000);
+    this.start(sourcePath);
   }
 }
