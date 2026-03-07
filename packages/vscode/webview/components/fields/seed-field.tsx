@@ -1,7 +1,9 @@
 import { Shuffle } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { InputGroup } from "@/components/ui/input-group";
+import {
+  InputGroup,
+  InputGroupInput,
+  InputGroupButton,
+} from "@/components/ui/input-group";
 
 type Props = { value: number | ""; onChange: (v: number) => void; id: string };
 
@@ -10,7 +12,7 @@ export function SeedField({ value, onChange, id }: Props) {
 
   return (
     <InputGroup>
-      <Input
+      <InputGroupInput
         id={id}
         type="number"
         min={0}
@@ -22,9 +24,9 @@ export function SeedField({ value, onChange, id }: Props) {
           if (!isNaN(n)) onChange(n);
         }}
       />
-      <Button variant="outline" size="icon-sm" onClick={randomize}>
-        <Shuffle className="size-3" />
-      </Button>
+      <InputGroupButton onClick={randomize}>
+        <Shuffle />
+      </InputGroupButton>
     </InputGroup>
   );
 }
