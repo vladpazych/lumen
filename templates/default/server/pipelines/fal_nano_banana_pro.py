@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from lumen_server import (
+from lumen_sdk import (
     GenerateResult,
     PipelineConfig,
     PipelineOutput,

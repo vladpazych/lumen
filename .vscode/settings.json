@@ -9,5 +9,5 @@
     "**/dist": true,
     "**/.vite": true
   },
-  "lumen.server": "${workspaceFolder}/templates/default/lumen-server"
+  "lumen.server": "${workspaceFolder}/templates/default/server"
 }

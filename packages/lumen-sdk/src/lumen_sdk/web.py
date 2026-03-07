@@ -11,8 +11,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.responses import StreamingResponse
 
-from lumen_server import registry
-from lumen_server.types import GenerateResult
+from lumen_sdk import registry
+from lumen_sdk.types import GenerateResult
 
 AUTH_KEY_FILE = ".authkey"
 _CONTAINER_AUTH_KEY_FILE = "/run/authkey"
@@ -30,7 +30,7 @@ def _read_auth_key() -> str:
 def create_app() -> FastAPI:
     """Create the FastAPI app with pipeline routes and auth middleware."""
     auth_key = _read_auth_key()
-    web_app = FastAPI(title="Lumen Server")
+    web_app = FastAPI(title="Lumen Pipeline Server")
 
     @web_app.middleware("http")
     async def auth_middleware(request: Request, call_next: Any) -> Any:

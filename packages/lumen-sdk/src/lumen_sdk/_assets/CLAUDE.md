@@ -1,6 +1,6 @@
-# Lumen Server
+# Lumen Pipeline Server
 
-Pipeline server framework — FastAPI on Modal. Pipelines are auto-discovered from `pipelines/` directory. Framework code lives in the `lumen-server` package — import types and the Modal app from `lumen_server`.
+Pipeline server framework — FastAPI on Modal. Pipelines are auto-discovered from `pipelines/` directory. Framework code lives in the `lumen-sdk` package — import types and the Modal app from `lumen_sdk`.
 
 ## Adding a pipeline
 
@@ -9,10 +9,10 @@ Create a single file in `pipelines/` that exports two things:
 1. `config` — a `PipelineConfig` defining the schema (id, name, params, output)
 2. `generate` — an `async def generate(params: dict[str, Any]) -> GenerateResult`
 
-That's it. The framework auto-discovers all pipeline modules on startup. Copy `pipelines/_template.py` as a starting point. Import types from `lumen_server`:
+That's it. The framework auto-discovers all pipeline modules on startup. Copy `pipelines/_template.py` as a starting point. Import types from `lumen_sdk`:
 
 ```python
-from lumen_server import PipelineConfig, PipelineOutput, PromptParam, GenerateResult, OutputAsset
+from lumen_sdk import PipelineConfig, PipelineOutput, PromptParam, GenerateResult, OutputAsset
 ```
 
 ### Cost tier
@@ -143,7 +143,7 @@ The `serve` function runs on a lightweight image (no torch). GPU inference runs 
 
 ## Modal patterns
 
-This server runs on [Modal](https://modal.com) — a serverless cloud platform. The Modal app is provided by the `lumen_server` package. Key concepts for pipeline authors:
+This server runs on [Modal](https://modal.com) — a serverless cloud platform. The Modal app is provided by the `lumen_sdk` package. Key concepts for pipeline authors:
 
 ### Images — define deps per function, not globally
 
@@ -235,8 +235,8 @@ The server requires a Bearer token on every request. The VS Code extension gener
 
 ## Rules
 
-- Import types from `lumen_server`, not from `pipelines`: `from lumen_server import PipelineConfig, ...`
-- For GPU pipelines, import the Modal app: `from lumen_server import app`
+- Import types from `lumen_sdk`, not from `pipelines`: `from lumen_sdk import PipelineConfig, ...`
+- For GPU pipelines, import the Modal app: `from lumen_sdk import app`
 - JSON responses use camelCase `runId` (not `run_id`) — handled by `GenerateResult.to_wire()`.
 - Pipeline `id` must be a unique kebab-case slug.
 - Files starting with `_` are skipped by discovery (use for shared helpers like `_fal.py`).

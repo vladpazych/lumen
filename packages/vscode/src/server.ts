@@ -9,7 +9,7 @@ import type { DevServerState } from "../webview/lib/messaging";
 export function getServerSource(): string {
   const raw = vscode.workspace
     .getConfiguration("lumen")
-    .get<string>("server", "lumen-server");
+    .get<string>("server", "server");
   const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
   return raw.replace(/\$\{workspaceFolder\}/g, root);
 }
@@ -125,7 +125,7 @@ export class ServerManager {
     const shell = process.env.SHELL || "/bin/zsh";
     const child = spawn(
       shell,
-      ["-l", "-c", "uv sync && lumen-server sync && exec lumen-server serve"],
+      ["-l", "-c", "uv sync && lumen-sdk sync && exec lumen-sdk serve"],
       {
         cwd: sourcePath,
         stdio: ["ignore", "pipe", "pipe"],

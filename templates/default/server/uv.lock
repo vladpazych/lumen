@@ -422,7 +422,7 @@ name = "lumen-example-modal"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "lumen-server" },
+    { name = "lumen-sdk" },
 ]
 
 [package.dev-dependencies]
@@ -433,7 +433,7 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "lumen-server", editable = "../../../packages/lumen-server" }]
+requires-dist = [{ name = "lumen-sdk", editable = "../../../packages/lumen-sdk" }]
 
 [package.metadata.requires-dev]
 dev = [
@@ -443,9 +443,9 @@ dev = [
 ]
 
 [[package]]
-name = "lumen-server"
+name = "lumen-sdk"
 version = "0.1.0"
-source = { editable = "../../../packages/lumen-server" }
+source = { editable = "../../../packages/lumen-sdk" }
 dependencies = [
     { name = "fastapi" },
     { name = "httpx" },

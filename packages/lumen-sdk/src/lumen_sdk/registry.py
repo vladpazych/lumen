@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from lumen_server.types import GenerateResult, PipelineConfig
+from lumen_sdk.types import GenerateResult, PipelineConfig
 
 GenerateFn = Callable[[dict[str, Any]], Coroutine[Any, Any, GenerateResult]]
 

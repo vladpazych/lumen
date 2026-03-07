@@ -3,7 +3,7 @@ name = "lumen-example-modal"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-    "lumen-server",
+    "lumen-sdk",
 ]
 
 [dependency-groups]
@@ -14,7 +14,7 @@ dev = [
 ]
 
 [tool.uv.sources]
-lumen-server = { path = "../../../packages/lumen-server", editable = true }
+lumen-sdk = { path = "../../../packages/lumen-sdk", editable = true }
 
 [tool.ruff]
 line-length = 100

@@ -65,7 +65,7 @@
         },
         "lumen.server": {
           "type": "string",
-          "default": "lumen-server",
+          "default": "server",
           "description": "Path to the inference server source directory. Supports ${workspaceFolder}. The extension starts/stops the dev server and auto-detects the URL from Modal output."
         }
       }

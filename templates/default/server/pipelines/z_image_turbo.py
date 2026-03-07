@@ -6,7 +6,7 @@ import uuid
 from typing import Any
 
 import modal
-from lumen_server import (
+from lumen_sdk import (
     DimensionPreset,
     Dimensions,
     DimensionsParam,

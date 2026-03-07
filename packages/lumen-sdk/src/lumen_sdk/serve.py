@@ -2,8 +2,8 @@
 
 import modal
 
-from lumen_server import app, registry
-from lumen_server.web import AUTH_KEY_FILE, _CONTAINER_AUTH_KEY_FILE, create_app
+from lumen_sdk import app, registry
+from lumen_sdk.web import AUTH_KEY_FILE, _CONTAINER_AUTH_KEY_FILE, create_app
 
 registry.discover("pipelines")
 
@@ -12,7 +12,7 @@ server_image = (
     .pip_install("fastapi>=0.115.0", "httpx>=0.28.0", "pydantic>=2.0.0")
     .add_local_file(AUTH_KEY_FILE, _CONTAINER_AUTH_KEY_FILE, copy=True)
     .add_local_python_source("pipelines")
-    .add_local_python_source("lumen_server")
+    .add_local_python_source("lumen_sdk")
 )
 
 

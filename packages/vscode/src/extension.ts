@@ -11,7 +11,7 @@ function activeDocumentUri(): vscode.Uri | undefined {
 }
 
 export function activate(context: vscode.ExtensionContext): void {
-  const output = vscode.window.createOutputChannel("Lumen Server");
+  const output = vscode.window.createOutputChannel("Lumen Engine");
   const provider = new LumenEditorProvider(context);
 
   const serverManager = new ServerManager(

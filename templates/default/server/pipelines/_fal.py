@@ -8,7 +8,7 @@ import uuid
 from typing import Any
 
 import httpx
-from lumen_server import (
+from lumen_sdk import (
     BooleanParam,
     GenerateResult,
     IntegerParam,

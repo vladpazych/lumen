@@ -15,7 +15,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from lumen_server import (
+from lumen_sdk import (
     GenerateResult,
     OutputAsset,
     PipelineConfig,
@@ -48,7 +48,7 @@ async def generate(params: dict[str, Any]) -> GenerateResult:
 
 ## Rules
 
-- Import types from `lumen_server`, not from `pipelines`
+- Import types from `lumen_sdk`, not from `pipelines`
 - Export exactly `config` (PipelineConfig) and `generate` (async function)
 - `id` must be unique kebab-case slug
 - Files starting with `_` are skipped by discovery (use for shared helpers)
@@ -60,7 +60,7 @@ For Modal GPU inference, import the app and define a class:
 
 ```python
 import modal
-from lumen_server import app
+from lumen_sdk import app
 
 gpu_image = (
     modal.Image.debian_slim(python_version="3.12")

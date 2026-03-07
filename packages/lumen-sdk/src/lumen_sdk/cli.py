@@ -1,4 +1,4 @@
-"""CLI entry point — lumen-server serve | sync."""
+"""CLI entry point — lumen-sdk serve | sync."""
 
 from __future__ import annotations
 
@@ -34,9 +34,9 @@ def sync() -> None:
 
 def serve() -> None:
     """Run modal serve on the framework entry point."""
-    import lumen_server.serve  # noqa: F401 — ensure module is importable
+    import lumen_sdk.serve  # noqa: F401 — ensure module is importable
 
-    serve_path = Path(lumen_server.serve.__file__)
+    serve_path = Path(lumen_sdk.serve.__file__)
     result = subprocess.run(
         [sys.executable, "-m", "modal", "serve", str(serve_path)],
         cwd=Path.cwd(),
@@ -46,7 +46,7 @@ def serve() -> None:
 
 def main() -> None:
     if len(sys.argv) < 2:
-        print("Usage: lumen-server <serve|sync>", file=sys.stderr)
+        print("Usage: lumen-sdk <serve|sync>", file=sys.stderr)
         sys.exit(1)
 
     cmd = sys.argv[1]
