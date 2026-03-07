@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Callable, Coroutine
+from collections.abc import Callable, Coroutine
+from dataclasses import dataclass
+from typing import Any
 
 from pipelines.types import GenerateResult, PipelineConfig
-
 
 GenerateFn = Callable[[dict[str, Any]], Coroutine[Any, Any, GenerateResult]]
 
@@ -30,3 +30,20 @@ def get(pipeline_id: str) -> PipelineEntry | None:
 
 def list_all() -> list[PipelineEntry]:
     return list(_registry.values())
+
+
+def discover() -> None:
+    """Auto-import pipeline modules and register those with `config` + `generate`."""
+    import importlib
+    import pkgutil
+
+    import pipelines as pkg
+
+    for info in pkgutil.iter_modules(pkg.__path__):
+        if info.name.startswith("_") or info.name in ("registry", "types"):
+            continue
+        mod = importlib.import_module(f"pipelines.{info.name}")
+        cfg = getattr(mod, "config", None)
+        gen = getattr(mod, "generate", None)
+        if isinstance(cfg, PipelineConfig) and callable(gen):
+            register(cfg, gen)

@@ -1,16 +1,13 @@
-"""Pipeline type definitions — Python-side mirror of the wire contract."""
+"""Pipeline type definitions — Pydantic models matching the wire contract."""
 
-from __future__ import annotations
-
-from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from pydantic import BaseModel, Field
 
 # --- Parameter definitions ---
 
 
-@dataclass
-class TextParam:
+class TextParam(BaseModel):
     type: Literal["text"] = "text"
     name: str = ""
     label: str | None = None
@@ -20,8 +17,7 @@ class TextParam:
     multiline: bool | None = None
 
 
-@dataclass
-class NumberParam:
+class NumberParam(BaseModel):
     type: Literal["number"] = "number"
     name: str = ""
     label: str | None = None
@@ -33,8 +29,7 @@ class NumberParam:
     step: float | None = None
 
 
-@dataclass
-class IntegerParam:
+class IntegerParam(BaseModel):
     type: Literal["integer"] = "integer"
     name: str = ""
     label: str | None = None
@@ -45,8 +40,7 @@ class IntegerParam:
     max: int | None = None
 
 
-@dataclass
-class BooleanParam:
+class BooleanParam(BaseModel):
     type: Literal["boolean"] = "boolean"
     name: str = ""
     label: str | None = None
@@ -55,25 +49,22 @@ class BooleanParam:
     default: bool | None = None
 
 
-@dataclass
-class SelectOption:
+class SelectOption(BaseModel):
     value: str = ""
     label: str | None = None
 
 
-@dataclass
-class SelectParam:
+class SelectParam(BaseModel):
     type: Literal["select"] = "select"
     name: str = ""
     label: str | None = None
     required: bool | None = None
     group: str | None = None
-    options: list[SelectOption] = field(default_factory=list)
+    options: list[SelectOption] = []
     default: str | None = None
 
 
-@dataclass
-class SeedParam:
+class SeedParam(BaseModel):
     type: Literal["seed"] = "seed"
     name: str = ""
     label: str | None = None
@@ -82,21 +73,18 @@ class SeedParam:
     default: int | None = None
 
 
-@dataclass
-class DimensionPreset:
+class DimensionPreset(BaseModel):
     w: int = 0
     h: int = 0
     label: str = ""
 
 
-@dataclass
-class Dimensions:
+class Dimensions(BaseModel):
     w: int = 0
     h: int = 0
 
 
-@dataclass
-class DimensionsParam:
+class DimensionsParam(BaseModel):
     type: Literal["dimensions"] = "dimensions"
     name: str = ""
     label: str | None = None
@@ -106,8 +94,7 @@ class DimensionsParam:
     presets: list[DimensionPreset] | None = None
 
 
-@dataclass
-class ImageParam:
+class ImageParam(BaseModel):
     type: Literal["image"] = "image"
     name: str = ""
     label: str | None = None
@@ -115,8 +102,7 @@ class ImageParam:
     group: str | None = None
 
 
-@dataclass
-class VideoParam:
+class VideoParam(BaseModel):
     type: Literal["video"] = "video"
     name: str = ""
     label: str | None = None
@@ -124,8 +110,7 @@ class VideoParam:
     group: str | None = None
 
 
-@dataclass
-class PromptParam:
+class PromptParam(BaseModel):
     type: Literal["prompt"] = "prompt"
     name: str = ""
     label: str | None = None
@@ -151,96 +136,79 @@ ParamDefinition = (
 # --- Pipeline ---
 
 
-@dataclass
-class PipelineOutput:
+class PipelineOutput(BaseModel):
     type: Literal["image", "video", "image[]", "video[]"] = "image"
     format: str | None = None
 
 
-@dataclass
-class PipelineManifest:
+class PipelineConfig(BaseModel):
     id: str = ""
     name: str = ""
     description: str | None = None
     category: Literal["image", "video"] = "image"
+    params: list[ParamDefinition] = []
+    output: PipelineOutput = Field(default_factory=PipelineOutput)
 
+    def to_wire(self) -> dict[str, Any]:
+        """Full schema for GET /pipelines/{id} and SSE events."""
+        return self.model_dump(exclude_none=True)
 
-@dataclass
-class PipelineConfig:
-    id: str = ""
-    name: str = ""
-    description: str | None = None
-    category: Literal["image", "video"] = "image"
-    params: list[ParamDefinition] = field(default_factory=list)
-    output: PipelineOutput = field(default_factory=PipelineOutput)
+    def to_manifest(self) -> dict[str, Any]:
+        """Lightweight listing for GET /pipelines."""
+        return self.model_dump(
+            include={"id", "name", "description", "category"}, exclude_none=True
+        )
 
 
 # --- Generation ---
 
 
-@dataclass
-class OutputAsset:
+class OutputAsset(BaseModel):
     url: str = ""
     type: Literal["image", "video"] = "image"
     format: str | None = None
     metadata: dict[str, Any] | None = None
 
 
-@dataclass
-class GenerateResult:
+class GenerateResult(BaseModel):
     status: Literal["completed", "running", "queued", "failed"] = "completed"
     run_id: str = ""
-    outputs: list[OutputAsset] = field(default_factory=list)
+    outputs: list[OutputAsset] = []
     progress: float | None = None
     error: dict[str, str] | None = None
 
-
-def param_to_dict(p: ParamDefinition) -> dict[str, Any]:
-    """Serialize a parameter definition to a JSON-compatible dict, omitting None values."""
-    result: dict[str, Any] = {}
-    for k, v in p.__dict__.items():
-        if v is None:
-            continue
-        if isinstance(v, list):
-            result[k] = [item.__dict__ if hasattr(item, "__dict__") else item for item in v]
-        elif hasattr(v, "__dict__"):
-            result[k] = v.__dict__
-        else:
-            result[k] = v
-    return result
+    def to_wire(self) -> dict[str, Any]:
+        """Serialize for the JSON response. Uses camelCase runId."""
+        d: dict[str, Any] = {"status": self.status, "runId": self.run_id}
+        if self.status == "completed":
+            d["outputs"] = [o.model_dump(exclude_none=True) for o in self.outputs]
+        elif self.status == "running" and self.progress is not None:
+            d["progress"] = self.progress
+        elif self.status == "failed" and self.error:
+            d["error"] = self.error
+        return d
 
 
-def config_to_dict(c: PipelineConfig) -> dict[str, Any]:
-    """Serialize a pipeline config for the JSON response."""
-    return {
-        "id": c.id,
-        "name": c.name,
-        **({"description": c.description} if c.description else {}),
-        "category": c.category,
-        "params": [param_to_dict(p) for p in c.params],
-        "output": {k: v for k, v in c.output.__dict__.items() if v is not None},
-    }
-
-
-def manifest_to_dict(c: PipelineConfig) -> dict[str, Any]:
-    """Serialize a pipeline config as a manifest (no params/output)."""
-    return {
-        "id": c.id,
-        "name": c.name,
-        **({"description": c.description} if c.description else {}),
-        "category": c.category,
-    }
-
-
-def result_to_dict(r: GenerateResult) -> dict[str, Any]:
-    """Serialize a generate result for the JSON response."""
-    d: dict[str, Any] = {"status": r.status, "runId": r.run_id}
-    if r.status == "completed":
-        d["outputs"] = [
-            {k: v for k, v in o.__dict__.items() if v is not None} for o in r.outputs
-        ]
-    elif r.status == "running" and r.progress is not None:
-        d["progress"] = r.progress
-    elif r.status == "failed" and r.error:
-        d["error"] = r.error
-    return d
+__all__ = [
+    # Params
+    "TextParam",
+    "NumberParam",
+    "IntegerParam",
+    "BooleanParam",
+    "SelectOption",
+    "SelectParam",
+    "SeedParam",
+    "DimensionPreset",
+    "Dimensions",
+    "DimensionsParam",
+    "ImageParam",
+    "VideoParam",
+    "PromptParam",
+    "ParamDefinition",
+    # Pipeline
+    "PipelineOutput",
+    "PipelineConfig",
+    # Generation
+    "OutputAsset",
+    "GenerateResult",
+]

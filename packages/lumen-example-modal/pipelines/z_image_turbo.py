@@ -7,7 +7,7 @@ from typing import Any
 
 import modal
 
-from pipelines import app, registry
+from pipelines import app
 from pipelines.types import (
     DimensionPreset,
     Dimensions,
@@ -147,6 +147,3 @@ async def generate(params: dict[str, Any]) -> GenerateResult:
         run_id=run_id,
         outputs=[OutputAsset(url=data_url, type="image", format="png", metadata={"seed": seed})],
     )
-
-
-registry.register(config, generate)

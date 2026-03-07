@@ -14,8 +14,8 @@ bun run dev      # Start with modal serve (needs Modal CLI + auth)
 
 ## Adding a pipeline
 
-1. Create `pipelines/my_pipeline.py`
+1. Copy `pipelines/_template.py` to `pipelines/my_pipeline.py`
 2. Define a `PipelineConfig` with parameters and output type
 3. Write an `async def generate(params) -> GenerateResult` function
-4. Call `registry.register(config, generate)`
-5. Import the module in `app.py`
+
+Pipelines are auto-discovered on startup — no registration or imports needed.

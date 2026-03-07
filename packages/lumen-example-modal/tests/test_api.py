@@ -74,3 +74,21 @@ class TestGenerate:
     def test_not_found(self, client: TestClient):
         res = client.post("/pipelines/nonexistent/generate", json={})
         assert res.status_code == 404
+
+
+class TestAllPipelinesSchema:
+    """Validates schema shape for every registered pipeline."""
+
+    def test_all_configs_valid(self, client: TestClient):
+        pipelines = client.get("/pipelines").json()
+        for manifest in pipelines:
+            res = client.get(f"/pipelines/{manifest['id']}")
+            assert res.status_code == 200
+            config = res.json()
+            assert config["id"] == manifest["id"]
+            assert "params" in config
+            assert "output" in config
+            assert isinstance(config["params"], list)
+            for param in config["params"]:
+                assert "type" in param, f"Param missing 'type' in {manifest['id']}"
+                assert "name" in param, f"Param missing 'name' in {manifest['id']}"

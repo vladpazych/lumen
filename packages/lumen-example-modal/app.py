@@ -11,25 +11,21 @@ from fastapi.responses import JSONResponse
 from starlette.responses import StreamingResponse
 
 from pipelines import app, registry
-from pipelines.types import config_to_dict, manifest_to_dict, result_to_dict
 
-# Import pipelines to trigger registration
-import pipelines.echo  # noqa: F401
-import pipelines.z_image_turbo  # noqa: F401
+registry.discover()
 
 web_app = FastAPI(title="Lumen Example")
 
 
 @web_app.get("/pipelines")
 async def list_pipelines():
-    entries = registry.list_all()
-    return [manifest_to_dict(e.config) for e in entries]
+    return [e.config.to_manifest() for e in registry.list_all()]
 
 
 @web_app.get("/pipelines/events")
 async def pipeline_events():
     async def event_stream():
-        configs = [config_to_dict(e.config) for e in registry.list_all()]
+        configs = [e.config.to_wire() for e in registry.list_all()]
         yield f"event: schemas\ndata: {json.dumps(configs)}\n\n"
         try:
             while True:
@@ -49,7 +45,7 @@ async def get_pipeline(pipeline_id: str):
             status_code=404,
             content={"code": "NOT_FOUND", "message": f"Pipeline not found: {pipeline_id}"},
         )
-    return config_to_dict(entry.config)
+    return entry.config.to_wire()
 
 
 @web_app.post("/pipelines/{pipeline_id}/generate")
@@ -61,7 +57,7 @@ async def generate(pipeline_id: str, params: dict | None = None):
             content={"code": "NOT_FOUND", "message": f"Pipeline not found: {pipeline_id}"},
         )
     result = await entry.generate(params or {})
-    return result_to_dict(result)
+    return result.to_wire()
 
 
 # --- Modal ---

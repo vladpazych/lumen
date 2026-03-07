@@ -1,22 +1,32 @@
 # packages/lumen-example-modal/CLAUDE.md
 
-Example Lumen inference server — FastAPI on Modal. Stub pipeline (echo) validates the contract without GPU; GPU pipelines run as separate Modal classes.
+Lumen inference server template — FastAPI on Modal. Pipelines are auto-discovered from `pipelines/` directory.
 
-## Rules
+## Adding a pipeline
 
-- Python dataclasses in `pipelines/types.py` are the contract. Mirror changes to `packages/vscode/shared/types.ts`.
-- JSON responses use camelCase keys (`runId`, not `run_id`) to match the wire contract.
-- `registry.py` is the only coupling point — pipelines self-register on import.
-- Tests use FastAPI's `TestClient` — no Modal dependency needed for testing.
+Create a single file in `pipelines/` that exports two things:
 
-### Adding a pipeline
+1. `config` — a `PipelineConfig` defining the schema (id, name, params, output)
+2. `generate` — an `async def generate(params: dict[str, Any]) -> GenerateResult`
 
-Each pipeline is a single file in `pipelines/` with three parts: config, generate function, registration call.
+That's it. No imports in `app.py`, no registration calls. The server auto-discovers all pipeline modules on startup. Copy `pipelines/_template.py` as a starting point.
 
-1. Define a `PipelineConfig` with `id`, `name`, `category`, `params`, `output`.
-2. Define `async def generate(params: dict[str, Any]) -> GenerateResult`.
-3. Call `registry.register(config, generate)` at module level.
-4. Import the module in `app.py` to trigger registration.
+### Available param types
+
+| Type              | Key fields                                                             | Renders as                  |
+| :---------------- | :--------------------------------------------------------------------- | :-------------------------- |
+| `PromptParam`     | `default`                                                              | Textarea                    |
+| `TextParam`       | `default`, `multiline`                                                 | Input or textarea           |
+| `NumberParam`     | `default`, `min`, `max`, `step`                                        | Number input (float)        |
+| `IntegerParam`    | `default`, `min`, `max`                                                | Number input (int)          |
+| `BooleanParam`    | `default`                                                              | Checkbox                    |
+| `SelectParam`     | `options: [SelectOption(value, label)]`, `default`                     | Dropdown                    |
+| `SeedParam`       | `default`                                                              | Number + randomize button   |
+| `DimensionsParam` | `default: Dimensions(w, h)`, `presets: [DimensionPreset(w, h, label)]` | W×H inputs + preset buttons |
+| `ImageParam`      | —                                                                      | File upload + drag-drop     |
+| `VideoParam`      | —                                                                      | File upload (limited UI)    |
+
+All param types share: `name` (required, key in params dict), `label`, `required`, `group`.
 
 ### Generate function contract
 
@@ -39,6 +49,21 @@ The `serve` function runs on a lightweight image (no torch). GPU inference runs 
 ### `dimensions` param handling
 
 The `dimensions` param arrives as `{"w": int, "h": int}`. Always type-check with `isinstance(dims, dict)` and provide fallback defaults.
+
+## What NOT to modify
+
+- `app.py` — auto-discovers pipelines, no changes needed
+- `pipelines/types.py` — Pydantic models shared with the VS Code client
+- `pipelines/registry.py` — framework code
+- `pipelines/__init__.py` — Modal app definition
+- `tests/test_api.py` — contract tests (validates all pipelines automatically)
+
+## Rules
+
+- Types are Pydantic models in `pipelines/types.py`. Do not add new param types without also updating `packages/lumen/types/schema.ts`.
+- JSON responses use camelCase `runId` (not `run_id`) — handled by `GenerateResult.to_wire()`.
+- Pipeline `id` must be a unique kebab-case slug.
+- Files starting with `_` are skipped by discovery.
 
 ## Commands
 
