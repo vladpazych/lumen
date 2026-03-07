@@ -94,6 +94,29 @@ gpu="A100:2"       # Multi-GPU
 gpu=["H100", "A100", "any"]  # Fallback chain
 ```
 
+### Secrets — API keys and credentials
+
+Pipelines that call external APIs (Replicate, OpenAI, Stability, etc.) need secrets. Modal manages these securely — never hardcode keys in pipeline code.
+
+In code, attach secrets to the function or class and read them from `os.environ`:
+
+```python
+@app.cls(image=gpu_image, gpu="A10G", secrets=[modal.Secret.from_name("replicate-api-key")])
+class MyModel:
+    @modal.enter()
+    def load(self):
+        import os
+        self.api_key = os.environ["REPLICATE_API_TOKEN"]
+```
+
+The user must create the secret in the Modal dashboard before the pipeline will work. When a pipeline needs a secret, tell the user:
+
+1. Go to https://modal.com/secrets
+2. Click "Create new secret"
+3. Name it (kebab-case, e.g. `replicate-api-key`)
+4. Add the required environment variable(s) and values
+5. Restart the dev server from VS Code
+
 ### Style rules
 
 - Always `import modal` then use qualified names: `modal.Image`, `modal.enter()`.
