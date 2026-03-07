@@ -1,5 +1,5 @@
 {
-  "name": "@vladpazych/lumen-vscode",
+  "name": "lumen-vscode",
   "displayName": "Lumen",
   "description": "Schema-driven editor for .imagic files",
   "version": "0.0.0",
