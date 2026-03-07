@@ -1,5 +1,6 @@
-import { createCLI } from "@vladpazych/dexter/meta"
+import { createCLI } from "@vladpazych/dexter/meta";
+import { release } from "./commands/release";
 
 await createCLI({
-  commands: {},
-}).run()
+  commands: { release },
+}).run();

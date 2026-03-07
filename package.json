@@ -5,5 +5,8 @@
     "packages/*",
     "apps/*",
     "meta"
-  ]
+  ],
+  "scripts": {
+    "bump": "bun meta/index.ts release"
+  }
 }
