@@ -22,6 +22,7 @@ export type NumberParam = BaseParam & {
   min?: number;
   max?: number;
   step?: number;
+  display?: "input" | "slider";
 };
 
 export type IntegerParam = BaseParam & {
@@ -29,6 +30,7 @@ export type IntegerParam = BaseParam & {
   default?: number;
   min?: number;
   max?: number;
+  display?: "input" | "slider";
 };
 
 export type BooleanParam = BaseParam & {

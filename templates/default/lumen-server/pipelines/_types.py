@@ -33,6 +33,7 @@ class NumberParam(BaseModel):
     min: float | None = None
     max: float | None = None
     step: float | None = None
+    display: Literal["input", "slider"] | None = None
 
 
 class IntegerParam(BaseModel):
@@ -47,6 +48,7 @@ class IntegerParam(BaseModel):
     default: int | None = None
     min: int | None = None
     max: int | None = None
+    display: Literal["input", "slider"] | None = None
 
 
 class BooleanParam(BaseModel):
