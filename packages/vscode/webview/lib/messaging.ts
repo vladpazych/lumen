@@ -21,7 +21,6 @@ export type InitMessage = {
   schemas: Record<string, PipelineConfig[]>;
   configs: LumenConfig[];
   serverStatuses: Record<string, ServerStatus>;
-  serverNames: Record<string, string>;
   devServerState: DevServerState;
   devServerUrl: string | null;
 };

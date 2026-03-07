@@ -13,7 +13,6 @@ import { ResultDisplay } from "@/components/result-display";
 type Props = {
   config: LumenConfig;
   schema?: PipelineConfig;
-  serverName?: string;
   status: ServerStatus;
   isGenerating: boolean;
   progress?: number;
@@ -38,13 +37,6 @@ const statusVariant = {
   disconnected: "muted",
 } as const;
 
-function shortenUrl(url: string): string {
-  return url
-    .replace(/^https?:\/\//, "")
-    .replace(/^provider:\/\//, "")
-    .replace(/\/$/, "");
-}
-
 function promptSummary(
   config: LumenConfig,
   schema?: PipelineConfig,
@@ -60,7 +52,6 @@ function promptSummary(
 export function ConfigCard({
   config,
   schema,
-  serverName,
   status,
   isGenerating,
   progress,
@@ -74,8 +65,7 @@ export function ConfigCard({
   isPickingImage,
   imageThumbs,
 }: Props) {
-  const serverLabel = serverName ?? shortenUrl(config.service);
-  const fallbackTitle = `${serverLabel} / ${schema?.name ?? config.pipeline}`;
+  const fallbackTitle = schema?.name ?? config.pipeline;
   const title = config.name ?? fallbackTitle;
   const summary = promptSummary(config, schema);
 
@@ -185,7 +175,7 @@ export function ConfigCard({
         ) : (
           <div className="p-3">
             <p className="text-[11px] text-text-tertiary">
-              Connect to {serverLabel} to edit
+              Connect server to edit
             </p>
           </div>
         )}

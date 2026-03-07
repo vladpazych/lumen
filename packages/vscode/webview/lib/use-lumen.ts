@@ -13,7 +13,6 @@ type State = {
   schemas: Record<string, PipelineConfig[]>;
   configs: LumenConfig[];
   serverStatuses: Record<string, ServerStatus>;
-  serverNames: Record<string, string>;
   devServerState: DevServerState;
   devServerUrl: string | null;
   focusIndex: number;
@@ -35,7 +34,6 @@ type Action =
       schemas: Record<string, PipelineConfig[]>;
       configs: LumenConfig[];
       serverStatuses: Record<string, ServerStatus>;
-      serverNames: Record<string, string>;
       devServerState: DevServerState;
       devServerUrl: string | null;
     }
@@ -70,7 +68,6 @@ function reducer(state: State, action: Action): State {
         schemas: action.schemas,
         configs: action.configs,
         serverStatuses: action.serverStatuses,
-        serverNames: action.serverNames,
         devServerState: action.devServerState,
         devServerUrl: action.devServerUrl,
         ready: true,
@@ -166,7 +163,6 @@ const initialState: State = {
   schemas: {},
   configs: [],
   serverStatuses: {},
-  serverNames: {},
   devServerState: "stopped",
   devServerUrl: null,
   focusIndex: 0,
@@ -192,7 +188,6 @@ export function useLumen() {
             schemas: msg.schemas,
             configs: msg.configs,
             serverStatuses: msg.serverStatuses,
-            serverNames: msg.serverNames,
             devServerState: msg.devServerState,
             devServerUrl: msg.devServerUrl,
           });
@@ -356,11 +351,6 @@ export function useLumen() {
     vscode.postMessage({ type: "restartDevServer" });
   }, []);
 
-  const isDevServer = useCallback(
-    (url: string) => url === state.devServerUrl,
-    [state.devServerUrl],
-  );
-
   const addConfig = useCallback(
     (
       service: string,
@@ -429,7 +419,6 @@ export function useLumen() {
 
   return {
     ...state,
-    isDevServer,
     addConfig,
     removeConfig,
     updateParam,

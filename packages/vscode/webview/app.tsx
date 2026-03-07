@@ -1,16 +1,23 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { ServerGroup } from "@/components/server-group";
+import { StatusDot } from "@/components/status-dot";
+import { ConfigCard } from "@/components/config-card";
+import { ServerLog } from "@/components/server-log";
 import { AddConfigDialog } from "@/components/add-config-dialog";
+import { Accordion, AccordionItem } from "@/components/ui/accordion";
 import { useLumen } from "@/lib/use-lumen";
+
+const statusVariant = {
+  connected: "success",
+  error: "destructive",
+  disconnected: "muted",
+} as const;
 
 export function App() {
   const {
     schemas,
     configs,
     serverStatuses,
-    serverNames,
     devServerState,
     devServerLog,
     devServerUrl,
@@ -28,7 +35,6 @@ export function App() {
     startDevServer,
     stopDevServer,
     restartDevServer,
-    isDevServer,
     pickImage,
     pickImageByUri,
     isPickingImage,
@@ -45,110 +51,153 @@ export function App() {
     );
   }
 
-  const serverUrls = Object.keys(schemas);
+  const serverUrl = devServerUrl ?? Object.keys(schemas)[0];
+  const status = serverUrl
+    ? (serverStatuses[serverUrl] ?? "disconnected")
+    : "disconnected";
+  const pipelines = serverUrl ? (schemas[serverUrl] ?? []) : [];
 
-  if (serverUrls.length === 0 && configs.length === 0) {
-    return (
-      <div className="mx-auto max-w-2xl p-4">
-        <p className="text-[11px] text-text-secondary">
-          No servers configured. Add servers to{" "}
-          <span className="font-mono text-[11px] text-text-primary">
-            lumen.servers
-          </span>{" "}
-          in VS Code settings.
-        </p>
-      </div>
-    );
-  }
+  const canStart =
+    devServerState === "stopped" ||
+    devServerState === "error" ||
+    devServerState === "orphaned";
+  const canStop =
+    devServerState === "running" ||
+    devServerState === "starting" ||
+    devServerState === "rebuilding";
+  const canRestart =
+    devServerState === "running" || devServerState === "rebuilding";
+  const isRebuilding = devServerState === "rebuilding";
+  const isStopping = devServerState === "stopping";
+  const isOrphaned = devServerState === "orphaned";
 
-  // Group configs by server URL, seeded from schema keys
-  const serverConfigMap = new Map<string, typeof configs>();
-  for (const url of serverUrls) {
-    serverConfigMap.set(url, []);
-  }
-  for (const config of configs) {
-    const existing = serverConfigMap.get(config.service) ?? [];
-    existing.push(config);
-    serverConfigMap.set(config.service, existing);
-  }
+  const focusedConfig = configs[focusIndex];
+  const initialKey = focusedConfig?.id ?? null;
 
-  const handleAddConfig = (service: string, pipeline: string) => {
-    addConfig(service, pipeline, schemas, configs);
+  const handleAddConfig = (pipeline: string) => {
+    if (!serverUrl) return;
+    addConfig(serverUrl, pipeline, schemas, configs);
     setShowAddForm(false);
     setFocus(configs.length);
   };
 
-  let globalOffset = 0;
-
   return (
     <div className="mx-auto max-w-2xl p-4">
-      <div className="flex flex-col gap-6">
-        <div className="flex justify-end">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowAddForm(true)}
-          >
-            + Add
-          </Button>
+      <div className="flex flex-col gap-4">
+        {/* Global header */}
+        <div className="flex items-center justify-between py-1.5">
+          <div className="flex items-center gap-2">
+            <StatusDot variant={statusVariant[status]} size="sm" />
+            {isRebuilding && (
+              <span className="text-[10px] text-warning animate-pulse">
+                Rebuilding…
+              </span>
+            )}
+            {isOrphaned && (
+              <span className="text-[10px] text-warning">No process</span>
+            )}
+            {isStopping && (
+              <span className="text-[10px] text-text-tertiary animate-pulse">
+                Stopping…
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            {canStart && (
+              <Button variant="ghost" size="xs" onClick={startDevServer}>
+                {isOrphaned ? "Replace" : "Start"}
+              </Button>
+            )}
+            {canRestart && (
+              <Button variant="ghost" size="xs" onClick={restartDevServer}>
+                Restart
+              </Button>
+            )}
+            {canStop && (
+              <Button variant="ghost" size="xs" onClick={stopDevServer}>
+                {devServerState === "starting" ? "Starting…" : "Stop"}
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAddForm(true)}
+              disabled={pipelines.length === 0}
+            >
+              + Add
+            </Button>
+          </div>
         </div>
 
-        {[...serverConfigMap.entries()].map(([serverUrl, serverConfigs], i) => {
-          const offset = globalOffset;
-          globalOffset += serverConfigs.length;
-          return (
-            <div key={serverUrl}>
-              {i > 0 && <Separator className="mb-4" />}
-              <ServerGroup
-                serverUrl={serverUrl}
-                serverName={serverNames[serverUrl]}
-                status={serverStatuses[serverUrl] ?? "disconnected"}
-                configs={serverConfigs}
-                pipelines={schemas[serverUrl] ?? []}
-                focusIndex={focusIndex}
-                generating={generating}
-                progress={progress}
-                results={results}
-                isPickingImage={isPickingImage}
-                imageThumbs={imageThumbs}
-                isDevServer={isDevServer(serverUrl)}
-                devServerState={devServerState}
-                devServerLog={devServerLog}
-                onStartServer={startDevServer}
-                onStopServer={stopDevServer}
-                onRestartServer={restartDevServer}
-                onParamChange={(
-                  configId,
-                  service,
-                  pipeline,
-                  paramName,
-                  value,
-                ) => updateParam(configId, service, pipeline, paramName, value)}
-                onGenerate={(configId, service, pipeline, params) =>
-                  requestGenerate(configId, service, pipeline, params)
-                }
-                onPickImage={(configId, service, pipeline, paramName) =>
-                  pickImage(configId, service, pipeline, paramName)
-                }
-                onPickImageByUri={(
-                  configId,
-                  service,
-                  pipeline,
-                  paramName,
-                  uri,
-                ) =>
-                  pickImageByUri(configId, service, pipeline, paramName, uri)
-                }
-                onRename={(configId, name) => updateName(configId, name)}
-                onRemove={(configId) => removeConfig(configId)}
-                onFocus={setFocus}
-                globalIndexOffset={offset}
-              />
-            </div>
-          );
-        })}
+        {devServerLog.length > 0 && <ServerLog lines={devServerLog} />}
 
-        {configs.length === 0 && (
+        {configs.length > 0 && (
+          <Accordion defaultValue={initialKey ? [initialKey] : undefined}>
+            {configs.map((config, i) => {
+              const schema = pipelines.find((p) => p.id === config.pipeline);
+              const isGen = generating[config.id] ?? false;
+              const prog = progress[config.id];
+              const result = results[config.id];
+
+              return (
+                <AccordionItem
+                  key={config.id}
+                  value={config.id}
+                  onOpenChange={(open) => open && setFocus(i)}
+                >
+                  <ConfigCard
+                    config={config}
+                    schema={schema}
+                    status={status}
+                    isGenerating={isGen}
+                    progress={prog}
+                    result={result}
+                    onParamChange={(paramName, value) =>
+                      updateParam(
+                        config.id,
+                        config.service,
+                        config.pipeline,
+                        paramName,
+                        value,
+                      )
+                    }
+                    onGenerate={(params) =>
+                      requestGenerate(
+                        config.id,
+                        config.service,
+                        config.pipeline,
+                        params,
+                      )
+                    }
+                    onPickImage={(paramName) =>
+                      pickImage(
+                        config.id,
+                        config.service,
+                        config.pipeline,
+                        paramName,
+                      )
+                    }
+                    onPickImageByUri={(paramName, uri) =>
+                      pickImageByUri(
+                        config.id,
+                        config.service,
+                        config.pipeline,
+                        paramName,
+                        uri,
+                      )
+                    }
+                    onRename={(name) => updateName(config.id, name)}
+                    onRemove={() => removeConfig(config.id)}
+                    isPickingImage={isPickingImage}
+                    imageThumbs={imageThumbs}
+                  />
+                </AccordionItem>
+              );
+            })}
+          </Accordion>
+        )}
+
+        {configs.length === 0 && pipelines.length > 0 && (
           <p className="text-[11px] text-text-tertiary">
             No configurations yet. Click + Add to get started.
           </p>
@@ -156,9 +205,7 @@ export function App() {
 
         {showAddForm && (
           <AddConfigDialog
-            schemas={schemas}
-            serverStatuses={serverStatuses}
-            serverNames={serverNames}
+            pipelines={pipelines}
             onAdd={handleAddConfig}
             onCancel={() => setShowAddForm(false)}
           />

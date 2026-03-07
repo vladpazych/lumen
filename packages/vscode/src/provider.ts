@@ -5,7 +5,7 @@ import {
   readdirSync,
   writeFileSync,
 } from "node:fs";
-import { basename, dirname, join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import * as vscode from "vscode";
 import type { LumenConfig } from "@lumen/core/types";
 import type { ProviderPort } from "@lumen/core/ports";
@@ -87,10 +87,6 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     return this.detectedUrl;
   }
 
-  private getServerName(): string {
-    return basename(getServerSource());
-  }
-
   onDevServerStateChange(state: DevServerState): void {
     const url = this.getServerUrl();
     if (
@@ -162,14 +158,11 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
           }
           const url = this.getServerUrl();
           if (url && !this.schemas[url]) this.schemas[url] = [];
-          const serverNames: Record<string, string> = {};
-          if (url) serverNames[url] = this.getServerName();
           this.postMessage(webviewPanel, {
             type: "init",
             schemas: this.schemas,
             configs,
             serverStatuses: this.serverStatuses,
-            serverNames,
             devServerState: this.devServerState,
             devServerUrl: url,
           });
