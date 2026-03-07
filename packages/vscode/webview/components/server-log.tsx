@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
 
 const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\].*?\x07|\[[\d;]*[A-Za-z]/g;
 function stripAnsi(text: string): string {
@@ -35,19 +34,7 @@ export function ServerLog({ lines }: Props) {
         className={`flex w-full items-center justify-center gap-1.5 px-3 py-1.5 text-[10px] text-text-tertiary hover:text-text-secondary ${open ? "border-t border-border" : ""}`}
         onClick={() => setOpen((v) => !v)}
       >
-        {open ? (
-          <>
-            <ChevronUp className="size-3" />
-            <span>Hide logs</span>
-            <ChevronUp className="size-3" />
-          </>
-        ) : (
-          <>
-            <ChevronDown className="size-3" />
-            <span>Show logs</span>
-            <ChevronDown className="size-3" />
-          </>
-        )}
+        {open ? "Hide logs" : "Show logs"}
       </button>
     </div>
   );
