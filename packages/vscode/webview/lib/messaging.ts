@@ -10,6 +10,8 @@ export type DevServerState =
   | "starting"
   | "rebuilding"
   | "running"
+  | "stopping"
+  | "orphaned"
   | "error";
 
 // --- Extension → Webview ---

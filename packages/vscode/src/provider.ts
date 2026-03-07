@@ -145,8 +145,19 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
   }
 
   onDevServerStateChange(state: DevServerState): void {
-    this.devServerState = state;
-    this.broadcastToAll({ type: "devServerStatus", state });
+    // If process says stopped but SSE shows server still reachable, mark orphaned
+    const devServer = this.getDevServer();
+    if (
+      state === "stopped" &&
+      devServer &&
+      this.serverStatuses[devServer.url] === "connected"
+    ) {
+      this.devServerState = "orphaned";
+      this.broadcastToAll({ type: "devServerStatus", state: "orphaned" });
+    } else {
+      this.devServerState = state;
+      this.broadcastToAll({ type: "devServerStatus", state });
+    }
     if (state === "running") {
       this.unsubscribeAll();
       this.rebuildProviders();
@@ -532,6 +543,26 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
         onStatus: (status) => {
           this.serverStatuses[url] = status;
           this.broadcastToAll({ type: "serverStatus", serverUrl: url, status });
+          // Detect orphaned dev server: endpoint alive but no local process
+          const devServer = this.getDevServer();
+          if (devServer && url === devServer.url) {
+            if (status === "connected" && this.devServerState === "stopped") {
+              this.devServerState = "orphaned";
+              this.broadcastToAll({
+                type: "devServerStatus",
+                state: "orphaned",
+              });
+            } else if (
+              status === "disconnected" &&
+              this.devServerState === "orphaned"
+            ) {
+              this.devServerState = "stopped";
+              this.broadcastToAll({
+                type: "devServerStatus",
+                state: "stopped",
+              });
+            }
+          }
         },
       });
       this.subscriptions.set(url, dispose);

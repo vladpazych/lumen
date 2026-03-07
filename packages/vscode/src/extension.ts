@@ -78,7 +78,7 @@ export function activate(context: vscode.ExtensionContext): void {
       const server = getServers().find((s) => s.source);
       if (server && (await isServerReachable(server.url))) {
         vscode.window.showInformationMessage(
-          "Server endpoint is already reachable — reconnecting with a fresh process",
+          "Remote endpoint still alive — new process will replace it",
         );
       }
       serverManager.start(source);

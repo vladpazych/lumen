@@ -104,7 +104,10 @@ export function ServerGroup({
   globalIndexOffset,
 }: Props) {
   const label = serverName ?? shortenUrl(serverUrl);
-  const canStart = devServerState === "stopped" || devServerState === "error";
+  const canStart =
+    devServerState === "stopped" ||
+    devServerState === "error" ||
+    devServerState === "orphaned";
   const canStop =
     devServerState === "running" ||
     devServerState === "starting" ||
@@ -112,6 +115,8 @@ export function ServerGroup({
   const canRestart =
     devServerState === "running" || devServerState === "rebuilding";
   const isRebuilding = devServerState === "rebuilding";
+  const isStopping = devServerState === "stopping";
+  const isOrphaned = devServerState === "orphaned";
 
   const focusedConfig = configs[focusIndex - globalIndexOffset];
   const initialKey = focusedConfig?.id ?? null;
@@ -132,9 +137,17 @@ export function ServerGroup({
                 Rebuilding…
               </span>
             )}
+            {isOrphaned && (
+              <span className="text-[10px] text-warning">No process</span>
+            )}
+            {isStopping && (
+              <span className="text-[10px] text-text-tertiary animate-pulse">
+                Stopping…
+              </span>
+            )}
             {canStart && (
               <Button variant="ghost" size="xs" onClick={onStartServer}>
-                Start
+                {isOrphaned ? "Replace" : "Start"}
               </Button>
             )}
             {canRestart && (

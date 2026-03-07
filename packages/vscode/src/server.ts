@@ -10,6 +10,8 @@ export type DevServerState =
   | "starting"
   | "rebuilding"
   | "running"
+  | "stopping"
+  | "orphaned"
   | "error";
 
 /** Expand ${workspaceFolder} in a path string. */
@@ -211,8 +213,9 @@ export class ServerManager {
     try {
       unlinkSync(pidFile(sourcePath));
     } catch {}
-    this.setState("stopped");
+    this.setState("stopping");
     await this.killProcess(pid);
+    this.setState("stopped");
     this.output.appendLine("[dev] Process stopped");
   }
 
@@ -224,6 +227,7 @@ export class ServerManager {
       try {
         unlinkSync(pidFile(sourcePath));
       } catch {}
+      this.setState("stopping");
       await this.killProcess(pid);
       this.output.appendLine("[dev] Old process stopped");
     }
