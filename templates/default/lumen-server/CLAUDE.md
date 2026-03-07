@@ -13,20 +13,34 @@ That's it. No imports in `app.py`, no registration calls. The server auto-discov
 
 ### Available param types
 
-| Type              | Key fields                                                             | Renders as                  |
-| :---------------- | :--------------------------------------------------------------------- | :-------------------------- |
-| `PromptParam`     | `default`                                                              | Textarea                    |
-| `TextParam`       | `default`, `multiline`                                                 | Input or textarea           |
-| `NumberParam`     | `default`, `min`, `max`, `step`                                        | Number input (float)        |
-| `IntegerParam`    | `default`, `min`, `max`                                                | Number input (int)          |
-| `BooleanParam`    | `default`                                                              | Checkbox                    |
-| `SelectParam`     | `options: [SelectOption(value, label)]`, `default`                     | Dropdown                    |
-| `SeedParam`       | `default`                                                              | Number + randomize button   |
-| `DimensionsParam` | `default: Dimensions(w, h)`, `presets: [DimensionPreset(w, h, label)]` | W×H inputs + preset buttons |
-| `ImageParam`      | —                                                                      | File upload + drag-drop     |
-| `VideoParam`      | —                                                                      | File upload (limited UI)    |
+| Type              | Key fields                                                             | Renders as                           |
+| :---------------- | :--------------------------------------------------------------------- | :----------------------------------- |
+| `PromptParam`     | `default`                                                              | Textarea                             |
+| `TextParam`       | `default`, `multiline`                                                 | Input or textarea                    |
+| `NumberParam`     | `default`, `min`, `max`, `step`, `display`                             | Number input or slider               |
+| `IntegerParam`    | `default`, `min`, `max`, `display`                                     | Integer input or slider              |
+| `BooleanParam`    | `default`                                                              | Checkbox                             |
+| `SelectParam`     | `options`, `default`, `allowCustom`, `display`                         | Dropdown, combobox, radio, or toggle |
+| `SeedParam`       | `default`                                                              | Number + randomize button            |
+| `DimensionsParam` | `default: Dimensions(w, h)`, `presets: [DimensionPreset(w, h, label)]` | W×H inputs + preset buttons          |
+| `ImageParam`      | `maxItems`                                                             | File upload + drag-drop              |
+| `VideoParam`      | `maxItems`                                                             | File upload + drag-drop              |
+| `TagsParam`       | `options`, `default`, `allowCustom`, `max`                             | Chip list + input                    |
 
-All param types share: `name` (required, key in params dict), `label`, `required`, `group`.
+All param types share: `name` (required, key in params dict), `label`, `required`, `group`, `placeholder`, `description`, `hidden`.
+
+### Display hints
+
+Some param types accept a `display` field to control UI rendering:
+
+- **SelectParam** `display`: `"dropdown"` (default), `"radio"` (2-5 options), `"toggle"` (2-4 compact options). With `allowCustom=True`, dropdown becomes a combobox allowing freeform input.
+- **NumberParam / IntegerParam** `display`: `"input"` (default), `"slider"` (requires `min` and `max`).
+
+### Common fields
+
+- `placeholder` — hint text shown in empty inputs
+- `description` — tooltip text explaining the param (shown as info icon)
+- `hidden` — param sent in generate but not shown in UI (for fixed pipeline constants)
 
 ### Generate function contract
 

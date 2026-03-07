@@ -65,6 +65,7 @@ def shared_params(
             label="Format",
             default="png",
             options=FORMAT_OPTIONS,
+            display="toggle",
             group="advanced",
         ),
         SelectParam(

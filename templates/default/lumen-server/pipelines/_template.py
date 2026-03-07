@@ -25,7 +25,32 @@ config = PipelineConfig(
     category="image",
     params=[
         PromptParam(name="prompt", label="Prompt", required=True, group="basic"),
-        # See CLAUDE.md for all available param types
+        # More param examples (uncomment as needed):
+        #
+        # NumberParam(name="strength", label="Strength",
+        #     default=0.7, min=0, max=1, step=0.05,
+        #     display="slider", group="basic"),
+        # IntegerParam(name="steps", label="Steps",
+        #     default=30, min=1, max=100,
+        #     display="slider", group="advanced"),
+        # SelectParam(name="style", label="Style",
+        #     options=[SelectOption(value="photo"),
+        #              SelectOption(value="anime")],
+        #     display="toggle", group="basic"),
+        # SelectParam(name="model", label="Model",
+        #     options=[SelectOption(value="v1"),
+        #              SelectOption(value="v2")],
+        #     allowCustom=True, group="advanced"),
+        # TagsParam(name="tags", label="Tags",
+        #     options=[SelectOption(value="HDR"),
+        #              SelectOption(value="cinematic")],
+        #     group="advanced"),
+        # ImageParam(name="reference",
+        #     label="Reference Image", group="basic"),
+        # BooleanParam(name="upscale", label="Upscale",
+        #     default=False,
+        #     description="2x upscale via ESRGAN",
+        #     group="advanced"),
     ],
     output=PipelineOutput(type="image", format="png"),
 )
