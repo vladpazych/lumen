@@ -106,7 +106,12 @@ async function handleReady(ctx: HandlerContext): Promise<void> {
   }
 
   const docDir = dirname(document.uri.fsPath);
-  const thumbs = collectThumbs(configs, docDir, panel.webview);
+  const thumbs = collectThumbs(
+    connection.schemas,
+    configs,
+    docDir,
+    panel.webview,
+  );
   if (Object.keys(thumbs).length > 0) {
     ctx.post({ type: "imageThumbs", thumbs });
   }

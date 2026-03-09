@@ -50,7 +50,7 @@ export function PipelineForm({
           )}
           {params.map((param) => {
             const imgValue =
-              param.type === "image"
+              param.type === "image" && typeof values[param.name] === "string"
                 ? (values[param.name] as string | undefined)
                 : undefined;
             return (

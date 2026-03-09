@@ -7,7 +7,11 @@ export function validateParam(
 ): string | null {
   if (param.hidden) return null;
 
-  const empty = value === undefined || value === null || value === "";
+  const empty =
+    value === undefined ||
+    value === null ||
+    value === "" ||
+    (Array.isArray(value) && value.length === 0);
   if (param.required && empty) {
     return `${param.label ?? param.name} is required`;
   }
@@ -40,6 +44,17 @@ export function validateParam(
       if (!Array.isArray(value)) return null;
       if (param.max !== undefined && value.length > param.max) {
         return `Max ${param.max} tags`;
+      }
+      return null;
+    }
+    case "image":
+    case "video": {
+      if (
+        param.maxItems !== undefined &&
+        Array.isArray(value) &&
+        value.length > param.maxItems
+      ) {
+        return `Max ${param.maxItems} files`;
       }
       return null;
     }

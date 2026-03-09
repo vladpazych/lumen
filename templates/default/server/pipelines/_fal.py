@@ -163,14 +163,28 @@ async def run_fal(
     if not body.get("seed"):
         body.pop("seed", None)
 
-    # Resolve image param if present
+    # Resolve image params if present
     use_edit = False
     async with httpx.AsyncClient(timeout=120) as client:
         if image_param and body.get(image_param):
             raw = body.pop(image_param)
-            if isinstance(raw, str) and raw:
-                url = await resolve_image(client, api_key, raw)
-                body["image_urls"] = [url]
+            raw_values = (
+                [raw]
+                if isinstance(raw, str)
+                else raw
+                if isinstance(raw, list)
+                else []
+            )
+            image_values = [
+                value
+                for value in raw_values
+                if isinstance(value, str) and value
+            ]
+            if image_values:
+                body["image_urls"] = [
+                    await resolve_image(client, api_key, value)
+                    for value in image_values
+                ]
                 use_edit = True
 
         actual_endpoint = (

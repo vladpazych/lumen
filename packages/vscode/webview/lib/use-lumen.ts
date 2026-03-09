@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useReducer } from "react";
+import { useCallback, useEffect, useReducer, useRef } from "react";
 import type {
   LumenConfig,
+  OutputAsset,
   PipelineConfig,
   ServerStatus,
 } from "@lumen/core/types";
@@ -24,7 +25,7 @@ type State = {
   stage: Record<string, "queued" | "running">;
   results: Record<
     string,
-    { imageUrl?: string; error?: string; metadata?: Record<string, unknown> }
+    { outputs?: OutputAsset[]; error?: string }
   >;
   imageThumbs: Record<string, string>;
   devServerLog: string[];
@@ -60,9 +61,8 @@ type Action =
   | {
       type: "generateResult";
       key: string;
-      imageUrl?: string;
+      outputs?: OutputAsset[];
       error?: string;
-      metadata?: Record<string, unknown>;
     }
   | { type: "pickImageStart" }
   | { type: "pickImageDone" }
@@ -147,9 +147,8 @@ function reducer(state: State, action: Action): State {
         results: {
           ...state.results,
           [action.key]: {
-            imageUrl: action.imageUrl,
+            outputs: action.outputs,
             error: action.error,
-            metadata: action.metadata,
           },
         },
       };
@@ -204,6 +203,11 @@ const initialState: State = {
 
 export function useLumen() {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const stateRef = useRef(state);
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   useEffect(() => {
     const handler = (event: MessageEvent<ExtensionMessage>) => {
@@ -258,12 +262,10 @@ export function useLumen() {
             msg.response?.status === "completed" &&
             msg.response.outputs.length > 0
           ) {
-            const output = msg.response.outputs[0];
             dispatch({
               type: "generateResult",
               key,
-              imageUrl: output.url,
-              metadata: output.metadata,
+              outputs: msg.response.outputs,
             });
           } else if (msg.response?.status === "failed") {
             dispatch({
@@ -286,11 +288,35 @@ export function useLumen() {
         case "imagePicked": {
           dispatch({ type: "pickImageDone" });
           if (msg.url) {
+            const currentState = stateRef.current;
+            const config = currentState.configs.find((c) => c.id === msg.configId);
+            const schema = currentState.schemas[msg.service]?.find(
+              (pipeline) => pipeline.id === msg.pipeline,
+            );
+            const param = schema?.params.find((p) => p.name === msg.paramName);
+            const isMulti =
+              param?.type === "image" && (param.maxItems ?? 1) > 1;
+            const existingValue =
+              config?.params[msg.paramName];
+            const nextValue = isMulti
+              ? [
+                  ...new Set([
+                    ...(
+                      Array.isArray(existingValue)
+                        ? existingValue.filter(
+                            (value): value is string => typeof value === "string",
+                          )
+                        : []
+                    ),
+                    msg.url,
+                  ]),
+                ].slice(0, param?.maxItems)
+              : msg.url;
             dispatch({
               type: "updateParam",
               configId: msg.configId,
               paramName: msg.paramName,
-              value: msg.url,
+              value: nextValue,
             });
             vscode.postMessage({
               type: "updateState",
@@ -298,7 +324,7 @@ export function useLumen() {
               service: msg.service,
               pipeline: msg.pipeline,
               paramName: msg.paramName,
-              value: msg.url,
+              value: nextValue,
             });
             if (msg.thumbnailUri) {
               dispatch({

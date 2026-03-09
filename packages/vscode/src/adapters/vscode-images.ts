@@ -19,14 +19,17 @@ export function resolveImageParams(
   for (const param of schema.params) {
     if (param.type !== "image") continue;
     const val = resolved[param.name];
-    if (typeof val !== "string" || !val) continue;
-    if (val.startsWith("http") || val.startsWith("data:")) continue;
-    const absPath = resolve(docDir, val);
-    if (!existsSync(absPath)) continue;
-    const bytes = readFileSync(absPath);
-    const ext = absPath.split(".").pop()?.toLowerCase() ?? "png";
-    const mime = ext === "jpg" ? "image/jpeg" : `image/${ext}`;
-    resolved[param.name] = `data:${mime};base64,${bytes.toString("base64")}`;
+    if (typeof val === "string") {
+      const resolvedValue = resolveImageValue(val, docDir);
+      if (resolvedValue) resolved[param.name] = resolvedValue;
+      continue;
+    }
+    if (!Array.isArray(val)) continue;
+    resolved[param.name] = val.map((item) =>
+      typeof item === "string"
+        ? (resolveImageValue(item, docDir) ?? item)
+        : item,
+    );
   }
   return resolved;
 }
@@ -45,20 +48,49 @@ export function imageThumbUri(
 
 /** Collect thumbnail URIs for all image-valued params in configs. */
 export function collectThumbs(
+  schemas: SchemaCache,
   configs: LumenConfig[],
   docDir: string,
   webview: vscode.Webview,
 ): Record<string, string> {
   const thumbs: Record<string, string> = {};
   for (const config of configs) {
-    for (const val of Object.values(config.params)) {
-      if (typeof val === "string" && val && !val.startsWith("http")) {
-        const uri = imageThumbUri(val, docDir, webview);
-        if (uri) thumbs[val] = uri;
+    const schema = schemas[config.service]?.find((p) => p.id === config.pipeline);
+    if (!schema) continue;
+    for (const param of schema.params) {
+      if (param.type !== "image") continue;
+      const value = config.params[param.name];
+      const paths =
+        typeof value === "string"
+          ? [value]
+          : Array.isArray(value)
+          ? value.filter((item): item is string => typeof item === "string")
+          : [];
+      for (const path of paths) {
+        if (!path || path.startsWith("http") || path.startsWith("data:")) {
+          continue;
+        }
+        const uri = imageThumbUri(path, docDir, webview);
+        if (uri) thumbs[path] = uri;
       }
     }
   }
   return thumbs;
+}
+
+function resolveImageValue(
+  value: string,
+  docDir: string,
+): string | undefined {
+  if (!value || value.startsWith("http") || value.startsWith("data:")) {
+    return undefined;
+  }
+  const absPath = resolve(docDir, value);
+  if (!existsSync(absPath)) return undefined;
+  const bytes = readFileSync(absPath);
+  const ext = absPath.split(".").pop()?.toLowerCase() ?? "png";
+  const mime = ext === "jpg" ? "image/jpeg" : `image/${ext}`;
+  return `data:${mime};base64,${bytes.toString("base64")}`;
 }
 
 /** In-webview file picker for reference images. */

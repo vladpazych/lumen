@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import type {
   LumenConfig,
+  OutputAsset,
   PipelineConfig,
   ServerStatus,
 } from "@lumen/core/types";
@@ -19,9 +20,8 @@ type Props = {
   progress?: number;
   stage?: "queued" | "running";
   result?: {
-    imageUrl?: string;
+    outputs?: OutputAsset[];
     error?: string;
-    metadata?: Record<string, unknown>;
   };
   onParamChange: (paramName: string, value: unknown) => void;
   onGenerate: (params: Record<string, unknown>) => void;
@@ -157,9 +157,8 @@ export function ConfigCard({
               />
               {result && (
                 <ResultDisplay
-                  imageUrl={result.imageUrl}
+                  outputs={result.outputs}
                   error={result.error}
-                  metadata={result.metadata}
                 />
               )}
             </div>

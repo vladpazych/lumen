@@ -161,13 +161,7 @@ function renderField(
             onPick={onPickImage ?? (() => {})}
             isPicking={isPicking ?? false}
             thumbnails={imageThumbs ?? {}}
-            onDropUri={
-              onDropUri
-                ? (uri) => {
-                    onChange([...arr, uri]);
-                  }
-                : undefined
-            }
+            onDropUri={onDropUri}
             maxItems={param.maxItems}
           />
         );

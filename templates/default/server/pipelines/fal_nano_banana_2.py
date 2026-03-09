@@ -29,9 +29,10 @@ config = PipelineConfig(
             group="basic",
         ),
         ImageParam(
-            name="image_url",
-            label="Reference Image",
+            name="image_urls",
+            label="Reference Images",
             group="basic",
+            maxItems=14,
         ),
         *shared_params([
             SelectOption(value="0.5K"),
@@ -40,7 +41,7 @@ config = PipelineConfig(
             SelectOption(value="4K"),
         ]),
     ],
-    output=PipelineOutput(type="image", format="png"),
+    output=PipelineOutput(type="image[]", format="png"),
     tier=2,
 )
 
@@ -49,5 +50,5 @@ async def generate(params: dict[str, Any]) -> GenerateResult:
     return await run_fal(
         "fal-ai/nano-banana-2",
         params,
-        image_param="image_url",
+        image_param="image_urls",
     )

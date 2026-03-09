@@ -6,6 +6,7 @@ from typing import Any
 
 from lumen_sdk import (
     GenerateResult,
+    ImageParam,
     PipelineConfig,
     PipelineOutput,
     PromptParam,
@@ -27,15 +28,25 @@ config = PipelineConfig(
             required=True,
             group="basic",
         ),
+        ImageParam(
+            name="image_urls",
+            label="Reference Images",
+            group="basic",
+            maxItems=14,
+        ),
         *shared_params([
             SelectOption(value="1K"),
             SelectOption(value="2K"),
         ]),
     ],
-    output=PipelineOutput(type="image", format="png"),
+    output=PipelineOutput(type="image[]", format="png"),
     tier=2,
 )
 
 
 async def generate(params: dict[str, Any]) -> GenerateResult:
-    return await run_fal("fal-ai/nano-banana", params)
+    return await run_fal(
+        "fal-ai/nano-banana",
+        params,
+        image_param="image_urls",
+    )
