@@ -89,3 +89,4 @@ Call from generate: `MyModel().inference.remote(prompt)`
 - Use `hint` for non-obvious params — one line explaining the effect
 - Use `placeholder` for format hints in empty inputs
 - Use `required=True` only for truly required params (usually just prompt)
+- If `generate()` reads a Modal secret from `os.environ`, declare `serve_secrets = ["secret-name"]` in the module so the shared runtime attaches it

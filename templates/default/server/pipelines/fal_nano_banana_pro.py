@@ -14,6 +14,8 @@ from lumen_sdk import (
 
 from pipelines._fal import run_fal, shared_params
 
+serve_secrets = ["fal-api-key"]
+
 config = PipelineConfig(
     id="fal-nano-banana-pro",
     name="Nano Banana Pro",

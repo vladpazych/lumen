@@ -195,7 +195,7 @@ Pipelines that call external APIs (Replicate, OpenAI, Stability, etc.) need secr
 
 Modal secrets have two independent names: the **secret name** (what you pass to `from_name()`) and the **environment variable name(s)** stored inside it (what you read from `os.environ`). These are configured separately in the Modal dashboard.
 
-In code, attach secrets to the function or class and read them from `os.environ`:
+For GPU classes and other dedicated Modal workloads, attach secrets to the function or class and read them from `os.environ`:
 
 ```python
 @app.cls(image=gpu_image, gpu="A10G", secrets=[modal.Secret.from_name("replicate-api-key")])
@@ -204,6 +204,12 @@ class MyModel:
     def load(self):
         import os
         self.api_key = os.environ["REPLICATE_API_TOKEN"]
+```
+
+For code that runs inside the shared `serve` container, declare module-level `serve_secrets` so the runtime attaches them before serving requests:
+
+```python
+serve_secrets = ["fal-api-key"]
 ```
 
 The user must create the secret in the Modal dashboard before the pipeline will work. When a pipeline needs a secret, tell the user:

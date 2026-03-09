@@ -6,6 +6,10 @@ from lumen_sdk import app, registry
 from lumen_sdk.web import AUTH_KEY_FILE, _CONTAINER_AUTH_KEY_FILE, create_app
 
 registry.discover("pipelines")
+serve_secrets = [
+    modal.Secret.from_name(name)
+    for name in registry.list_serve_secrets()
+]
 
 server_image = (
     modal.Image.debian_slim(python_version="3.12")
@@ -16,7 +20,7 @@ server_image = (
 )
 
 
-@app.function(image=server_image)
+@app.function(image=server_image, secrets=serve_secrets)
 @modal.asgi_app()
 def serve():
     return create_app()

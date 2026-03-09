@@ -19,13 +19,49 @@ GenerateFn = Callable[[dict[str, Any]], Coroutine[Any, Any, GenerateResult]]
 class PipelineEntry:
     config: PipelineConfig
     generate: GenerateFn
+    serve_secrets: tuple[str, ...] = ()
 
 
 _registry: dict[str, PipelineEntry] = {}
 
 
-def register(config: PipelineConfig, generate: GenerateFn) -> None:
-    _registry[config.id] = PipelineEntry(config=config, generate=generate)
+def _parse_serve_secrets(
+    value: object,
+    *,
+    module_name: str,
+) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if not isinstance(value, (list, tuple)):
+        msg = (
+            f"{module_name}.serve_secrets must be a list or tuple of "
+            "Modal secret names"
+        )
+        raise TypeError(msg)
+
+    secrets: list[str] = []
+    for item in value:
+        if not isinstance(item, str) or not item.strip():
+            msg = (
+                f"{module_name}.serve_secrets entries must be non-empty "
+                "strings"
+            )
+            raise TypeError(msg)
+        secrets.append(item.strip())
+    return tuple(secrets)
+
+
+def register(
+    config: PipelineConfig,
+    generate: GenerateFn,
+    *,
+    serve_secrets: tuple[str, ...] = (),
+) -> None:
+    _registry[config.id] = PipelineEntry(
+        config=config,
+        generate=generate,
+        serve_secrets=serve_secrets,
+    )
 
 
 def get(pipeline_id: str) -> PipelineEntry | None:
@@ -34,6 +70,18 @@ def get(pipeline_id: str) -> PipelineEntry | None:
 
 def list_all() -> list[PipelineEntry]:
     return list(_registry.values())
+
+
+def list_serve_secrets() -> list[str]:
+    seen: set[str] = set()
+    secrets: list[str] = []
+    for entry in _registry.values():
+        for secret in entry.serve_secrets:
+            if secret in seen:
+                continue
+            seen.add(secret)
+            secrets.append(secret)
+    return secrets
 
 
 def discover(pipelines_dir: str = "pipelines") -> None:
@@ -56,5 +104,9 @@ def discover(pipelines_dir: str = "pipelines") -> None:
         mod = importlib.import_module(f"{pkg_name}.{info.name}")
         cfg = getattr(mod, "config", None)
         gen = getattr(mod, "generate", None)
+        serve_secrets = _parse_serve_secrets(
+            getattr(mod, "serve_secrets", None),
+            module_name=f"{pkg_name}.{info.name}",
+        )
         if isinstance(cfg, PipelineConfig) and callable(gen):
-            register(cfg, gen)
+            register(cfg, gen, serve_secrets=serve_secrets)
