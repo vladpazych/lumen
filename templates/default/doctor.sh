@@ -6,6 +6,8 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 BOLD='\033[1m'
 NC='\033[0m'
+ROOT="$(cd "${0%/*}" 2>/dev/null && pwd)"
+SERVER_DIR="$ROOT/server"
 
 ok=0
 fail=0
@@ -13,17 +15,17 @@ warn=0
 
 pass() {
   printf "  ${GREEN}OK${NC}  %s\n" "$1"
-  ((ok++))
+  ok=$((ok + 1))
 }
 
 fail() {
   printf "  ${RED}NO${NC}  %s — %s\n" "$1" "$2"
-  ((fail++))
+  fail=$((fail + 1))
 }
 
 skip() {
   printf "  ${YELLOW}--${NC}  %s — %s\n" "$1" "$2"
-  ((warn++))
+  warn=$((warn + 1))
 }
 
 echo ""
@@ -70,14 +72,20 @@ if [[ $fail -eq 0 ]]; then
   echo "${GREEN}All checks passed.${NC}"
   echo ""
 
-  # Set up Python venv
-  if [[ -d lumen-server ]]; then
-    echo "Installing Python dependencies..."
-    (cd lumen-server && uv sync)
+  if [[ -d "$SERVER_DIR" ]]; then
+    echo "Bootstrapping server..."
+    (
+      cd "$SERVER_DIR"
+      uv sync
+      uv run lumen-sdk sync
+    )
     echo ""
   fi
 
-  echo "Ready. Open this folder in VS Code to start."
+  echo "Ready."
+  echo "  1. Open this folder in VS Code"
+  echo "  2. Open or create a .lumen file"
+  echo "  3. Click Start in the Lumen editor"
 else
   echo "${RED}$fail check(s) failed.${NC} Install missing dependencies and re-run:"
   echo "  bash doctor.sh"
