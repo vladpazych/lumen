@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 Schema-driven image/video generation editor. Provider-agnostic `.lumen` file format, VS Code custom editor, ML inference pipelines.
 
@@ -34,4 +34,4 @@ Schema-driven image/video generation editor. Provider-agnostic `.lumen` file for
 
 ## Gotchas
 
-- Emergency brake: `touch .claude/hooks-disabled`. Remove immediately after fix.
+- Emergency brake: `touch .codex/hooks-disabled`. Remove immediately after fix.

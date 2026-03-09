@@ -37,7 +37,7 @@ Cap at 20 source files — if exceeded, report count and stop with "narrow scope
 
 | # | Location | Spec | Constraint | Evidence |
 |:--|:---------|:-----|:-----------|:---------|
-| 1 | file:line | CLAUDE.md path | "quoted rule" | observed behavior |
+| 1 | file:line | AGENTS.md path | "quoted rule" | observed behavior |
 
 *No violations found.*
 
@@ -48,6 +48,6 @@ FAIL(<n>) — <m> files, <n> violations
 ```
 
 - **Location**: `path/file.ts:42` format.
-- **Spec**: CLAUDE.md path from the cascade above.
+- **Spec**: AGENTS.md path from the cascade above.
 - **Constraint**: verbatim quote from the spec.
 - **Evidence**: what the code does that contradicts the constraint.

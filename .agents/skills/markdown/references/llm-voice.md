@@ -124,7 +124,7 @@ Each rung costs tokens. Escalate only when the simpler level fails.
 | "try to", "consider" | Weakens activation |
 | "as you work", "when done" | Zero signal filler |
 | Meta-commentary | Omit references to the reader |
-| Explanations derivable from context | Already loaded via CLAUDE.md or code |
+| Explanations derivable from context | Already loaded via AGENTS.md or code |
 
 Keep: inline WHY clauses that communicate intent the model needs to generalize from.
 

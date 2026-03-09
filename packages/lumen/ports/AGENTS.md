@@ -1,4 +1,4 @@
-# packages/lumen/ports/CLAUDE.md
+# packages/lumen/ports/AGENTS.md
 
 Driven port contracts. Every external capability the core depends on.
 

@@ -10,23 +10,23 @@ ASSETS_DIR = Path(__file__).parent / "_assets"
 
 
 def sync() -> None:
-    """Copy framework assets (serve.py, CLAUDE.md, skills) into the current project."""
+    """Copy framework assets (serve.py, AGENTS.md, skills) into the current project."""
     # serve.py → cwd (Modal entry point)
     src_serve = ASSETS_DIR / "serve.py"
     if src_serve.exists():
         shutil.copy2(src_serve, "serve.py")
 
-    # Server docs → CLAUDE.md in cwd
-    src_claude = ASSETS_DIR / "CLAUDE.md"
-    if src_claude.exists():
-        shutil.copy2(src_claude, "CLAUDE.md")
+    # Server docs → AGENTS.md in cwd
+    src_agents = ASSETS_DIR / "AGENTS.md"
+    if src_agents.exists():
+        shutil.copy2(src_agents, "AGENTS.md")
 
-    # Skills → .claude/skills/ relative to project root (parent of server dir)
+    # Skills → .agents/skills/ relative to project root (parent of server dir)
     project_root = Path.cwd().parent
-    claude_dir = project_root / ".claude"
+    agents_dir = project_root / ".agents"
     src_skills = ASSETS_DIR / "skills"
     if src_skills.is_dir():
-        dst_skills = claude_dir / "skills"
+        dst_skills = agents_dir / "skills"
         for skill_dir in src_skills.iterdir():
             if not skill_dir.is_dir():
                 continue

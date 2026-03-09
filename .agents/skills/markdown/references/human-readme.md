@@ -4,16 +4,16 @@ Human-facing vision. Answers: why does this exist, who is it for, where is it go
 
 ---
 
-# RELATIONSHIP TO CLAUDE.md
+# RELATIONSHIP TO AGENTS.md
 
-| CLAUDE.md | README.md |
+| AGENTS.md | README.md |
 |:----------|:----------|
 | Agent-facing law | Human-facing vision |
 | What must be true | Why this exists |
 | Auto-loads on file touch | Read on demand |
 | Constraints, boundaries | Context, motivation, roadmap |
 
-README never duplicates CLAUDE.md. README never contains spec or constraints.
+README never duplicates AGENTS.md. README never contains spec or constraints.
 
 ---
 
@@ -73,4 +73,4 @@ Who needs this. What problem it solves. Why it exists as a separate package.
 - Purpose clear in one sentence
 - Context explains business motivation, not technical implementation
 - Roadmap present (unless genuinely nothing planned)
-- No duplication of CLAUDE.md content
+- No duplication of AGENTS.md content

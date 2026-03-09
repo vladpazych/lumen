@@ -1,4 +1,4 @@
-# packages/lumen/domain/CLAUDE.md
+# packages/lumen/domain/AGENTS.md
 
 Pure business logic. Data in, data out.
 

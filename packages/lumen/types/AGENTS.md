@@ -1,4 +1,4 @@
-# packages/lumen/types/CLAUDE.md
+# packages/lumen/types/AGENTS.md
 
 Domain vocabulary. All types shared across the package boundary.
 

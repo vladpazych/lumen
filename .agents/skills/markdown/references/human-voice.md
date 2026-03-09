@@ -17,7 +17,7 @@ Declarative over explanatory. First person plural when natural.
 
 # STALENESS
 
-Contains nothing that drifts during daily development. Stale in two weeks → belongs in code or CLAUDE.md.
+Contains nothing that drifts during daily development. Stale in two weeks → belongs in code or AGENTS.md.
 
 ---
 
@@ -26,7 +26,7 @@ Contains nothing that drifts during daily development. Stale in two weeks → be
 | Cut | Reason |
 |:----|:-------|
 | Code examples, imports | Drift daily — read the source |
-| File trees, architecture diagrams | Drift on refactor — CLAUDE.md governs structure |
+| File trees, architecture diagrams | Drift on refactor — AGENTS.md governs structure |
 | CLI commands, route tables | Drift on feature work — discoverable from code |
 | Type definitions, API shapes | IDE provides — types are the spec |
 | Badges, shields | Vanity metrics |

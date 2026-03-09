@@ -54,7 +54,7 @@ Active verbs. No meta-reference ("this PR adds..."). Cover ALL section topics in
 What existed before. What changed. Why. Technical detail a reviewer needs to evaluate the change.
 
 **Scope:** `paths/`
-**Spec:** `path/to/CLAUDE.md` (section) — when a spec covers this area
+**Spec:** `path/to/AGENTS.md` (section) — when a spec covers this area
 ```
 
 ### Summary
@@ -100,7 +100,7 @@ Opening paragraph: dense summary, active verbs, all changes covered.
 Context: what existed before. What changed. Why. Technical detail.
 
 **Scope:** `path/to/affected/`
-**Spec:** `path/to/CLAUDE.md` (relevant section)
+**Spec:** `path/to/AGENTS.md` (relevant section)
 
 ### 2. Title
 
@@ -122,7 +122,7 @@ Context: what existed before. What changed. Why. Technical detail.
 - One section per logical change, not per commit
 - Every section has context paragraph (not just scope)
 - Scope present on every section
-- Spec referenced when CLAUDE.md exists for the area
+- Spec referenced when AGENTS.md exists for the area
 - Summary section present with one-liner bullets
 - Summary bullets match Changes sections 1:1
 - No changelog bullet format in Changes (prose paragraphs)

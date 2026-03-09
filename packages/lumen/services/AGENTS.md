@@ -1,4 +1,4 @@
-# packages/lumen/services/CLAUDE.md
+# packages/lumen/services/AGENTS.md
 
 Service factories. Take port aggregates, return operation interfaces.
 

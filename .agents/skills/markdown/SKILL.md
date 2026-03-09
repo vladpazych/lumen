@@ -1,6 +1,6 @@
 ---
 name: markdown
-description: "Markdown authoring. CLAUDE.md, README, specs. NOT: code, config, plan files."
+description: "Markdown authoring. AGENTS.md, README, specs. NOT: code, config, plan files."
 ---
 
 # Markdown
@@ -11,7 +11,7 @@ Every document has an audience and a category. Category determines audience — 
 
 | Audience | Category | File |
 |:---------|:---------|:-----|
-| llm | claude-md | CLAUDE.md |
+| llm | agents-md | AGENTS.md |
 | llm | skill | SKILL.md |
 | human | readme | README.md |
 | human | mr-description | MR/PR body |

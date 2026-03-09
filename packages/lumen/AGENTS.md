@@ -1,4 +1,4 @@
-# packages/lumen/CLAUDE.md
+# packages/lumen/AGENTS.md
 
 Hexagonal core — domain types, port contracts, pure logic, service orchestration.
 

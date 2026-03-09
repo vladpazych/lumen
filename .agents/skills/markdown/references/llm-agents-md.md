@@ -1,6 +1,6 @@
-# CLAUDE.md Files
+# AGENTS.md Files
 
-CLAUDE.md auto-loads when any file in its directory tree is read. It primes interpretation before code is seen.
+AGENTS.md auto-loads when any file in its directory tree is read. It primes interpretation before code is seen.
 
 ## What it is
 
@@ -11,7 +11,7 @@ Specification the codebase must satisfy. Not documentation of what code does.
 - Prescriptive constraints (MUST/NEVER), not descriptions
 - Most important rules first (primes all subsequent interpretation)
 - No examples derivable from reading the code
-- No duplication of parent CLAUDE.md rules (children inherit)
+- No duplication of parent AGENTS.md rules (children inherit)
 - Every token loaded on first file access in directory — minimize
 
 ## Template

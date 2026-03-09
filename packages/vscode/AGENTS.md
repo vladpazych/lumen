@@ -1,4 +1,4 @@
-# packages/vscode/CLAUDE.md
+# packages/vscode/AGENTS.md
 
 VS Code custom editor for `.lumen` files. Bootstraps `@lumen/core`, wires adapters, owns the webview.
 
