@@ -11,18 +11,17 @@ VS Code custom editor for `.lumen` files. Bootstraps `@lumen/core`, wires adapte
 - `src/provider.ts` is the `CustomTextEditorProvider` — thin shell that delegates to `EditorService` from `@lumen/core/editor`.
 - `src/extension.ts` bootstraps: creates adapters, wires the service, registers commands.
 
-### Providers
+### Provider
 
-Two adapter models, both implement `ProviderPort`:
+This package manages a single HTTP provider per workspace:
 
-- **HTTP** (`src/adapters/http-provider.ts`) — wraps `GET /pipelines`, `POST /pipelines/:id/generate`, `GET /pipelines/:id/runs/:runId`. Add server URL to `lumen.servers` setting.
-- **fal.ai** (`src/adapters/fal-provider.ts`) — built-in schemas, fal.ai REST API, image upload to fal CDN. Activated when API key is set.
+- **HTTP** (`src/adapters/http-provider.ts`) — wraps `GET /pipelines`, `POST /pipelines/:id/generate`, `GET /pipelines/:id/runs/:runId`. The workspace points `lumen.server` at the server source directory, and the extension starts the dev server and discovers the live URL from Modal output.
 
 ### .lumen file format
 
 Top-level JSON array of `LumenConfig` objects. Each = `{ id, name?, service, pipeline, params }`.
 
-Identity is the `id` (UUID). IDs auto-assigned on first open if missing. `name` is optional. Array order = display order. Focus index in VS Code workspace state. Old nested format auto-migrates on open.
+Identity is the `id` (slug derived from the pipeline id). IDs auto-assigned on first open if missing. `name` is optional. Array order = display order. Focus index in VS Code workspace state. Old nested format auto-migrates on open.
 
 ### Build targets
 

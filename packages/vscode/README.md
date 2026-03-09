@@ -4,13 +4,12 @@ VS Code custom editor for `.lumen` files — schema-driven UI for AI image and v
 
 ## Context
 
-Generation pipelines vary wildly: different servers, different models, different parameter schemas. We needed a single file format that captures generation configurations portably, and a viewer that renders the right form UI automatically from any provider's schema.
+Generation pipelines vary wildly: different models expose different parameter schemas, validation rules, and outputs. Lumen standardizes those schemas into one editing surface so a workspace can manage one inference server cleanly.
 
-An `.lumen` file is a JSON array of configurations — each one targeting a service, a pipeline, and a set of parameter values. The extension discovers pipeline schemas from providers (dynamically via HTTP or statically bundled), renders typed form fields, and proxies generation requests. One file can hold configurations across multiple providers for side-by-side comparison.
+An `.lumen` file is a JSON array of configurations for one managed server. Each config targets a pipeline on that server and stores a set of parameter values. The extension starts the server, discovers its schemas over HTTP, renders typed form fields, and proxies generation requests.
 
 ## Roadmap
 
 - Collection view — show all configurations as expandable cards instead of drilling down through dropdowns
 - Generation history per configuration, not just latest result
-- Schema caching for graceful offline degradation
 - Result feedback loop — drag generated images between cards for iterative workflows

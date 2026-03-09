@@ -4,9 +4,9 @@ dist/
 .env.*
 !.env.example
 *.log
-lumen.schema.json
 .authkey
 .dev.pid
+.dev.url
 .DS_Store
 
 # Python

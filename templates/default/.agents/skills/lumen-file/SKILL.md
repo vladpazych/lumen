@@ -5,7 +5,7 @@ description: "Create or edit .lumen files. TRIGGER: user asks to create a .lumen
 
 # .lumen file format
 
-JSON array of config objects. Each config targets one pipeline on one service.
+JSON array of config objects. In the default Lumen flow, each config targets one pipeline on the workspace's single managed server.
 
 ## Schema
 
@@ -31,7 +31,7 @@ JSON array of config objects. Each config targets one pipeline on one service.
 | :--------- | :----- | :------- | :------------------------------------------------------------------------------------------------------------------------ |
 | `id`       | string | yes      | Kebab-case slug, unique within the file. Derive from pipeline id (e.g., `nano-banana`). Append `-2`, `-3` for duplicates. |
 | `name`     | string | no       | Display name. Auto-generated from pipeline name if omitted.                                                               |
-| `service`  | string | yes      | Server URL (`http://...`) or virtual provider (`provider://fal`).                                                         |
+| `service`  | string | yes      | Live server URL (`https://...modal.run` in the default Modal flow).                                                        |
 | `pipeline` | string | yes      | Pipeline ID on that service (e.g., `txt2img`, `nano-banana`).                                                             |
 | `params`   | object | yes      | Key-value pairs matching the pipeline's `ParamDefinition[]` schema.                                                       |
 
@@ -63,24 +63,15 @@ Match param values to their schema type:
 7. Trailing newline after the closing bracket.
 8. 2-space indentation.
 
-## Known services and pipelines
+## Managed server flow
 
-### `provider://fal`
-
-| Pipeline          | Description                                 | Key params                                                                                       |
-| :---------------- | :------------------------------------------ | :----------------------------------------------------------------------------------------------- |
-| `nano-banana`     | Gemini 2.5 Flash                            | prompt, aspect_ratio, num_images, seed, output_format, resolution, enable_web_search             |
-| `nano-banana-2`   | Gemini 3.1 Flash (supports reference image) | prompt, image_urls, aspect_ratio, num_images, seed, output_format, resolution, enable_web_search |
-| `nano-banana-pro` | Gemini 3 Pro                                | prompt, aspect_ratio, num_images, seed, output_format, resolution, enable_web_search             |
-
-### HTTP servers (including custom Modal pipelines)
-
-HTTP servers expose schemas via a REST contract. Discover available pipelines and their params before writing the `.lumen` file.
+The VS Code extension manages one server per workspace. It starts `modal serve`, generates the auth key, and discovers the live server URL automatically.
 
 #### Finding the server URL
 
-1. Check existing configs in the `.lumen` file — the `service` field is the URL.
-2. Check `.vscode/settings.json` for `lumen.servers` — each entry has `url` and `name`.
+1. Check existing configs in the `.lumen` file — the `service` field is the live URL.
+2. Check the workspace setting `lumen.server` — it points to the server source directory, not the live URL.
+3. Start the dev server from the editor. The extension detects the live `https://...modal.run` URL and uses it for new configs.
 
 #### Discovery steps
 
@@ -89,15 +80,22 @@ HTTP servers expose schemas via a REST contract. Discover available pipelines an
 3. Read each param's `type`, `name`, `required`, `default`, `options` (for select), `min`/`max` (for number/integer)
 4. Use the param `name` fields as keys in your `.lumen` `params` object
 
+All requests require the Bearer token from `server/.authkey`:
+
+```sh
+AUTH="$(tr -d '\n' < server/.authkey)"
+curl -H "Authorization: Bearer $AUTH" "$SERVER_URL/pipelines"
+```
+
 #### Example: discovering a server's schema
 
 ```sh
 # List available pipelines
-curl http://localhost:8000/pipelines
+curl -H "Authorization: Bearer $AUTH" "$SERVER_URL/pipelines"
 # [{"id":"echo","name":"Echo","category":"image"}]
 
 # Get full schema for "echo"
-curl http://localhost:8000/pipelines/echo
+curl -H "Authorization: Bearer $AUTH" "$SERVER_URL/pipelines/echo"
 # {"id":"echo","name":"Echo","category":"image",
 #  "params":[{"type":"prompt","name":"prompt","label":"Prompt","required":true,"group":"basic"}],
 #  "output":{"type":"image","format":"png"}}
@@ -109,7 +107,7 @@ Then write:
 [
   {
     "id": "echo",
-    "service": "http://localhost:8000",
+    "service": "https://workspace-name.modal.run",
     "pipeline": "echo",
     "params": {
       "prompt": "a cat"
@@ -118,7 +116,7 @@ Then write:
 ]
 ```
 
-When the server is unavailable or params are unknown, set `params` to `{}` — the editor will populate from the server's schema once connected.
+When the server is unavailable or params are unknown, start the server from the editor first. The current product does not support offline schema editing.
 
 ## Examples
 
@@ -127,9 +125,9 @@ Single config, minimal:
 ```json
 [
   {
-    "id": "nano-banana",
-    "service": "provider://fal",
-    "pipeline": "nano-banana",
+    "id": "echo",
+    "service": "https://workspace-name.modal.run",
+    "pipeline": "echo",
     "params": {
       "prompt": "a cat in a spacesuit"
     }
@@ -137,31 +135,27 @@ Single config, minimal:
 ]
 ```
 
-Multiple configs:
+Multiple configs on the same server:
 
 ```json
 [
   {
-    "id": "nano-banana-pro",
+    "id": "echo",
     "name": "Portrait shot",
-    "service": "provider://fal",
-    "pipeline": "nano-banana-pro",
+    "service": "https://workspace-name.modal.run",
+    "pipeline": "echo",
     "params": {
       "prompt": "professional headshot, studio lighting",
-      "aspect_ratio": "3:4",
-      "resolution": "2K",
       "seed": 98765
     }
   },
   {
-    "id": "nano-banana-2",
+    "id": "echo-2",
     "name": "Landscape variation",
-    "service": "provider://fal",
-    "pipeline": "nano-banana",
+    "service": "https://workspace-name.modal.run",
+    "pipeline": "echo",
     "params": {
-      "prompt": "mountain lake at golden hour",
-      "aspect_ratio": "16:9",
-      "num_images": 2
+      "prompt": "mountain lake at golden hour"
     }
   }
 ]

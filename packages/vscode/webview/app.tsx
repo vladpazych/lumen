@@ -74,7 +74,7 @@ export function App() {
     );
   }
 
-  const serverUrl = devServerUrl ?? Object.keys(schemas)[0];
+  const serverUrl = devServerUrl;
   const status = serverUrl
     ? (serverStatuses[serverUrl] ?? "disconnected")
     : "disconnected";
@@ -213,6 +213,12 @@ export function App() {
         {configs.length === 0 && pipelines.length > 0 && (
           <p className="text-[11px] text-text-tertiary px-1">
             No configurations yet. Click + Add to get started.
+          </p>
+        )}
+
+        {configs.length === 0 && !serverUrl && (
+          <p className="text-[11px] text-text-tertiary px-1">
+            Start the dev server to load pipelines for this workspace.
           </p>
         )}
 

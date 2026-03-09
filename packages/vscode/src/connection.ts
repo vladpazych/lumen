@@ -1,5 +1,3 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 import type { ProviderPort } from "@lumen/core/ports";
 import type { PipelineConfig, ServerStatus } from "@lumen/core/types";
 import type {
@@ -10,7 +8,7 @@ import type {
 import type { DevServerState } from "../webview/lib/messaging";
 import type { FileLogger } from "./adapters/vscode-logger";
 import { httpProvider } from "./adapters/http-provider";
-import { readAuthKey } from "./server";
+import { readAuthKey, readLastUrl } from "./server-state";
 
 export type ConnectionEvents = {
   schemasChanged(serverUrl: string, pipelines: PipelineConfig[]): void;
@@ -40,7 +38,10 @@ export class ServerConnection {
     private readonly fileLog: FileLogger,
     private readonly getServerSource: () => string,
   ) {
-    this.loadCachedSchemas();
+    const serverSource = this.getServerSource();
+    if (serverSource) {
+      this.detectedUrl = readLastUrl(serverSource);
+    }
   }
 
   /** Set after construction to break the circular dependency with EditorService. */
@@ -108,7 +109,6 @@ export class ServerConnection {
           this.log.info(`[sse] ${url} schemas: ${ids}`);
           this.fileLog.append(`[sse] ${url} schemas: ${ids}\n`);
           this.schemas[url] = schemas;
-          this.writeSchemaFile(url);
           this.events.schemasChanged(url, schemas);
         },
         onStatus: (status) => {
@@ -141,7 +141,6 @@ export class ServerConnection {
     );
     this.schemas = result.schemas;
     this.statuses = result.statuses;
-    this.writeSchemaFile(serverUrl);
     this.events.schemasChanged(serverUrl, this.schemas[serverUrl] ?? []);
     this.events.serverStatusChanged(serverUrl, this.statuses[serverUrl]);
   }
@@ -159,33 +158,5 @@ export class ServerConnection {
       this.devServerState = "stopped";
       this.events.devServerStateChanged("stopped");
     }
-  }
-
-  // --- Schema file ---
-
-  /** Load cached schemas from lumen.schema.json when no live data exists. */
-  loadCachedSchemas(): void {
-    if (Object.keys(this.schemas).length > 0) return;
-    const source = this.getServerSource();
-    if (!source) return;
-    const file = join(source, "lumen.schema.json");
-    if (!existsSync(file)) return;
-    try {
-      const data = JSON.parse(readFileSync(file, "utf-8")) as PipelineConfig[];
-      if (Array.isArray(data) && data.length > 0) {
-        const key = "_cached";
-        this.schemas[key] = data;
-      }
-    } catch {}
-  }
-
-  private writeSchemaFile(serverUrl: string): void {
-    const source = this.getServerSource();
-    if (!source) return;
-    const dest = join(source, "lumen.schema.json");
-    try {
-      const schemas = this.schemas[serverUrl] ?? [];
-      writeFileSync(dest, JSON.stringify(schemas, null, 2) + "\n");
-    } catch {}
   }
 }

@@ -1,9 +1,13 @@
-import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 import * as vscode from "vscode";
 import type { DevServerState } from "../webview/lib/messaging";
+import {
+  clearLastUrl,
+  ensureAuthKey,
+  writeLastUrl,
+} from "./server-state";
 
 /** Read lumen.server setting and resolve ${workspaceFolder}. */
 export function getServerSource(): string {
@@ -12,29 +16,6 @@ export function getServerSource(): string {
     .get<string>("server", "server");
   const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
   return raw.replace(/\$\{workspaceFolder\}/g, root);
-}
-
-function authKeyFile(serverPath: string): string {
-  return join(serverPath, ".authkey");
-}
-
-/** Ensure .authkey exists in the server directory. Creates one if missing. */
-export function ensureAuthKey(serverPath: string): string {
-  const file = authKeyFile(serverPath);
-  if (existsSync(file)) {
-    return readFileSync(file, "utf-8").trim();
-  }
-  const key = randomBytes(32).toString("hex");
-  writeFileSync(file, key + "\n");
-  return key;
-}
-
-/** Read the .authkey from a server directory, or null if missing. */
-export function readAuthKey(serverPath: string): string | null {
-  const file = authKeyFile(serverPath);
-  if (!existsSync(file)) return null;
-  const key = readFileSync(file, "utf-8").trim();
-  return key || null;
 }
 
 function pidFile(serverPath: string): string {
@@ -115,6 +96,7 @@ export class ServerManager {
     }
 
     ensureAuthKey(sourcePath);
+    clearLastUrl(sourcePath);
     this.onLogClear();
     this.output.appendLine(
       `[dev] Syncing deps and starting server in ${sourcePath}`,
@@ -146,7 +128,10 @@ export class ServerManager {
       this.output.append(text);
       this.onLog(text);
       const urlMatch = text.match(MODAL_URL_RE);
-      if (urlMatch) this.onUrl(sourcePath, urlMatch[0]);
+      if (urlMatch) {
+        writeLastUrl(sourcePath, urlMatch[0]);
+        this.onUrl(sourcePath, urlMatch[0]);
+      }
       if (REBUILD_DONE.test(text)) {
         this.setState("running");
       } else if (REBUILD_START.test(text)) {
@@ -162,6 +147,7 @@ export class ServerManager {
       try {
         unlinkSync(pidFile(sourcePath));
       } catch {}
+      clearLastUrl(sourcePath);
       this.setState("stopped");
     });
 
@@ -170,6 +156,7 @@ export class ServerManager {
       try {
         unlinkSync(pidFile(sourcePath));
       } catch {}
+      clearLastUrl(sourcePath);
       this.setState("error");
     });
 
@@ -226,6 +213,7 @@ export class ServerManager {
     try {
       unlinkSync(pidFile(sourcePath));
     } catch {}
+    clearLastUrl(sourcePath);
     this.setState("stopping");
     await this.killProcess(pid);
     this.setState("stopped");
