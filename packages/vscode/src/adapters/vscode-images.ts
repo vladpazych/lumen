@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import * as vscode from "vscode";
-import type { LumenConfig, PipelineConfig } from "@lumen/core/types";
+import type { LumenConfig, PipelineConfig } from "@vladpazych/lumen/types";
 
 type SchemaCache = Record<string, PipelineConfig[]>;
 

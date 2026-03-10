@@ -1,5 +1,5 @@
-import type { ProviderCallbacks, ProviderPort } from "@lumen/core/ports";
-import type { GenerateResponse, PipelineConfig } from "@lumen/core/types";
+import type { ProviderCallbacks, ProviderPort } from "@vladpazych/lumen/ports";
+import type { GenerateResponse, PipelineConfig } from "@vladpazych/lumen/types";
 
 const RECONNECT_MS = 3_000;
 

@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { X } from "lucide-react";
 import { Popover } from "@base-ui/react/popover";
-import type { TagsParam } from "@lumen/core/types";
+import type { TagsParam } from "@vladpazych/lumen/types";
 
 import { cn } from "@/lib/utils";
 

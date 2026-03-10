@@ -1,14 +1,14 @@
 # packages/vscode/AGENTS.md
 
-VS Code custom editor for `.lumen` files. Bootstraps `@lumen/core`, wires adapters, owns the webview.
+VS Code custom editor for `.lumen` files. Bootstraps `@vladpazych/lumen`, wires adapters, owns the webview.
 
 ## Rules
 
 ### Architecture
 
-- Domain types, ports, and services live in `@lumen/core`. This package implements adapters and VS Code glue.
-- `src/adapters/` implement `@lumen/core/ports` contracts. Each adapter owns its framework coupling (VS Code APIs, fal.ai REST, HTTP fetch).
-- `src/provider.ts` is the `CustomTextEditorProvider` — thin shell that delegates to `EditorService` from `@lumen/core/editor`.
+- Domain types, ports, and services live in `@vladpazych/lumen`. This package implements adapters and VS Code glue.
+- `src/adapters/` implement `@vladpazych/lumen/ports` contracts. Each adapter owns its framework coupling (VS Code APIs, fal.ai REST, HTTP fetch).
+- `src/provider.ts` is the `CustomTextEditorProvider` — thin shell that delegates to `EditorService` from `@vladpazych/lumen/editor`.
 - `src/extension.ts` bootstraps: creates adapters, wires the service, registers commands.
 
 ### Provider

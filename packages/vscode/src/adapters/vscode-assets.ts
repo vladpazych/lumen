@@ -1,6 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
-import type { AssetStorePort } from "@lumen/core/ports";
+import type { AssetStorePort } from "@vladpazych/lumen/ports";
 
 type AssetDeps = {
   logger: { info(msg: string): void };

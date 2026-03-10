@@ -1,7 +1,7 @@
 import { dirname, relative } from "node:path";
 import * as vscode from "vscode";
-import { ensureIds } from "@lumen/core/domain/config";
-import type { EditorService } from "@lumen/core/editor";
+import { ensureIds } from "@vladpazych/lumen/domain/config";
+import type { EditorService } from "@vladpazych/lumen/editor";
 import type {
   ExtensionMessage,
   WebviewMessage,

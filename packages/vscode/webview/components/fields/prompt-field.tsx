@@ -1,5 +1,5 @@
 import { Textarea } from "@/components/ui/textarea";
-import type { PromptParam } from "@lumen/core/types";
+import type { PromptParam } from "@vladpazych/lumen/types";
 
 type Props = {
   param: PromptParam;

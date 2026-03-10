@@ -3,7 +3,7 @@ import type {
   LumenConfig,
   PipelineConfig,
   ServerStatus,
-} from "@lumen/core/types";
+} from "@vladpazych/lumen/types";
 
 export type DevServerState =
   | "stopped"

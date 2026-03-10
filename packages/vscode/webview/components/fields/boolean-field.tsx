@@ -1,6 +1,6 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import type { BooleanParam } from "@lumen/core/types";
+import type { BooleanParam } from "@vladpazych/lumen/types";
 
 type Props = {
   param: BooleanParam;

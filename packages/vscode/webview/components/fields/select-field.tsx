@@ -1,7 +1,7 @@
 import { Combobox } from "@/components/ui/combobox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import type { SelectParam } from "@lumen/core/types";
+import type { SelectParam } from "@vladpazych/lumen/types";
 
 type Props = {
   param: SelectParam;

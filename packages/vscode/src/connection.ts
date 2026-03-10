@@ -1,10 +1,10 @@
-import type { ProviderPort } from "@lumen/core/ports";
-import type { PipelineConfig, ServerStatus } from "@lumen/core/types";
+import type { ProviderPort } from "@vladpazych/lumen/ports";
+import type { PipelineConfig, ServerStatus } from "@vladpazych/lumen/types";
 import type {
   EditorService,
   SchemaCache,
   StatusCache,
-} from "@lumen/core/editor";
+} from "@vladpazych/lumen/editor";
 import type { DevServerState } from "../webview/lib/messaging";
 import type { FileLogger } from "./adapters/vscode-logger";
 import { httpProvider } from "./adapters/http-provider";

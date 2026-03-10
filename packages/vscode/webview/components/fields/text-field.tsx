@@ -1,6 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import type { TextParam } from "@lumen/core/types";
+import type { TextParam } from "@vladpazych/lumen/types";
 
 type Props = {
   param: TextParam;

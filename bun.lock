@@ -16,21 +16,17 @@
       },
     },
     "packages/lumen": {
-      "name": "@lumen/core",
+      "name": "@vladpazych/lumen",
       "version": "0.0.0",
       "devDependencies": {
         "@typescript-eslint/parser": "^8.56.1",
       },
     },
-    "packages/lumen-example-modal": {
-      "name": "@vladpazych/lumen-example-modal",
-      "version": "0.1.0",
-    },
     "packages/vscode": {
       "name": "lumen-vscode",
       "version": "0.0.0",
       "dependencies": {
-        "@lumen/core": "workspace:*",
+        "@vladpazych/lumen": "workspace:*",
       },
       "devDependencies": {
         "@base-ui/react": "^1.0.0",
@@ -189,8 +185,6 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
-    "@lumen/core": ["@lumen/core@workspace:packages/lumen"],
-
     "@lumen/meta": ["@lumen/meta@workspace:meta"],
 
     "@rolldown/pluginutils": ["@rolldown/pluginutils@1.0.0-beta.27", "", {}, "sha512-+d0F4MKMCbeVUJwG96uQ4SgAznZNSq93I3V+9NHA4OpvqG8mRCpGdKmK8l/dl02h2CCDHwW2FqilnTyDcAnqjA=="],
@@ -317,7 +311,7 @@
 
     "@vladpazych/dexter": ["@vladpazych/dexter@0.1.13", "", { "dependencies": { "zod": "^4.0.0" }, "bin": { "dexter": "bin/dexter" } }, "sha512-W1s9YTbgyYI6zj2Q1px+m7YHBUv8xVy/xjf6Up138T3nU0scE570ummisvDlJ4aCvbfLvo/j2YayuCCK/FGZxQ=="],
 
-    "@vladpazych/lumen-example-modal": ["@vladpazych/lumen-example-modal@workspace:packages/lumen-example-modal"],
+    "@vladpazych/lumen": ["@vladpazych/lumen@workspace:packages/lumen"],
 
     "acorn": ["acorn@8.16.0", "", { "bin": { "acorn": "bin/acorn" } }, "sha512-UVJyE9MttOsBQIDKw1skb9nAwQuR5wuGD3+82K6JgJlm/Y+KI92oNsMNGZCYdDsVtRHSak0pcV5Dno5+4jh9sw=="],
 

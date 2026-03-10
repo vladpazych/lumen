@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Label } from "@/components/ui/label";
-import type { PipelineConfig } from "@lumen/core/types";
-import { validateParams } from "@lumen/core/domain/validation";
+import type { PipelineConfig } from "@vladpazych/lumen/types";
+import { validateParams } from "@vladpazych/lumen/domain/validation";
 import { ParamField } from "@/components/param-field";
 
 type Props = {

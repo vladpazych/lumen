@@ -1,6 +1,6 @@
 import { appendFileSync, writeFileSync } from "node:fs";
 import * as vscode from "vscode";
-import type { LoggerPort } from "@lumen/core/ports";
+import type { LoggerPort } from "@vladpazych/lumen/ports";
 
 export function vscodeLogger(channel: vscode.OutputChannel): LoggerPort {
   return {

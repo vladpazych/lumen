@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
-import type { LumenConfig } from "@lumen/core/types";
-import { parseConfigs, serializeConfigs } from "@lumen/core/domain/config";
+import type { LumenConfig } from "@vladpazych/lumen/types";
+import { parseConfigs, serializeConfigs } from "@vladpazych/lumen/domain/config";
 
 /** Thin bridge for reading/writing .lumen documents with echo prevention. */
 export class DocumentBridge {

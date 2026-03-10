@@ -1,6 +1,6 @@
 import { useId } from "react";
 import { Label } from "@/components/ui/label";
-import type { ParamDefinition } from "@lumen/core/types";
+import type { ParamDefinition } from "@vladpazych/lumen/types";
 import { BooleanField } from "@/components/fields/boolean-field";
 import { DimensionsField } from "@/components/fields/dimensions-field";
 import { IntegerField } from "@/components/fields/integer-field";

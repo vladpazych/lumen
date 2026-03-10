@@ -4,7 +4,7 @@ import type {
   OutputAsset,
   PipelineConfig,
   ServerStatus,
-} from "@lumen/core/types";
+} from "@vladpazych/lumen/types";
 import { GenerateSection } from "@/components/generate-section";
 import { PipelineForm } from "@/components/pipeline-form";
 import { ResultDisplay } from "@/components/result-display";

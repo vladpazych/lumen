@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
-import type { IntegerParam } from "@lumen/core/types";
+import type { IntegerParam } from "@vladpazych/lumen/types";
 
 type Props = {
   param: IntegerParam;

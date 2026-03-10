@@ -4,8 +4,8 @@ import type {
   OutputAsset,
   PipelineConfig,
   ServerStatus,
-} from "@lumen/core/types";
-import { createConfig } from "@lumen/core/domain/config";
+} from "@vladpazych/lumen/types";
+import { createConfig } from "@vladpazych/lumen/domain/config";
 import type { DevServerState } from "./messaging";
 import type { ExtensionMessage } from "./messaging";
 import { vscode } from "./vscode";

@@ -1,4 +1,4 @@
-import type { OutputAsset } from "@lumen/core/types";
+import type { OutputAsset } from "@vladpazych/lumen/types";
 
 type Props = {
   outputs?: OutputAsset[];

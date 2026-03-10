@@ -1,6 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import type { DimensionsParam } from "@lumen/core/types";
+import type { DimensionsParam } from "@vladpazych/lumen/types";
 
 type Dims = { w: number; h: number };
 type Props = {

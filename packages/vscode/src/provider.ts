@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import * as vscode from "vscode";
-import { editorService, type EditorService } from "@lumen/core/editor";
+import { editorService, type EditorService } from "@vladpazych/lumen/editor";
 import type {
   DevServerState,
   ExtensionMessage,

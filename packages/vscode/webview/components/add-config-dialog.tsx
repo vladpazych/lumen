@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
-import type { PipelineConfig } from "@lumen/core/types";
+import type { PipelineConfig } from "@vladpazych/lumen/types";
 
 type Props = {
   pipelines: PipelineConfig[];
