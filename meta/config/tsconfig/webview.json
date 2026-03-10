@@ -1,0 +1,11 @@
+{
+  "extends": "@repo/meta-config/tsconfig/base.json",
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "useDefineForClassFields": true,
+    "lib": ["ES2023", "DOM", "DOM.Iterable"]
+  }
+}

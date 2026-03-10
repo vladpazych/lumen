@@ -4,9 +4,19 @@
   "workspaces": [
     "packages/*",
     "apps/*",
-    "meta"
+    "meta/config",
+    "meta/commands"
   ],
+  "devDependencies": {
+    "@repo/meta-commands": "workspace:*",
+    "@repo/meta-config": "workspace:*",
+    "@types/bun": "^1",
+    "@vladpazych/dexter": "file:../dexter/packages/dexter",
+    "eslint": "^9",
+    "typescript": "^5"
+  },
   "scripts": {
-    "bump": "bun meta/index.ts release"
+    "bump": "dexter release vscode",
+    "lint": "eslint ."
   }
 }

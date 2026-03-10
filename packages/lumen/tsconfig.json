@@ -1,15 +1,8 @@
 {
+  "extends": "@repo/meta-config/tsconfig/bundler.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
     "lib": ["ES2022"],
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "isolatedModules": true,
-    "noEmit": true
+    "rootDir": "."
   },
   "include": [
     "env.d.ts",
@@ -17,5 +10,6 @@
     "ports/**/*.ts",
     "domain/**/*.ts",
     "services/**/*.ts"
-  ]
+  ],
+  "exclude": ["node_modules", "dist"]
 }

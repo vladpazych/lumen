@@ -1,18 +1,10 @@
 {
+  "extends": "@repo/meta-config/tsconfig/bundler.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "Node16",
-    "moduleResolution": "Node16",
     "lib": ["ES2022"],
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
     "rootDir": ".",
     "outDir": "dist"
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "vite.config.ts", "dev.ts"],
   "exclude": ["node_modules", "dist", "webview"]
 }

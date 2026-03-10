@@ -1,0 +1,14 @@
+{
+  "name": "@repo/meta-commands",
+  "private": true,
+  "type": "module",
+  "files": ["src"],
+  "exports": {
+    ".": "./src/index.ts",
+    "./release": "./src/release.ts"
+  },
+  "dependencies": {
+    "@vladpazych/dexter": "file:../../../dexter/packages/dexter",
+    "zod": "^4.0.0"
+  }
+}

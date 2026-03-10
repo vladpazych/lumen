@@ -29,7 +29,7 @@ export function PipelineForm({
     const e = validateParams(pipeline.params, values);
     onValidation?.(Object.keys(e).length > 0);
     return e;
-  }, [pipeline.params, values]);
+  }, [onValidation, pipeline.params, values]);
   const groups = new Map<string, typeof pipeline.params>();
   for (const param of pipeline.params) {
     if (param.name === "quality") continue;

@@ -36,9 +36,10 @@ export function ParamField({
   imageThumbs,
   onDropUri,
 }: Props) {
+  const fieldId = useId();
+
   if (param.hidden) return null;
 
-  const fieldId = useId();
   const showLabel = param.type !== "boolean";
   const label = param.label ?? param.name;
 

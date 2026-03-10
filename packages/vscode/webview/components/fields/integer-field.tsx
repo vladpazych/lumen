@@ -15,14 +15,15 @@ export function IntegerField({ param, value, onChange, id }: Props) {
     param.display === "slider" && param.min != null && param.max != null;
 
   if (useSlider) {
-    const current =
-      typeof value === "number" ? value : (param.default ?? param.min!);
+    const min = param.min;
+    const max = param.max;
+    const current = typeof value === "number" ? value : (param.default ?? min);
     return (
       <div className="flex items-center gap-2">
         <Slider
           value={current}
-          min={param.min}
-          max={param.max}
+          min={min}
+          max={max}
           step={1}
           onValueChange={(v) => onChange(v as number)}
         />

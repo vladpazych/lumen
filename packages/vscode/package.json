@@ -77,19 +77,19 @@
     "build": "bun build src/extension.ts --outdir dist --target node --format cjs --external vscode --sourcemap=linked && vite build",
     "package": "bun run build && bunx @vscode/vsce package --no-dependencies -o dist/lumen-vscode.vsix",
     "reinstall": "bun run package && code --install-extension dist/lumen-vscode.vsix",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.webview.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.webview.json"
   },
   "dependencies": {
     "@vladpazych/lumen": "workspace:*"
   },
   "devDependencies": {
+    "@repo/meta-config": "workspace:*",
     "@base-ui/react": "^1.0.0",
     "@tailwindcss/vite": "^4.1.0",
     "@types/node": "^25.3.5",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/vscode": "^1.85.0",
-    "@typescript-eslint/parser": "^8.56.1",
     "@vitejs/plugin-react": "^4.7.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
