@@ -28,8 +28,7 @@ Schema-driven image/video generation editor. Provider-agnostic `.lumen` file for
 | :------------------ | :---------------------------------------------- |
 | packages/lumen/     | Hexagonal core: types, ports, domain, services  |
 | packages/vscode/    | VS Code custom editor extension                 |
-| packages/lumen-sdk/ | Pipeline server framework (Python, pip package) |
-| templates/default/  | Example project with server and pipelines       |
+| templates/default/  | Example project with self-contained Modal server |
 | meta/               | Repo tooling packages (`config/`, `commands/`) |
 
 ## Gotchas

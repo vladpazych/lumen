@@ -32,7 +32,7 @@ function writeExecutable(path: string, body: string): void {
 }
 
 describe("doctor.sh", () => {
-  test("bootstraps the server directory with uv sync and lumen-sdk sync", () => {
+  test("bootstraps the server directory with uv sync", () => {
     const repoRoot = process.cwd();
     const projectDir = makeTempDir("lumen-doctor-");
     const binDir = join(projectDir, "bin");
@@ -95,6 +95,6 @@ describe("doctor.sh", () => {
 
     const calls = readFileSync(logFile, "utf-8");
     expect(calls).toContain(`PWD=${serverDir} ARGS=sync`);
-    expect(calls).toContain(`PWD=${serverDir} ARGS=run lumen-sdk sync`);
+    expect(calls).not.toContain("lumen-sdk");
   });
 });

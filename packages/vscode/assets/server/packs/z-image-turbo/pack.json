@@ -1,0 +1,5 @@
+{
+  "id": "z-image-turbo",
+  "name": "Z-Image Turbo",
+  "description": "GPU-backed starter pipeline using Modal cls and a diffusion model."
+}

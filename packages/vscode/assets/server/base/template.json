@@ -1,0 +1,5 @@
+{
+  "id": "base",
+  "name": "Base Modal Server",
+  "description": "Self-contained FastAPI + Modal scaffold with auth, discovery, and a demo pipeline."
+}

@@ -77,7 +77,6 @@ if [[ $fail -eq 0 ]]; then
     (
       cd "$SERVER_DIR"
       uv sync
-      uv run lumen-sdk sync
     )
     echo ""
   fi

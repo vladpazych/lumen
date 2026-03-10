@@ -1,0 +1,5 @@
+{
+  "id": "pipeline",
+  "name": "Pipeline authoring",
+  "description": "Guidance for creating Modal pipeline files in the scaffolded server."
+}
