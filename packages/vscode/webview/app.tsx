@@ -5,6 +5,7 @@ import { StatusDot } from "@/components/status-dot";
 import { ConfigCard } from "@/components/config-card";
 import { ServerLog } from "@/components/server-log";
 import { AddConfigDialog } from "@/components/add-config-dialog";
+import { SetupPanel } from "@/components/setup-panel";
 import { useLumen } from "@/lib/use-lumen";
 import { vscode } from "@/lib/vscode";
 
@@ -33,6 +34,8 @@ export function App() {
     devServerState,
     devServerLog,
     devServerUrl,
+    serverSetup,
+    installingServer,
     generating,
     progress,
     stage,
@@ -47,6 +50,10 @@ export function App() {
     startDevServer,
     stopDevServer,
     restartDevServer,
+    installServer,
+    copyServerAuthToken,
+    createModalSecret,
+    revealServer,
     pickImage,
     pickImageByUri,
     isPickingImage,
@@ -81,15 +88,18 @@ export function App() {
   const pipelines = serverUrl ? (schemas[serverUrl] ?? []) : [];
 
   const canStart =
-    devServerState === "stopped" ||
-    devServerState === "error" ||
-    devServerState === "orphaned";
+    serverSetup.installed &&
+    (devServerState === "stopped" ||
+      devServerState === "error" ||
+      devServerState === "orphaned");
   const canStop =
-    devServerState === "running" ||
-    devServerState === "starting" ||
-    devServerState === "rebuilding";
+    serverSetup.installed &&
+    (devServerState === "running" ||
+      devServerState === "starting" ||
+      devServerState === "rebuilding");
   const canRestart =
-    devServerState === "running" || devServerState === "rebuilding";
+    serverSetup.installed &&
+    (devServerState === "running" || devServerState === "rebuilding");
   const isRebuilding = devServerState === "rebuilding";
   const isStopping = devServerState === "stopping";
   const isOrphaned = devServerState === "orphaned";
@@ -104,51 +114,61 @@ export function App() {
   return (
     <TooltipProvider>
       <div className="p-3 flex flex-col gap-3">
-        {/* Header card */}
-        <div className="rounded-md border border-border bg-card">
-          <div className="flex items-center justify-between px-3 py-2">
-            <div className="flex items-center gap-2">
-              <StatusDot variant={statusVariant[status]} size="sm" />
-              {canStart && (
-                <Button variant="ghost" size="xs" onClick={startDevServer}>
-                  {isOrphaned ? "Replace" : "Start"}
-                </Button>
-              )}
-              {canRestart && (
-                <Button variant="ghost" size="xs" onClick={restartDevServer}>
-                  Restart
-                </Button>
-              )}
-              {canStop && (
-                <Button variant="ghost" size="xs" onClick={stopDevServer}>
-                  {devServerState === "starting" ? "Starting…" : "Stop"}
-                </Button>
-              )}
-              {isRebuilding && (
-                <span className="text-[10px] text-warning animate-pulse">
-                  Rebuilding…
-                </span>
-              )}
-              {isOrphaned && (
-                <span className="text-[10px] text-warning">No process</span>
-              )}
-              {isStopping && (
-                <span className="text-[10px] text-text-tertiary animate-pulse">
-                  Stopping…
-                </span>
-              )}
+        <SetupPanel
+          setup={serverSetup}
+          installing={installingServer}
+          onInstall={installServer}
+          onCopyAuthToken={copyServerAuthToken}
+          onCreateModalSecret={createModalSecret}
+          onRevealServer={revealServer}
+        />
+
+        {serverSetup.installed && (
+          <div className="rounded-md border border-border bg-card">
+            <div className="flex items-center justify-between px-3 py-2">
+              <div className="flex items-center gap-2">
+                <StatusDot variant={statusVariant[status]} size="sm" />
+                {canStart && (
+                  <Button variant="ghost" size="xs" onClick={startDevServer}>
+                    {isOrphaned ? "Replace" : "Start"}
+                  </Button>
+                )}
+                {canRestart && (
+                  <Button variant="ghost" size="xs" onClick={restartDevServer}>
+                    Restart
+                  </Button>
+                )}
+                {canStop && (
+                  <Button variant="ghost" size="xs" onClick={stopDevServer}>
+                    {devServerState === "starting" ? "Starting…" : "Stop"}
+                  </Button>
+                )}
+                {isRebuilding && (
+                  <span className="text-[10px] text-warning animate-pulse">
+                    Rebuilding…
+                  </span>
+                )}
+                {isOrphaned && (
+                  <span className="text-[10px] text-warning">No process</span>
+                )}
+                {isStopping && (
+                  <span className="text-[10px] text-text-tertiary animate-pulse">
+                    Stopping…
+                  </span>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="xs"
+                onClick={() => setShowAddForm(true)}
+                disabled={pipelines.length === 0}
+              >
+                + Add
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="xs"
-              onClick={() => setShowAddForm(true)}
-              disabled={pipelines.length === 0}
-            >
-              + Add
-            </Button>
+            {devServerLog.length > 0 && <ServerLog lines={devServerLog} />}
           </div>
-          {devServerLog.length > 0 && <ServerLog lines={devServerLog} />}
-        </div>
+        )}
 
         {/* Config cards */}
         {configs.map((config, i) => {
@@ -216,7 +236,13 @@ export function App() {
           </p>
         )}
 
-        {configs.length === 0 && !serverUrl && (
+        {configs.length === 0 && !serverSetup.installed && (
+          <p className="text-[11px] text-text-tertiary px-1">
+            Install a server to start discovering pipelines for this workspace.
+          </p>
+        )}
+
+        {configs.length === 0 && serverSetup.installed && !serverUrl && (
           <p className="text-[11px] text-text-tertiary px-1">
             Start the dev server to load pipelines for this workspace.
           </p>

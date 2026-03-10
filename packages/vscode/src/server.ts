@@ -10,10 +10,15 @@ import {
 } from "./server-state";
 
 /** Read lumen.server setting and resolve ${workspaceFolder}. */
-export function getServerSource(): string {
-  const raw = vscode.workspace
+export function getServerSetting(): string {
+  return vscode.workspace
     .getConfiguration("lumen")
     .get<string>("server", "server");
+}
+
+/** Read lumen.server setting and resolve ${workspaceFolder}. */
+export function getServerSource(): string {
+  const raw = getServerSetting();
   const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
   return raw.replace(/\$\{workspaceFolder\}/g, root);
 }
@@ -110,7 +115,7 @@ export class ServerManager {
       [
         "-l",
         "-c",
-        "uv sync && uv run lumen-sdk sync && exec uv run modal serve serve.py",
+        "uv sync && exec uv run modal serve serve.py",
       ],
       {
         cwd: sourcePath,

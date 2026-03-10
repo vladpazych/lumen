@@ -9,11 +9,19 @@ import type {
 import type { DocumentBridge } from "./document";
 import type { ServerConnection } from "./connection";
 import {
+  copyAuthToken,
+  createOrUpdateModalSecret,
+  describeServerSetup,
+  installServerTemplate,
+  revealServerFolder,
+} from "./server-scaffold";
+import {
   collectThumbs,
   imageThumbUri,
   pickImage,
   resolveImageParams,
 } from "./adapters/vscode-images";
+import { getServerSetting, getServerSource } from "./server";
 
 export type HandlerContext = {
   document: vscode.TextDocument;
@@ -62,6 +70,14 @@ export async function handleMessage(
     case "restartDevServer":
       ctx.onDevServerCommand?.("restart");
       return;
+    case "installServer":
+      return handleInstallServer(ctx, msg);
+    case "copyAuthToken":
+      return handleCopyAuthToken(ctx);
+    case "createModalSecret":
+      return handleCreateModalSecret(ctx);
+    case "revealServer":
+      return handleRevealServer(ctx);
   }
 }
 
@@ -82,6 +98,11 @@ async function handleReady(ctx: HandlerContext): Promise<void> {
     serverStatuses: connection.statuses,
     devServerState: connection.devServerState,
     devServerUrl: url,
+    serverSetup: describeServerSetup(
+      ctx.context,
+      getServerSource(),
+      getServerSetting(),
+    ),
   });
 
   const bufferedLog = ctx.getDevLogBuffer();
@@ -322,5 +343,65 @@ async function handleUpdateName(
   if (idx >= 0) {
     configs[idx] = { ...configs[idx], name: msg.name };
     await ctx.bridge.write(ctx.document, configs);
+  }
+}
+
+async function handleInstallServer(
+  ctx: HandlerContext,
+  msg: Extract<WebviewMessage, { type: "installServer" }>,
+): Promise<void> {
+  try {
+    const setup = await installServerTemplate({
+      context: ctx.context,
+      serverSetting: msg.serverSetting,
+      pipelinePackIds: msg.pipelinePackIds,
+      skillPackIds: msg.skillPackIds,
+      initGit: msg.initGit,
+    });
+    ctx.connection.unsubscribeAll();
+    ctx.connection.rebuildProviders();
+    ctx.connection.subscribeAll();
+    ctx.post({ type: "serverSetup", setup });
+    vscode.window.showInformationMessage("Lumen server installed");
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    vscode.window.showErrorMessage(`Failed to install server: ${message}`);
+  }
+}
+
+async function handleCopyAuthToken(_: HandlerContext): Promise<void> {
+  try {
+    const token = copyAuthToken(getServerSource());
+    await vscode.env.clipboard.writeText(token);
+    vscode.window.showInformationMessage("Copied Lumen auth token");
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    vscode.window.showErrorMessage(message);
+  }
+}
+
+async function handleCreateModalSecret(ctx: HandlerContext): Promise<void> {
+  try {
+    const setup = describeServerSetup(
+      ctx.context,
+      getServerSource(),
+      getServerSetting(),
+    );
+    createOrUpdateModalSecret(setup.serverPath, setup.authSecretName);
+    vscode.window.showInformationMessage(
+      `Updated Modal secret ${setup.authSecretName}`,
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    vscode.window.showErrorMessage(`Failed to create Modal secret: ${message}`);
+  }
+}
+
+async function handleRevealServer(_: HandlerContext): Promise<void> {
+  try {
+    await revealServerFolder(getServerSource());
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    vscode.window.showErrorMessage(message);
   }
 }

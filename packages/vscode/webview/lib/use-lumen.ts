@@ -6,8 +6,11 @@ import type {
   ServerStatus,
 } from "@vladpazych/lumen/types";
 import { createConfig } from "@vladpazych/lumen/domain/config";
-import type { DevServerState } from "./messaging";
-import type { ExtensionMessage } from "./messaging";
+import type {
+  DevServerState,
+  ExtensionMessage,
+  ServerSetupInfo,
+} from "./messaging";
 import { vscode } from "./vscode";
 
 /** Detect tqdm-style progress bars: `Loading weights:  10%|█ | 41/398` */
@@ -29,6 +32,8 @@ type State = {
   >;
   imageThumbs: Record<string, string>;
   devServerLog: string[];
+  serverSetup: ServerSetupInfo;
+  installingServer: boolean;
   isPickingImage: boolean;
   ready: boolean;
 };
@@ -41,7 +46,9 @@ type Action =
       serverStatuses: Record<string, ServerStatus>;
       devServerState: DevServerState;
       devServerUrl: string | null;
+      serverSetup: ServerSetupInfo;
     }
+  | { type: "serverSetup"; setup: ServerSetupInfo }
   | { type: "configsUpdated"; configs: LumenConfig[] }
   | { type: "schemaRefresh"; serverUrl: string; pipelines: PipelineConfig[] }
   | { type: "serverStatus"; serverUrl: string; status: ServerStatus }
@@ -66,6 +73,7 @@ type Action =
     }
   | { type: "pickImageStart" }
   | { type: "pickImageDone" }
+  | { type: "installServerStart" }
   | { type: "mergeImageThumbs"; thumbs: Record<string, string> }
   | { type: "devServerLog"; text: string };
 
@@ -79,7 +87,15 @@ function reducer(state: State, action: Action): State {
         serverStatuses: action.serverStatuses,
         devServerState: action.devServerState,
         devServerUrl: action.devServerUrl,
+        serverSetup: action.serverSetup,
+        installingServer: false,
         ready: true,
+      };
+    case "serverSetup":
+      return {
+        ...state,
+        serverSetup: action.setup,
+        installingServer: false,
       };
     case "configsUpdated":
       return { ...state, configs: action.configs };
@@ -156,6 +172,8 @@ function reducer(state: State, action: Action): State {
       return { ...state, isPickingImage: true };
     case "pickImageDone":
       return { ...state, isPickingImage: false };
+    case "installServerStart":
+      return { ...state, installingServer: true };
     case "mergeImageThumbs":
       return {
         ...state,
@@ -197,6 +215,19 @@ const initialState: State = {
   results: {},
   imageThumbs: {},
   devServerLog: [],
+  serverSetup: {
+    serverPath: "",
+    serverSetting: "server",
+    installed: false,
+    managed: false,
+    authToken: null,
+    authSecretName: "lumen-auth",
+    manifest: null,
+    pipelinePacks: [],
+    skillPacks: [],
+    canCreateModalSecret: false,
+  },
+  installingServer: false,
   isPickingImage: false,
   ready: false,
 };
@@ -221,7 +252,11 @@ export function useLumen() {
             serverStatuses: msg.serverStatuses,
             devServerState: msg.devServerState,
             devServerUrl: msg.devServerUrl,
+            serverSetup: msg.serverSetup,
           });
+          break;
+        case "serverSetup":
+          dispatch({ type: "serverSetup", setup: msg.setup });
           break;
         case "configsUpdated":
           dispatch({ type: "configsUpdated", configs: msg.configs });
@@ -405,6 +440,32 @@ export function useLumen() {
     vscode.postMessage({ type: "restartDevServer" });
   }, []);
 
+  const installServer = useCallback(
+    (serverSetting: string, pipelinePackIds: string[], skillPackIds: string[], initGit: boolean) => {
+      dispatch({ type: "installServerStart" });
+      vscode.postMessage({
+        type: "installServer",
+        serverSetting,
+        pipelinePackIds,
+        skillPackIds,
+        initGit,
+      });
+    },
+    [],
+  );
+
+  const copyServerAuthToken = useCallback(() => {
+    vscode.postMessage({ type: "copyAuthToken" });
+  }, []);
+
+  const createModalSecret = useCallback(() => {
+    vscode.postMessage({ type: "createModalSecret" });
+  }, []);
+
+  const revealServer = useCallback(() => {
+    vscode.postMessage({ type: "revealServer" });
+  }, []);
+
   const addConfig = useCallback(
     (
       service: string,
@@ -483,6 +544,10 @@ export function useLumen() {
     startDevServer,
     stopDevServer,
     restartDevServer,
+    installServer,
+    copyServerAuthToken,
+    createModalSecret,
+    revealServer,
     pickImage,
     pickImageByUri,
   };

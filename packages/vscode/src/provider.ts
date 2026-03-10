@@ -16,7 +16,8 @@ import {
 import { DocumentBridge } from "./document";
 import { ServerConnection, type ConnectionEvents } from "./connection";
 import { handleMessage, type HandlerContext } from "./handlers";
-import { getServerSource } from "./server";
+import { describeServerSetup, writeSchemaSnapshot } from "./server-scaffold";
+import { getServerSetting, getServerSource } from "./server";
 
 const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\].*?\x07|\[[\d;]*[A-Za-z]/g;
 function stripAnsi(text: string): string {
@@ -79,6 +80,10 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
 
     const connectionEvents: ConnectionEvents = {
       schemasChanged: (serverUrl, pipelines) => {
+        const source = getServerSource();
+        if (source && this.connection.serverUrl === serverUrl) {
+          writeSchemaSnapshot(source, pipelines);
+        }
         this.broadcastToAll({
           type: "schemaRefresh",
           serverUrl,
@@ -108,6 +113,17 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     });
 
     this.connection.setService(this.service);
+  }
+
+  private currentServerSetup() {
+    return describeServerSetup(this.context, getServerSource(), getServerSetting());
+  }
+
+  broadcastServerSetup(): void {
+    this.broadcastToAll({
+      type: "serverSetup",
+      setup: this.currentServerSetup(),
+    });
   }
 
   onDevServerStateChange(state: DevServerState): void {
@@ -195,7 +211,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
 
     if (this.panels.size === 1) this.connection.subscribeAll();
 
-    const handlerCtx: HandlerContext = {
+  const handlerCtx: HandlerContext = {
       document,
       panel: webviewPanel,
       bridge,
@@ -225,6 +241,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
           this.connection.unsubscribeAll();
           this.connection.rebuildProviders();
           this.connection.subscribeAll();
+          this.broadcastServerSetup();
         }
       },
     );

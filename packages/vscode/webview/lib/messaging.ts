@@ -14,6 +14,35 @@ export type DevServerState =
   | "orphaned"
   | "error";
 
+export type PackInfo = {
+  id: string;
+  kind: "pipeline" | "skill";
+  name: string;
+  description: string;
+};
+
+export type ManagedServerManifest = {
+  templateVersion: number;
+  authSecretName: string;
+  installedPipelinePacks: string[];
+  installedSkillPacks: string[];
+  initializedGit: boolean;
+  createdAt: string;
+};
+
+export type ServerSetupInfo = {
+  serverPath: string;
+  serverSetting: string;
+  installed: boolean;
+  managed: boolean;
+  authToken: string | null;
+  authSecretName: string;
+  manifest: ManagedServerManifest | null;
+  pipelinePacks: PackInfo[];
+  skillPacks: PackInfo[];
+  canCreateModalSecret: boolean;
+};
+
 // --- Extension → Webview ---
 
 export type InitMessage = {
@@ -23,6 +52,7 @@ export type InitMessage = {
   serverStatuses: Record<string, ServerStatus>;
   devServerState: DevServerState;
   devServerUrl: string | null;
+  serverSetup: ServerSetupInfo;
 };
 
 export type ConfigsUpdatedMessage = {
@@ -89,6 +119,11 @@ export type ImageThumbsMessage = {
   thumbs: Record<string, string>;
 };
 
+export type ServerSetupMessage = {
+  type: "serverSetup";
+  setup: ServerSetupInfo;
+};
+
 export type ExtensionMessage =
   | InitMessage
   | ConfigsUpdatedMessage
@@ -99,7 +134,8 @@ export type ExtensionMessage =
   | DevServerStatusMessage
   | DevServerLogMessage
   | ImagePickedMessage
-  | ImageThumbsMessage;
+  | ImageThumbsMessage
+  | ServerSetupMessage;
 
 // --- Webview → Extension ---
 
@@ -169,6 +205,18 @@ export type RemoveConfigMessage = {
   configId: string;
 };
 
+export type InstallServerMessage = {
+  type: "installServer";
+  serverSetting: string;
+  pipelinePackIds: string[];
+  skillPackIds: string[];
+  initGit: boolean;
+};
+
+export type CopyAuthTokenMessage = { type: "copyAuthToken" };
+export type CreateModalSecretMessage = { type: "createModalSecret" };
+export type RevealServerMessage = { type: "revealServer" };
+
 export type WebviewMessage =
   | ReadyMessage
   | UpdateStateMessage
@@ -182,4 +230,8 @@ export type WebviewMessage =
   | PickImageByUriMessage
   | AddConfigMessage
   | UpdateNameMessage
-  | RemoveConfigMessage;
+  | RemoveConfigMessage
+  | InstallServerMessage
+  | CopyAuthTokenMessage
+  | CreateModalSecretMessage
+  | RevealServerMessage;
