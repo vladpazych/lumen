@@ -2,39 +2,27 @@
 
 VS Code-first tooling for vibe-coding inference pipelines on Modal, backed by schema-driven `.lumen` files and a managed self-contained pipeline server.
 
-```json
-[
-  {
-    "id": "hero-shot",
-    "name": "Hero Shot",
-    "service": "https://your-server.modal.run",
-    "pipeline": "echo",
-    "params": {
-      "prompt": "Studio portrait, soft rim light, 85mm lens"
-    }
-  }
-]
-```
+The goal experience is simple:
 
-```sh
-bun install
-cd packages/vscode
-bun run package
-code --install-extension dist/lumen-vscode.vsix
-```
+1. Install the VS Code extension.
+2. Create a `.lumen` file.
+3. Open it and follow the wizard.
+4. Let Lumen scaffold a Modal pipeline server into your workspace.
+5. Start vibe-coding inference pipelines with your editor and preferred LLM tools.
 
 ## What It Is
 
 - A VS Code extension first, not a Python SDK
 - A way to vibe-code inference pipelines on Modal with your preferred LLM tools
 - A provider-agnostic `.lumen` file format for generation configs
-- A VS Code custom editor that renders pipeline schemas as typed forms
+- A VS Code custom editor with a first-run setup wizard
 - A managed server bootstrap flow that installs a self-contained Modal server into your workspace
 - Optional starter pipeline packs and AI skill packs for pipeline authoring
 
 ## Concepts
 
 - Lumen is extension-led. The editor is the product surface; the Python server is just the runtime it manages for you.
+- A `.lumen` file is the entry point. If no server exists yet, opening the file becomes an onboarding flow instead of a dead editor.
 - A `.lumen` file is a JSON array of generation configs. Each config targets one pipeline on one live server URL.
 - The VS Code extension owns the workflow: scaffold server files, generate auth, start `modal serve`, discover schemas, mirror logs, and write schema snapshots.
 - The Python server is intentionally small. It discovers pipeline modules, validates bearer auth, exposes pipeline schemas, and runs `generate`.
@@ -42,7 +30,26 @@ code --install-extension dist/lumen-vscode.vsix
 
 ## Quick Start
 
-Today the easiest way to try Lumen from this repo is from source:
+The intended user flow is:
+
+1. Install the Lumen VS Code extension.
+2. Create a `.lumen` file with `[]`.
+3. Open it in VS Code.
+4. Follow the setup wizard.
+5. Choose where to install the managed server, whether to initialize git, and which starter packs to include.
+6. Copy the generated auth token into a Modal secret named `lumen-auth`, or let Lumen do it if the Modal CLI is available.
+7. Start the dev server from the editor.
+8. Add configs from the discovered pipelines and iterate in the same `.lumen` file.
+
+What this unlocks:
+
+- scaffold a self-contained Modal server without hand-rolling project setup
+- browse discovered pipeline schemas as typed forms in VS Code
+- install starter pipelines such as `fal` or `z-image-turbo`
+- mirror logs and schemas into workspace files for debugging and agent workflows
+- install optional skill packs so your LLM can help author pipelines and `.lumen` configs
+
+If you want to try Lumen from this repo today, install the extension from source:
 
 ```sh
 bun install
@@ -50,15 +57,6 @@ cd packages/vscode
 bun run package
 code --install-extension dist/lumen-vscode.vsix
 ```
-
-Then in any workspace:
-
-1. Create a `.lumen` file with `[]`.
-2. Open it in VS Code. The Lumen custom editor will show the setup panel.
-3. Choose where to install the managed server, whether to initialize git, and which starter pipeline packs and skill packs to install.
-4. Copy the generated auth token into a Modal secret named `lumen-auth`, or use the button in the editor if the Modal CLI is available.
-5. Start the dev server from the editor.
-6. Add configs from the discovered pipelines and iterate in the same `.lumen` file.
 
 The intended loop is: open VS Code, open a `.lumen` file, let Lumen scaffold the Modal server, then use your editor and LLM tools to keep shaping pipelines in that workspace.
 
@@ -74,8 +72,9 @@ What the extension writes for you:
 
 Use Lumen when you want one workspace to own the whole loop:
 
-- define generation configs in `.lumen`
+- start from a blank `.lumen` file instead of a prebuilt backend repo
 - scaffold or evolve the Modal server from the editor
+- define and run generation configs in `.lumen`
 - install starter pipelines such as `fal` or `z-image-turbo`
 - let an LLM help vibe-code new pipelines through installed skill packs
 - keep experimenting with any model provider as long as the server exposes the Lumen HTTP contract
