@@ -1,10 +1,16 @@
 src/**
 webview/**
 node_modules/**
+tests/**
 tsconfig*.json
 vite.config.ts
 dev.ts
-eslint.config.js
+eslint.config.*
 .gitignore
+AGENTS.md
+components.json
+assets/server/base/AGENTS.md
+assets/server/base/conftest.py
+assets/server/base/tests/**
 **/*.map
 **/*.vsix

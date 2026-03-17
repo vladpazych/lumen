@@ -1,17 +1,30 @@
-# lumen-vscode
+# Lumen
 
-VS Code custom editors for `lumen.config.json` and `.lumen` files — workspace home plus schema-driven runner config editing.
+Lumen is a VS Code extension for experimenting with Modal inference pipelines through plain files. It turns `lumen.config.json` into a workspace home, keeps `server/` and `assets/` organized, and opens `.lumen` files in a schema-driven editor that non-developers can use.
 
-## Context
+## Quick Start
 
-Generation pipelines vary wildly: different models expose different parameter schemas, validation rules, and outputs. Lumen standardizes those schemas into one editing surface so a workspace can manage one inference server cleanly.
+1. Install the extension and authenticate the Modal CLI on your machine with `modal token set`.
+2. Create `lumen.config.json` at the root of a workspace and open it in VS Code.
+3. Select `Initialize Lumen Workspace`.
+4. Start the dev server from the workspace home.
+5. Create or open an `assets/*.lumen` file and configure a pipeline.
 
-`lumen.config.json` is the workspace home. It owns initialization, server lifecycle, pipeline creation, skill installation, and navigation to runner configs.
+## Concepts
 
-A `.lumen` file is a JSON array of configurations for one managed server. Each config targets a pipeline on that server and stores a set of parameter values. The extension starts the server, discovers its schemas over HTTP, renders typed form fields, and proxies generation requests.
+- `lumen.config.json` is the workspace home. It owns setup, server lifecycle, pipeline creation, skill installation, and navigation.
+- `server/` is committed source. It contains the Modal app, pipeline modules, and the local runtime contract.
+- `assets/` is for `*.lumen` configs and generated outputs near them.
+- A `.lumen` file is a JSON array of configs for one managed server. Each entry targets a pipeline and stores parameter values.
 
-## Roadmap
+## Structure
 
-- Collection view — show all configurations as expandable cards instead of drilling down through dropdowns
-- Generation history per configuration, not just latest result
-- Result feedback loop — drag generated images between cards for iterative workflows
+- `server/` contains the scaffolded Modal runtime and user-owned pipelines.
+- `assets/` contains `*.lumen` runner configs and generated artifacts.
+- `.agents/skills/` and `.claude/skills/` contain the bundled agent skills that Lumen installs into the workspace.
+
+## Development
+
+- Build the extension with `bun run --cwd packages/vscode build`.
+- Package a local VSIX with `bun run --cwd packages/vscode package`.
+- Typecheck with `bun run --cwd packages/vscode typecheck`.

@@ -1,15 +1,34 @@
 {
   "name": "lumen-vscode",
   "displayName": "Lumen",
-  "description": "Schema-driven editor for .lumen files",
-  "version": "0.0.0",
-  "private": true,
+  "description": "Workspace home and schema-driven editor for Modal AI pipelines",
+  "version": "0.1.0",
   "publisher": "vladpazych",
+  "preview": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vladpazych/lumen.git"
+  },
+  "homepage": "https://github.com/vladpazych/lumen",
+  "bugs": {
+    "url": "https://github.com/vladpazych/lumen/issues"
+  },
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
-    "Visualization"
+    "Visualization",
+    "Data Science"
+  ],
+  "keywords": [
+    "modal",
+    "ai",
+    "image generation",
+    "video generation",
+    "inference pipelines",
+    "vibe coding"
   ],
   "main": "./dist/extension.js",
   "contributes": {
