@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
-import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { readAuthKey } from "../src/server-state";
@@ -8,18 +8,43 @@ import {
   WorkspaceSecretStore,
 } from "../src/workspace-secrets";
 
+let currentServerSetting = "server";
+let currentWorkspaceRoot = "";
+
 mock.module("vscode", () => ({
   workspace: {
-    getConfiguration: () => ({ get: () => "server" }),
-    workspaceFolders: [],
+    getConfiguration: () => ({
+      get: () => currentServerSetting,
+      update: (_key: string, value: string) => {
+        currentServerSetting = value;
+        return Promise.resolve();
+      },
+    }),
+    workspaceFolders: [
+      {
+        uri: {
+          get fsPath() {
+            return currentWorkspaceRoot;
+          },
+        },
+      },
+    ],
   },
   window: {
     showErrorMessage: () => {},
     showWarningMessage: () => {},
   },
+  ConfigurationTarget: {
+    Workspace: 1,
+  },
 }));
 
-const { prepareServerStart } = await import("../src/server");
+const {
+  getServerSetting,
+  getServerSource,
+  migrateLegacyServerSetting,
+  prepareServerStart,
+} = await import("../src/server");
 
 class MemorySecretStorage implements SecretStorageLike {
   private readonly values = new Map<string, string>();
@@ -42,6 +67,8 @@ class MemorySecretStorage implements SecretStorageLike {
 const dirs: string[] = [];
 
 afterEach(() => {
+  currentServerSetting = "server";
+  currentWorkspaceRoot = "";
   for (const dir of dirs.splice(0)) {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -79,5 +106,24 @@ describe("prepareServerStart", () => {
     await prepareServerStart(serverPath, store);
 
     expect(readAuthKey(serverPath)).not.toBeNull();
+  });
+});
+
+describe("server setting migration", () => {
+  test("falls back from legacy assets/server to server when the runtime moved", async () => {
+    const workspaceRoot = tempDir("lumen-workspace-");
+    currentWorkspaceRoot = workspaceRoot;
+    currentServerSetting = "assets/server";
+    const serverPath = join(workspaceRoot, "server");
+
+    mkdirSync(serverPath, { recursive: true });
+    writeFileSync(join(serverPath, "serve.py"), "print('ok')\n");
+
+    expect(getServerSetting()).toBe("server");
+    expect(getServerSource()).toBe(serverPath);
+
+    await migrateLegacyServerSetting();
+
+    expect(currentServerSetting).toBe("server");
   });
 });

@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { LumenEditorProvider } from "./provider";
-import { ServerManager, getServerSource } from "./server";
+import { ServerManager, getServerSource, migrateLegacyServerSetting } from "./server";
 import { openWorkspaceHome } from "./workspace-home";
 import { WorkspaceSecretStore } from "./workspace-secrets";
 
@@ -13,6 +13,7 @@ function activeDocumentUri(): vscode.Uri | undefined {
 }
 
 export function activate(context: vscode.ExtensionContext): void {
+  void migrateLegacyServerSetting();
   const output = vscode.window.createOutputChannel("Lumen Engine");
   const workspaceSecrets = new WorkspaceSecretStore(
     context.secrets,

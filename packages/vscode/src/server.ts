@@ -10,18 +10,74 @@ import {
 } from "./server-state";
 import type { WorkspaceSecretStore } from "./workspace-secrets";
 
+const DEFAULT_SERVER_SETTING = "server";
+const LEGACY_SERVER_SETTING = "assets/server";
+
+function resolveServerPath(serverSetting: string): string {
+  const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
+  if (
+    root &&
+    !serverSetting.startsWith("/") &&
+    !serverSetting.startsWith("${workspaceFolder}")
+  ) {
+    return join(root, serverSetting);
+  }
+  return serverSetting.replace(/\$\{workspaceFolder\}/g, root);
+}
+
+function hasServerEntrypoint(serverPath: string): boolean {
+  return existsSync(join(serverPath, "serve.py"));
+}
+
 /** Read lumen.server setting and resolve ${workspaceFolder}. */
 export function getServerSetting(): string {
-  return vscode.workspace
+  const configured = vscode.workspace
     .getConfiguration("lumen")
-    .get<string>("server", "server");
+    .get<string>("server", DEFAULT_SERVER_SETTING);
+  if (configured !== LEGACY_SERVER_SETTING) {
+    return configured;
+  }
+
+  const configuredPath = resolveServerPath(configured);
+  if (hasServerEntrypoint(configuredPath)) {
+    return configured;
+  }
+
+  const migratedPath = resolveServerPath(DEFAULT_SERVER_SETTING);
+  if (hasServerEntrypoint(migratedPath)) {
+    return DEFAULT_SERVER_SETTING;
+  }
+
+  return configured;
 }
 
 /** Read lumen.server setting and resolve ${workspaceFolder}. */
 export function getServerSource(): string {
-  const raw = getServerSetting();
-  const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
-  return raw.replace(/\$\{workspaceFolder\}/g, root);
+  return resolveServerPath(getServerSetting());
+}
+
+export async function migrateLegacyServerSetting(): Promise<void> {
+  const configuration = vscode.workspace.getConfiguration("lumen");
+  const configured = configuration.get<string>("server", DEFAULT_SERVER_SETTING);
+  if (configured !== LEGACY_SERVER_SETTING) {
+    return;
+  }
+
+  const configuredPath = resolveServerPath(configured);
+  if (hasServerEntrypoint(configuredPath)) {
+    return;
+  }
+
+  const migratedPath = resolveServerPath(DEFAULT_SERVER_SETTING);
+  if (!hasServerEntrypoint(migratedPath)) {
+    return;
+  }
+
+  await configuration.update(
+    "server",
+    DEFAULT_SERVER_SETTING,
+    vscode.ConfigurationTarget.Workspace,
+  );
 }
 
 function pidFile(serverPath: string): string {
@@ -54,10 +110,6 @@ function readPid(serverPath: string): number | null {
 const REBUILD_START = /Creating objects|Initializing|Building image/;
 const REBUILD_DONE = /Created web function serve|Serving app/;
 const MODAL_URL_RE = /https:\/\/\S+\.modal\.run/;
-
-function serverEntrypoint(sourcePath: string): string {
-  return join(sourcePath, "serve.py");
-}
 
 export async function prepareServerStart(
   sourcePath: string,
@@ -109,7 +161,7 @@ export class ServerManager {
       vscode.window.showErrorMessage("No lumen.server configured");
       return;
     }
-    if (!existsSync(serverEntrypoint(sourcePath))) {
+    if (!hasServerEntrypoint(sourcePath)) {
       vscode.window.showErrorMessage(
         `Lumen server not found at ${sourcePath}. Initialize the workspace first.`,
       );
