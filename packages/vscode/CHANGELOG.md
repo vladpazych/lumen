@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+
+- Fix the remaining CI install path in release tooling so Marketplace publish can run from GitHub Actions
+
 ## 0.1.1
 
 - Fix the publish workflow so GitHub Actions can install repo tooling from the public registry
