@@ -11,7 +11,7 @@
     "@repo/meta-commands": "workspace:*",
     "@repo/meta-config": "workspace:*",
     "@types/bun": "^1",
-    "@vladpazych/dexter": "file:../dexter/packages/dexter",
+    "@vladpazych/dexter": "^1.2.2",
     "eslint": "^9",
     "typescript": "^5"
   },
