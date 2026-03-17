@@ -16,7 +16,7 @@
     "meta/commands": {
       "name": "@repo/meta-commands",
       "dependencies": {
-        "@vladpazych/dexter": "file:../../../dexter/packages/dexter",
+        "@vladpazych/dexter": "^1.2.2",
         "zod": "^4.0.0",
       },
     },
@@ -39,7 +39,7 @@
     },
     "packages/vscode": {
       "name": "lumen-vscode",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "@vladpazych/lumen": "workspace:*",
       },
@@ -845,8 +845,6 @@
     "@eslint/config-array/minimatch": ["minimatch@3.1.5", "", { "dependencies": { "brace-expansion": "^1.1.7" } }, "sha512-VgjWUsnnT6n+NUk6eZq77zeFdpW2LWDzP6zFGrCbHXiYNul5Dzqk2HHQ5uFH2DNW5Xbp8+jVzaeNt94ssEEl4w=="],
 
     "@eslint/eslintrc/minimatch": ["minimatch@3.1.5", "", { "dependencies": { "brace-expansion": "^1.1.7" } }, "sha512-VgjWUsnnT6n+NUk6eZq77zeFdpW2LWDzP6zFGrCbHXiYNul5Dzqk2HHQ5uFH2DNW5Xbp8+jVzaeNt94ssEEl4w=="],
-
-    "@repo/meta-commands/@vladpazych/dexter": ["@vladpazych/dexter@file:../dexter/packages/dexter", { "dependencies": { "zod": "^4.0.0" }, "devDependencies": { "@types/bun": "^1" }, "bin": { "dexter": "./bin/dexter" } }],
 
     "@tailwindcss/oxide-wasm32-wasi/@emnapi/core": ["@emnapi/core@1.8.1", "", { "dependencies": { "@emnapi/wasi-threads": "1.1.0", "tslib": "^2.4.0" }, "bundled": true }, "sha512-AvT9QFpxK0Zd8J0jopedNm+w/2fIzvtPKPjqyw9jwvBaReTTqPBk9Hixaz7KbjimP+QNz605/XnjFcDAL2pqBg=="],
 

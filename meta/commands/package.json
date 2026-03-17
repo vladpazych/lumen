@@ -8,7 +8,7 @@
     "./release": "./src/release.ts"
   },
   "dependencies": {
-    "@vladpazych/dexter": "file:../../../dexter/packages/dexter",
+    "@vladpazych/dexter": "^1.2.2",
     "zod": "^4.0.0"
   }
 }
