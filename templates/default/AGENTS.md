@@ -1,18 +1,19 @@
-## General
+`templates/default/` is the assembled example workspace generated from the packaged scaffold. Optimize for a runnable standalone project that matches what the extension creates for end users.
 
-- This directory is an assembled example project generated from the extension-packaged scaffold assets.
-- Keep the project runnable without any repo-local Python packages.
+## Rules
+
+- Keep this workspace runnable without any repo-local Python packages.
 - Treat the VS Code extension as the owner of server lifecycle, auth token generation, and schema discovery.
+- Use `uv` for Python workflows under `server/`.
+- Keep generated artifacts such as `server/lumen.log` and `server/lumen.schema.json` out of source edits.
 
 ## Structure
 
-- `server/` is the self-contained Modal server.
-- `server/pipelines/` contains installed example pipeline packs.
-- `*.lumen` files point at the live URL detected by the extension.
-- `.agents/skills/` contains optional AI guidance packs the extension can install into real workspaces.
+- `server/` owns the self-contained Modal server used by the example workspace.
+- `server/pipelines/` contains the installed example pipeline set.
+- `*.lumen` files point at the live server URL discovered by the extension.
+- `.agents/skills/` contains optional guidance packs the extension can install into generated workspaces.
 
-## Constraints
+## Gotchas
 
-- Use `uv` for Python workflows in `server/`.
-- Keep `server/lumen.log` and `server/lumen.schema.json` as generated artifacts, not source files.
-- Do not add dependencies on repo-local Python modules.
+- Changes here should usually mirror equivalent changes in `packages/vscode/assets/server/base/` unless the example workspace intentionally diverges from the scaffold source.
