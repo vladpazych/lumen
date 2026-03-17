@@ -8,7 +8,8 @@ import type {
 import type { DevServerState } from "../webview/lib/messaging";
 import type { FileLogger } from "./adapters/vscode-logger";
 import { httpProvider } from "./adapters/http-provider";
-import { readAuthKey, readLastUrl } from "./server-state";
+import { readLastUrl } from "./server-state";
+import type { WorkspaceSecretStore } from "./workspace-secrets";
 
 export type ConnectionEvents = {
   schemasChanged(serverUrl: string, pipelines: PipelineConfig[]): void;
@@ -37,6 +38,7 @@ export class ServerConnection {
     private readonly log: { info(msg: string): void },
     private readonly fileLog: FileLogger,
     private readonly getServerSource: () => string,
+    private readonly workspaceSecrets: WorkspaceSecretStore,
   ) {
     const serverSource = this.getServerSource();
     if (serverSource) {
@@ -58,7 +60,7 @@ export class ServerConnection {
     this.log.info(`[modal] detected URL: ${url}`);
   }
 
-  onDevServerStateChange(state: DevServerState): void {
+  async onDevServerStateChange(state: DevServerState): Promise<void> {
     const url = this.detectedUrl;
     if (state === "stopped" && url && this.statuses[url] === "connected") {
       this.devServerState = "orphaned";
@@ -69,19 +71,22 @@ export class ServerConnection {
     }
     if (state === "running") {
       this.unsubscribeAll();
-      this.rebuildProviders();
+      await this.rebuildProviders();
       this.subscribeAll();
     }
   }
 
   // --- Provider lifecycle ---
 
-  rebuildProviders(): void {
+  async rebuildProviders(): Promise<void> {
     for (const key of Object.keys(this.providers)) {
       delete this.providers[key];
     }
     if (this.detectedUrl) {
-      const authKey = readAuthKey(this.getServerSource()) ?? undefined;
+      const authKey =
+        (await this.workspaceSecrets.peekLumenAuthToken(
+          this.getServerSource(),
+        )) ?? undefined;
       this.providers[this.detectedUrl] = httpProvider(
         this.detectedUrl,
         authKey,

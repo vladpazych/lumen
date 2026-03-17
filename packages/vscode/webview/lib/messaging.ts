@@ -38,8 +38,15 @@ export type WorkspaceHomeInfo = {
   configFiles: WorkspaceConfigFile[];
 };
 
+export type WorkspaceAuthInfo = {
+  modalCredentialsSaved: boolean;
+  lumenAuthTokenSaved: boolean;
+  modalSecretName: string;
+};
+
 export type ManagedServerManifest = {
   templateVersion: number;
+  skillPackVersion: number;
   authSecretName: string;
   installedPipelinePacks: string[];
   installedSkillPacks: string[];
@@ -52,7 +59,6 @@ export type ServerSetupInfo = {
   serverSetting: string;
   installed: boolean;
   managed: boolean;
-  authToken: string | null;
   authSecretName: string;
   manifest: ManagedServerManifest | null;
   pipelinePacks: PackInfo[];
@@ -72,6 +78,7 @@ export type InitMessage = {
   devServerUrl: string | null;
   serverSetup: ServerSetupInfo;
   workspaceHome: WorkspaceHomeInfo;
+  workspaceAuth: WorkspaceAuthInfo;
 };
 
 export type ConfigsUpdatedMessage = {
@@ -148,6 +155,11 @@ export type WorkspaceHomeMessage = {
   home: WorkspaceHomeInfo;
 };
 
+export type WorkspaceAuthMessage = {
+  type: "workspaceAuth";
+  auth: WorkspaceAuthInfo;
+};
+
 export type ExtensionMessage =
   | InitMessage
   | ConfigsUpdatedMessage
@@ -160,7 +172,8 @@ export type ExtensionMessage =
   | ImagePickedMessage
   | ImageThumbsMessage
   | ServerSetupMessage
-  | WorkspaceHomeMessage;
+  | WorkspaceHomeMessage
+  | WorkspaceAuthMessage;
 
 // --- Webview → Extension ---
 
@@ -263,8 +276,14 @@ export type ReinstallSkillsMessage = {
   type: "reinstallSkills";
 };
 
+export type SaveModalCredentialsMessage = {
+  type: "saveModalCredentials";
+  tokenId: string;
+  tokenSecret: string;
+};
+
 export type CopyAuthTokenMessage = { type: "copyAuthToken" };
-export type CreateModalSecretMessage = { type: "createModalSecret" };
+export type SyncLumenAuthToModalMessage = { type: "syncLumenAuthToModal" };
 export type RevealServerMessage = { type: "revealServer" };
 export type RevealAssetsMessage = { type: "revealAssets" };
 
@@ -289,7 +308,8 @@ export type WebviewMessage =
   | CreatePipelineMessage
   | UpdateRuntimeMessage
   | ReinstallSkillsMessage
+  | SaveModalCredentialsMessage
   | CopyAuthTokenMessage
-  | CreateModalSecretMessage
+  | SyncLumenAuthToModalMessage
   | RevealServerMessage
   | RevealAssetsMessage;

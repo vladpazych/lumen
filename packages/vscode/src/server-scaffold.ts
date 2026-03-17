@@ -11,7 +11,8 @@ import {
 } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import * as vscode from "vscode";
-import { ensureAuthKey, readAuthKey } from "./server-state";
+import { writeAuthKey } from "./server-state";
+import type { WorkspaceSecretStore } from "./workspace-secrets";
 
 const SERVER_TEMPLATE_VERSION = 1;
 const SKILL_PACK_VERSION = 1;
@@ -54,7 +55,6 @@ export type ServerSetupInfo = {
   serverSetting: string;
   installed: boolean;
   managed: boolean;
-  authToken: string | null;
   authSecretName: string;
   manifest: ManagedServerManifest | null;
   pipelinePacks: PackDefinition[];
@@ -64,6 +64,7 @@ export type ServerSetupInfo = {
 
 export type InstallServerOptions = {
   context: vscode.ExtensionContext;
+  workspaceSecrets: WorkspaceSecretStore;
   serverSetting: string;
   pipelinePackIds: string[];
   skillPackIds: string[];
@@ -271,7 +272,6 @@ export function describeServerSetup(
     serverSetting,
     installed,
     managed: manifest !== null,
-    authToken: installed ? readAuthKey(serverPath) : null,
     authSecretName: manifest?.authSecretName ?? AUTH_SECRET_NAME,
     manifest,
     pipelinePacks,
@@ -281,7 +281,14 @@ export function describeServerSetup(
 }
 
 export async function installServerTemplate(options: InstallServerOptions): Promise<ServerSetupInfo> {
-  const { context, serverSetting, pipelinePackIds, skillPackIds, initGit } = options;
+  const {
+    context,
+    workspaceSecrets,
+    serverSetting,
+    pipelinePackIds,
+    skillPackIds,
+    initGit,
+  } = options;
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
   const resolvedSetting =
     workspaceRoot && !serverSetting.startsWith("/") && !serverSetting.startsWith("${workspaceFolder}")
@@ -316,7 +323,8 @@ export async function installServerTemplate(options: InstallServerOptions): Prom
     installSkillPackIntoWorkspace(pack, skillTarget);
   }
 
-  ensureAuthKey(targetPath);
+  const authToken = await workspaceSecrets.getLumenAuthToken(targetPath);
+  writeAuthKey(targetPath, authToken);
   if (isNewInstall) {
     writeSchemaSnapshot(targetPath, []);
   }
@@ -356,19 +364,23 @@ export async function revealServerFolder(serverPath: string): Promise<void> {
   await vscode.commands.executeCommand("revealFileInOS", vscode.Uri.file(serverPath));
 }
 
-export function copyAuthToken(serverPath: string): string {
-  const token = readAuthKey(serverPath);
-  if (!token) {
-    throw new Error("Auth token not found");
-  }
-  return token;
+export async function copyAuthToken(
+  workspaceSecrets: WorkspaceSecretStore,
+  serverPath: string,
+): Promise<string> {
+  return workspaceSecrets.getLumenAuthToken(serverPath);
 }
 
-export function createOrUpdateModalSecret(serverPath: string, secretName: string): void {
-  const token = readAuthKey(serverPath);
-  if (!token) {
-    throw new Error("Auth token not found");
-  }
+export async function createOrUpdateModalSecret(
+  workspaceSecrets: WorkspaceSecretStore,
+  serverPath: string,
+  secretName: string,
+): Promise<void> {
+  const token = await workspaceSecrets.getLumenAuthToken(serverPath);
+  const env = {
+    ...process.env,
+    ...(await workspaceSecrets.getModalProcessEnv()),
+  };
 
   const result = spawnSync(
     "modal",
@@ -376,6 +388,7 @@ export function createOrUpdateModalSecret(serverPath: string, secretName: string
     {
       cwd: serverPath,
       encoding: "utf-8",
+      env,
     },
   );
 

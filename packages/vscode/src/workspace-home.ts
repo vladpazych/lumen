@@ -17,6 +17,7 @@ import {
   updateManagedServerTemplate,
   type ServerSetupInfo,
 } from "./server-scaffold";
+import type { WorkspaceSecretStore } from "./workspace-secrets";
 
 export const LUMEN_WORKSPACE_FILE = "lumen.config.json";
 export const LUMEN_ASSETS_DIR = "assets";
@@ -212,6 +213,7 @@ function ensureRunnerConfig(filePath: string): void {
 
 export async function initializeWorkspace(
   context: vscode.ExtensionContext,
+  workspaceSecrets: WorkspaceSecretStore,
 ): Promise<{
   home: WorkspaceHomeInfo;
   setup: ServerSetupInfo;
@@ -223,6 +225,7 @@ export async function initializeWorkspace(
 
   const setup = await installServerTemplate({
     context,
+    workspaceSecrets,
     serverSetting: DEFAULT_LUMEN_SERVER_SETTING,
     pipelinePackIds: [],
     skillPackIds: [...DEFAULT_LUMEN_SKILL_PACK_IDS],

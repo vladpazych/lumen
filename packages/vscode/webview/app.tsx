@@ -37,6 +37,7 @@ export function App() {
     devServerUrl,
     documentKind,
     serverSetup,
+    workspaceAuth,
     workspaceHome,
     installingServer,
     generating,
@@ -55,7 +56,8 @@ export function App() {
     restartDevServer,
     installServer,
     copyServerAuthToken,
-    createModalSecret,
+    saveModalCredentials,
+    syncLumenAuthToModal,
     revealServer,
     initializeWorkspace,
     createRunnerConfig,
@@ -127,6 +129,7 @@ export function App() {
         <div className="p-3 flex flex-col gap-3">
           <WorkspaceHome
             setup={serverSetup}
+            auth={workspaceAuth}
             home={workspaceHome}
             status={status}
             devServerState={devServerState}
@@ -144,7 +147,8 @@ export function App() {
             onUpdateRuntime={updateRuntime}
             onReinstallSkills={reinstallSkills}
             onCopyAuthToken={copyServerAuthToken}
-            onCreateModalSecret={createModalSecret}
+            onSaveModalCredentials={saveModalCredentials}
+            onSyncLumenAuthToModal={syncLumenAuthToModal}
             onRevealAssets={revealAssets}
           />
 
@@ -168,8 +172,6 @@ export function App() {
           setup={serverSetup}
           installing={installingServer}
           onInstall={installServer}
-          onCopyAuthToken={copyServerAuthToken}
-          onCreateModalSecret={createModalSecret}
           onRevealServer={revealServer}
         />
 

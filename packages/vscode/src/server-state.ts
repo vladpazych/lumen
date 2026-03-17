@@ -21,7 +21,7 @@ export function ensureAuthKey(serverPath: string): string {
     return readFileSync(file, "utf-8").trim();
   }
   const key = randomBytes(32).toString("hex");
-  writeFileSync(file, key + "\n");
+  writeAuthKey(serverPath, key);
   return key;
 }
 
@@ -30,6 +30,10 @@ export function readAuthKey(serverPath: string): string | null {
   if (!existsSync(file)) return null;
   const key = readFileSync(file, "utf-8").trim();
   return key || null;
+}
+
+export function writeAuthKey(serverPath: string, key: string): void {
+  writeFileSync(authKeyFile(serverPath), `${key}\n`);
 }
 
 export function readLastUrl(serverPath: string): string | null {

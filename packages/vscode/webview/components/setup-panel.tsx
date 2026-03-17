@@ -14,8 +14,6 @@ type Props = {
     skillPackIds: string[],
     initGit: boolean,
   ) => void;
-  onCopyAuthToken: () => void;
-  onCreateModalSecret: () => void;
   onRevealServer: () => void;
 };
 
@@ -73,8 +71,6 @@ export function SetupPanel({
   setup,
   installing,
   onInstall,
-  onCopyAuthToken,
-  onCreateModalSecret,
   onRevealServer,
 }: Props) {
   const [serverSetting, setServerSetting] = useState(setup.serverSetting || "server");
@@ -217,26 +213,15 @@ export function SetupPanel({
         <Button variant="outline" size="sm" onClick={onRevealServer}>
           Reveal Folder
         </Button>
-        <Button variant="outline" size="sm" onClick={onCopyAuthToken}>
-          Copy Auth Token
-        </Button>
-        {setup.canCreateModalSecret && (
-          <Button variant="outline" size="sm" onClick={onCreateModalSecret}>
-            Create Modal Secret
-          </Button>
-        )}
       </div>
 
       <div className="rounded-md bg-surface-2 px-2.5 py-2 text-[11px] text-text-tertiary">
         Secret name: <span className="text-text-primary">{setup.authSecretName}</span>
       </div>
 
-      {setup.authToken && (
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="auth-token">Auth token</Label>
-          <Input id="auth-token" value={setup.authToken} readOnly />
-        </div>
-      )}
+      <p className="text-[11px] text-text-tertiary">
+        Manage Modal credentials and Lumen auth from <code>lumen.config.json</code>.
+      </p>
 
       {(availablePipelinePacks.length > 0 || availableSkillPacks.length > 0) && (
         <>

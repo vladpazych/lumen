@@ -33,6 +33,7 @@ import {
   updateWorkspaceRuntime,
   reinstallWorkspaceSkills,
 } from "./workspace-home";
+import type { WorkspaceSecretStore } from "./workspace-secrets";
 
 export type HandlerContext = {
   document: vscode.TextDocument;
@@ -42,6 +43,7 @@ export type HandlerContext = {
   connection: ServerConnection;
   service: EditorService;
   context: vscode.ExtensionContext;
+  workspaceSecrets: WorkspaceSecretStore;
   post(message: ExtensionMessage): void;
   onDevServerCommand: ((cmd: "start" | "stop" | "restart") => void) | null;
   getDevLogBuffer(): string[];
@@ -86,8 +88,10 @@ export async function handleMessage(
       return handleInstallServer(ctx, msg);
     case "copyAuthToken":
       return handleCopyAuthToken(ctx);
-    case "createModalSecret":
-      return handleCreateModalSecret(ctx);
+    case "saveModalCredentials":
+      return handleSaveModalCredentials(ctx, msg);
+    case "syncLumenAuthToModal":
+      return handleSyncLumenAuthToModal(ctx);
     case "revealServer":
       return handleRevealServer(ctx);
     case "initializeWorkspace":
@@ -111,6 +115,10 @@ async function handleReady(ctx: HandlerContext): Promise<void> {
   const { document, panel, bridge, connection } = ctx;
   const workspaceHome = describeWorkspaceHome();
   const managedServer = describeManagedWorkspaceServer(ctx.context);
+  const managedAuth = await ctx.workspaceSecrets.describeAuth(
+    managedServer.authSecretName,
+    managedServer.serverPath,
+  );
 
   if (ctx.documentKind === "workspace") {
     ctx.post({
@@ -123,6 +131,7 @@ async function handleReady(ctx: HandlerContext): Promise<void> {
       devServerUrl: connection.serverUrl,
       serverSetup: managedServer,
       workspaceHome,
+      workspaceAuth: managedAuth,
     });
 
     const bufferedLog = ctx.getDevLogBuffer();
@@ -139,6 +148,11 @@ async function handleReady(ctx: HandlerContext): Promise<void> {
 
   const url = connection.serverUrl;
   if (url && !connection.schemas[url]) connection.schemas[url] = [];
+  const currentSetup = describeServerSetup(
+    ctx.context,
+    getServerSource(),
+    getServerSetting(),
+  );
 
   ctx.post({
     type: "init",
@@ -148,12 +162,12 @@ async function handleReady(ctx: HandlerContext): Promise<void> {
     serverStatuses: connection.statuses,
     devServerState: connection.devServerState,
     devServerUrl: url,
-    serverSetup: describeServerSetup(
-      ctx.context,
-      getServerSource(),
-      getServerSetting(),
-    ),
+    serverSetup: currentSetup,
     workspaceHome,
+    workspaceAuth: await ctx.workspaceSecrets.describeAuth(
+      currentSetup.authSecretName,
+      currentSetup.serverPath,
+    ),
   });
 
   const bufferedLog = ctx.getDevLogBuffer();
@@ -284,7 +298,9 @@ async function handleGenerate(
 
 async function handleRefreshSchemas(ctx: HandlerContext): Promise<void> {
   const url = ctx.connection.serverUrl;
-  if (url) ctx.connection.refreshSchemas(url);
+  if (url) {
+    await ctx.connection.refreshSchemas(url);
+  }
 }
 
 async function handleSelectConfig(
@@ -404,16 +420,18 @@ async function handleInstallServer(
   try {
     const setup = await installServerTemplate({
       context: ctx.context,
+      workspaceSecrets: ctx.workspaceSecrets,
       serverSetting: msg.serverSetting,
       pipelinePackIds: msg.pipelinePackIds,
       skillPackIds: msg.skillPackIds,
       initGit: msg.initGit,
     });
     ctx.connection.unsubscribeAll();
-    ctx.connection.rebuildProviders();
+    await ctx.connection.rebuildProviders();
     ctx.connection.subscribeAll();
     ctx.post({ type: "serverSetup", setup });
     postWorkspaceHome(ctx);
+    await postWorkspaceAuth(ctx, setup.serverPath, setup.authSecretName);
     vscode.window.showInformationMessage("Lumen server installed");
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -421,9 +439,9 @@ async function handleInstallServer(
   }
 }
 
-async function handleCopyAuthToken(_: HandlerContext): Promise<void> {
+async function handleCopyAuthToken(ctx: HandlerContext): Promise<void> {
   try {
-    const token = copyAuthToken(getServerSource());
+    const token = await copyAuthToken(ctx.workspaceSecrets, getServerSource());
     await vscode.env.clipboard.writeText(token);
     vscode.window.showInformationMessage("Copied Lumen auth token");
   } catch (err) {
@@ -432,20 +450,45 @@ async function handleCopyAuthToken(_: HandlerContext): Promise<void> {
   }
 }
 
-async function handleCreateModalSecret(ctx: HandlerContext): Promise<void> {
+async function handleSaveModalCredentials(
+  ctx: HandlerContext,
+  msg: Extract<WebviewMessage, { type: "saveModalCredentials" }>,
+): Promise<void> {
+  try {
+    const tokenId = msg.tokenId.trim();
+    const tokenSecret = msg.tokenSecret.trim();
+    if (!tokenId || !tokenSecret) {
+      throw new Error("Enter both Modal token ID and token secret");
+    }
+
+    await ctx.workspaceSecrets.saveModalCredentials(tokenId, tokenSecret);
+    await postWorkspaceAuth(ctx);
+    vscode.window.showInformationMessage("Saved Modal credentials for this workspace");
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    vscode.window.showErrorMessage(`Failed to save Modal credentials: ${message}`);
+  }
+}
+
+async function handleSyncLumenAuthToModal(ctx: HandlerContext): Promise<void> {
   try {
     const setup = describeServerSetup(
       ctx.context,
       getServerSource(),
       getServerSetting(),
     );
-    createOrUpdateModalSecret(setup.serverPath, setup.authSecretName);
+    await createOrUpdateModalSecret(
+      ctx.workspaceSecrets,
+      setup.serverPath,
+      setup.authSecretName,
+    );
+    await postWorkspaceAuth(ctx, setup.serverPath, setup.authSecretName);
     vscode.window.showInformationMessage(
-      `Updated Modal secret ${setup.authSecretName}`,
+      `Synced Lumen auth to Modal secret ${setup.authSecretName}`,
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    vscode.window.showErrorMessage(`Failed to create Modal secret: ${message}`);
+    vscode.window.showErrorMessage(`Failed to sync Lumen auth to Modal: ${message}`);
   }
 }
 
@@ -465,14 +508,41 @@ function postWorkspaceHome(ctx: HandlerContext): void {
   });
 }
 
+async function postWorkspaceAuth(
+  ctx: HandlerContext,
+  serverPath?: string,
+  modalSecretName?: string,
+): Promise<void> {
+  const currentSetup =
+    ctx.documentKind === "workspace" && !serverPath
+      ? describeManagedWorkspaceServer(ctx.context)
+      : describeServerSetup(
+          ctx.context,
+          serverPath ?? getServerSource(),
+          getServerSetting(),
+        );
+  ctx.post({
+    type: "workspaceAuth",
+    auth: await ctx.workspaceSecrets.describeAuth(
+      modalSecretName ?? currentSetup.authSecretName,
+      currentSetup.serverPath,
+    ),
+  });
+}
+
 async function handleInitializeWorkspace(ctx: HandlerContext): Promise<void> {
   try {
-    const result = await initializeWorkspace(ctx.context);
+    const result = await initializeWorkspace(ctx.context, ctx.workspaceSecrets);
     ctx.connection.unsubscribeAll();
-    ctx.connection.rebuildProviders();
+    await ctx.connection.rebuildProviders();
     ctx.connection.subscribeAll();
     ctx.post({ type: "serverSetup", setup: result.setup });
     ctx.post({ type: "workspaceHome", home: result.home });
+    await postWorkspaceAuth(
+      ctx,
+      result.setup.serverPath,
+      result.setup.authSecretName,
+    );
     vscode.window.showInformationMessage("Lumen workspace initialized");
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -520,6 +590,7 @@ async function handleUpdateRuntime(ctx: HandlerContext): Promise<void> {
   try {
     const setup = await updateWorkspaceRuntime(ctx.context);
     ctx.post({ type: "serverSetup", setup });
+    await postWorkspaceAuth(ctx, setup.serverPath, setup.authSecretName);
     vscode.window.showInformationMessage("Lumen runtime updated");
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -532,6 +603,7 @@ async function handleReinstallSkills(ctx: HandlerContext): Promise<void> {
     const setup = await reinstallWorkspaceSkills(ctx.context);
     ctx.post({ type: "serverSetup", setup });
     postWorkspaceHome(ctx);
+    await postWorkspaceAuth(ctx, setup.serverPath, setup.authSecretName);
     vscode.window.showInformationMessage("Lumen skills reinstalled");
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

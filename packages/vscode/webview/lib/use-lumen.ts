@@ -11,6 +11,7 @@ import type {
   DevServerState,
   ExtensionMessage,
   ServerSetupInfo,
+  WorkspaceAuthInfo,
   WorkspaceHomeInfo,
 } from "./messaging";
 import { vscode } from "./vscode";
@@ -36,6 +37,7 @@ type State = {
   imageThumbs: Record<string, string>;
   devServerLog: string[];
   serverSetup: ServerSetupInfo;
+  workspaceAuth: WorkspaceAuthInfo;
   workspaceHome: WorkspaceHomeInfo;
   installingServer: boolean;
   isPickingImage: boolean;
@@ -52,9 +54,11 @@ type Action =
       devServerState: DevServerState;
       devServerUrl: string | null;
       serverSetup: ServerSetupInfo;
+      workspaceAuth: WorkspaceAuthInfo;
       workspaceHome: WorkspaceHomeInfo;
     }
   | { type: "serverSetup"; setup: ServerSetupInfo }
+  | { type: "workspaceAuth"; auth: WorkspaceAuthInfo }
   | { type: "workspaceHome"; home: WorkspaceHomeInfo }
   | { type: "configsUpdated"; configs: LumenConfig[] }
   | { type: "schemaRefresh"; serverUrl: string; pipelines: PipelineConfig[] }
@@ -96,6 +100,7 @@ function reducer(state: State, action: Action): State {
         devServerState: action.devServerState,
         devServerUrl: action.devServerUrl,
         serverSetup: action.serverSetup,
+        workspaceAuth: action.workspaceAuth,
         workspaceHome: action.workspaceHome,
         installingServer: false,
         ready: true,
@@ -105,6 +110,11 @@ function reducer(state: State, action: Action): State {
         ...state,
         serverSetup: action.setup,
         installingServer: false,
+      };
+    case "workspaceAuth":
+      return {
+        ...state,
+        workspaceAuth: action.auth,
       };
     case "workspaceHome":
       return {
@@ -235,12 +245,16 @@ const initialState: State = {
     serverSetting: "server",
     installed: false,
     managed: false,
-    authToken: null,
     authSecretName: "lumen-auth",
     manifest: null,
     pipelinePacks: [],
     skillPacks: [],
     canCreateModalSecret: false,
+  },
+  workspaceAuth: {
+    modalCredentialsSaved: false,
+    lumenAuthTokenSaved: false,
+    modalSecretName: "lumen-auth",
   },
   workspaceHome: {
     workspaceRoot: "",
@@ -276,11 +290,15 @@ export function useLumen() {
             devServerState: msg.devServerState,
             devServerUrl: msg.devServerUrl,
             serverSetup: msg.serverSetup,
+            workspaceAuth: msg.workspaceAuth,
             workspaceHome: msg.workspaceHome,
           });
           break;
         case "serverSetup":
           dispatch({ type: "serverSetup", setup: msg.setup });
+          break;
+        case "workspaceAuth":
+          dispatch({ type: "workspaceAuth", auth: msg.auth });
           break;
         case "workspaceHome":
           dispatch({ type: "workspaceHome", home: msg.home });
@@ -485,8 +503,15 @@ export function useLumen() {
     vscode.postMessage({ type: "copyAuthToken" });
   }, []);
 
-  const createModalSecret = useCallback(() => {
-    vscode.postMessage({ type: "createModalSecret" });
+  const saveModalCredentials = useCallback(
+    (tokenId: string, tokenSecret: string) => {
+      vscode.postMessage({ type: "saveModalCredentials", tokenId, tokenSecret });
+    },
+    [],
+  );
+
+  const syncLumenAuthToModal = useCallback(() => {
+    vscode.postMessage({ type: "syncLumenAuthToModal" });
   }, []);
 
   const revealServer = useCallback(() => {
@@ -602,7 +627,8 @@ export function useLumen() {
     restartDevServer,
     installServer,
     copyServerAuthToken,
-    createModalSecret,
+    saveModalCredentials,
+    syncLumenAuthToModal,
     revealServer,
     initializeWorkspace,
     createRunnerConfig,

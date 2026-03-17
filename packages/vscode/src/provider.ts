@@ -19,6 +19,7 @@ import { handleMessage, type HandlerContext } from "./handlers";
 import { describeServerSetup, writeSchemaSnapshot } from "./server-scaffold";
 import { getServerSetting, getServerSource } from "./server";
 import { describeWorkspaceHome, getAssetsRootPath, isWorkspaceHomeDocument } from "./workspace-home";
+import type { WorkspaceSecretStore } from "./workspace-secrets";
 
 const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\].*?\x07|\[[\d;]*[A-Za-z]/g;
 function stripAnsi(text: string): string {
@@ -57,7 +58,10 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     );
   }
 
-  constructor(private readonly context: vscode.ExtensionContext) {
+  constructor(
+    private readonly context: vscode.ExtensionContext,
+    private readonly workspaceSecrets: WorkspaceSecretStore,
+  ) {
     this.log = vscode.window.createOutputChannel("Lumen");
     const logger = vscodeLogger(this.log);
 
@@ -104,6 +108,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
       logger,
       this.fileLog,
       getServerSource,
+      this.workspaceSecrets,
     );
 
     this.service = editorService({
@@ -127,8 +132,20 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     });
   }
 
+  broadcastWorkspaceAuth(): void {
+    const setup = this.currentServerSetup();
+    void this.workspaceSecrets
+      .describeAuth(setup.authSecretName, setup.serverPath)
+      .then((auth) => {
+        this.broadcastToAll({
+          type: "workspaceAuth",
+          auth,
+        });
+      });
+  }
+
   onDevServerStateChange(state: DevServerState): void {
-    this.connection.onDevServerStateChange(state);
+    void this.connection.onDevServerStateChange(state);
   }
 
   onServerUrlDetected(source: string, url: string): void {
@@ -189,7 +206,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
       ? "workspace"
       : "config";
     this.panels.add(webviewPanel);
-    this.connection.rebuildProviders();
+    await this.connection.rebuildProviders();
 
     const resourceRoots = [
       vscode.Uri.file(join(this.context.extensionPath, "dist", "webview")),
@@ -223,6 +240,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
       connection: this.connection,
       service: this.service,
       context: this.context,
+      workspaceSecrets: this.workspaceSecrets,
       post: (msg) => webviewPanel.webview.postMessage(msg),
       onDevServerCommand: this.onDevServerCommand,
       getDevLogBuffer: () => this.devLogBuffer,
@@ -231,7 +249,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
 
     webviewPanel.webview.onDidReceiveMessage((msg: WebviewMessage) => {
       handlerCtx.onDevServerCommand = this.onDevServerCommand;
-      handleMessage(handlerCtx, msg);
+      void handleMessage(handlerCtx, msg);
     });
 
     const changeListener = vscode.workspace.onDidChangeTextDocument((event) => {
@@ -241,12 +259,13 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     });
 
     const configListener = vscode.workspace.onDidChangeConfiguration(
-      (event) => {
+      async (event) => {
         if (event.affectsConfiguration("lumen.server")) {
           this.connection.unsubscribeAll();
-          this.connection.rebuildProviders();
+          await this.connection.rebuildProviders();
           this.connection.subscribeAll();
           this.broadcastServerSetup();
+          this.broadcastWorkspaceAuth();
         }
       },
     );

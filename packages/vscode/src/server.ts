@@ -5,9 +5,9 @@ import * as vscode from "vscode";
 import type { DevServerState } from "../webview/lib/messaging";
 import {
   clearLastUrl,
-  ensureAuthKey,
   writeLastUrl,
 } from "./server-state";
+import type { WorkspaceSecretStore } from "./workspace-secrets";
 
 /** Read lumen.server setting and resolve ${workspaceFolder}. */
 export function getServerSetting(): string {
@@ -54,6 +54,17 @@ const REBUILD_START = /Creating objects|Initializing|Building image/;
 const REBUILD_DONE = /Created web function serve|Serving app/;
 const MODAL_URL_RE = /https:\/\/\S+\.modal\.run/;
 
+export async function prepareServerStart(
+  sourcePath: string,
+  workspaceSecrets: WorkspaceSecretStore,
+): Promise<NodeJS.ProcessEnv> {
+  await workspaceSecrets.syncLumenAuthKeyFile(sourcePath);
+  return {
+    ...process.env,
+    ...(await workspaceSecrets.getModalProcessEnv()),
+  };
+}
+
 export class ServerManager {
   private readonly output: vscode.OutputChannel;
   private readonly onChange: () => void;
@@ -64,6 +75,7 @@ export class ServerManager {
 
   constructor(
     output: vscode.OutputChannel,
+    private readonly workspaceSecrets: WorkspaceSecretStore,
     onChange: () => void,
     onLog: (text: string) => void,
     onLogClear: () => void,
@@ -90,7 +102,7 @@ export class ServerManager {
     this.onChange();
   }
 
-  start(sourcePath: string): void {
+  async start(sourcePath: string): Promise<void> {
     if (!sourcePath) {
       vscode.window.showErrorMessage("No lumen.server configured");
       return;
@@ -100,7 +112,15 @@ export class ServerManager {
       return;
     }
 
-    ensureAuthKey(sourcePath);
+    let env: NodeJS.ProcessEnv;
+    try {
+      env = await prepareServerStart(sourcePath, this.workspaceSecrets);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      vscode.window.showErrorMessage(message);
+      return;
+    }
+
     clearLastUrl(sourcePath);
     this.onLogClear();
     this.output.appendLine(
@@ -121,6 +141,7 @@ export class ServerManager {
         cwd: sourcePath,
         stdio: ["ignore", "pipe", "pipe"],
         detached: true,
+        env,
       },
     );
 
@@ -238,6 +259,6 @@ export class ServerManager {
       this.output.appendLine("[dev] Old process stopped");
     }
     this.setState("stopped");
-    this.start(sourcePath);
+    await this.start(sourcePath);
   }
 }
