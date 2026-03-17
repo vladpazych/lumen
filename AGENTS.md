@@ -1,36 +1,30 @@
-# AGENTS.md
-
-Schema-driven image/video generation editor. Provider-agnostic `.lumen` file format, VS Code custom editor, ML inference pipelines.
+Lumen is a schema-driven editor stack: framework-free `.lumen` core, VS Code editor, and scaffolded inference server assets. Optimize for clear package boundaries and reproducible repo tooling.
 
 ## Rules
 
-- Bun runtime for JS/TS. Never npm, pnpm, yarn, or node.
-- Python via uv for ML pipelines.
-- All repo tooling via `dexter <command>`
-- Commit atomically after each logical change. Follow commit nudges.
-- In commit message state the problem, not the solution
-- Max 72 chars. No type prefixes
-- `unknown` with type guards, not `any`. Explicit null handling, not `!`.
-- Comment non-obvious intent only.
-
-### Commits
-
-- Commit atomically after each logical change. Follow commit nudges.
-- In message state the problem, not the solution — `"Purpose line misrepresented repo"`, not `"Update purpose line"`
-- For trivial changes – short imperative "what" — `"Fix typo in README"`
-- Max 72 chars. No type prefixes
-- Quality gates (format, lint, typecheck) run automatically
-- `git revert` for undo. Never reset, amend, or force-push
+- Use Bun for JS and TS work. Do not use npm, pnpm, yarn, or raw `node`.
+- Use `uv` for Python work in server subtrees. Do not use `pip` directly.
+- Run repo-level tooling through `dexter` when the repo provides a matching command.
+- Commit each logical change atomically and follow commit nudges.
+- Commit messages state the problem, stay within 72 characters, and use no type prefix.
+- Use `git revert` for undo. Do not reset, amend, or force-push.
+- Prefer `unknown` with type guards over `any`.
+- Handle nullable values explicitly. Do not rely on non-null assertions.
+- Comment only non-obvious intent.
+- Keep durable working constraints in `AGENTS.md`, workflows in skills, and human explanation in `README.md`.
 
 ## Structure
 
-| Dir                 | Purpose                                         |
-| :------------------ | :---------------------------------------------- |
-| packages/lumen/     | Hexagonal core: types, ports, domain, services  |
-| packages/vscode/    | VS Code custom editor extension                 |
-| templates/default/  | Example project with self-contained Modal server |
-| meta/               | Repo tooling packages (`config/`, `commands/`) |
+- `packages/lumen/` owns the framework-free core: types, port contracts, domain logic, and service factories.
+- `packages/vscode/` owns the VS Code extension, adapters, webview, and scaffold assets shipped with the extension.
+- `templates/default/` owns the assembled example workspace generated from the packaged scaffold.
+- `meta/` owns repo tooling packages such as shared config and Dexter commands.
+
+## Verification
+
+- Run `bun run lint` for repo-wide JS or TS edits.
+- Run the narrowest verification command from the touched subtree before finishing a change.
 
 ## Gotchas
 
-- Emergency brake: `touch .codex/hooks-disabled`. Remove immediately after fix.
+- `touch .codex/hooks-disabled` disables repo hooks as an emergency brake. Remove the file immediately after the fix.

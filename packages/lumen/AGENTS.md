@@ -1,31 +1,20 @@
-# packages/lumen/AGENTS.md
-
-Hexagonal core — domain types, port contracts, pure logic, service orchestration.
-
-No runtime dependencies. No framework imports. Consumed by bundlers.
+`packages/lumen/` is the framework-free core consumed by the extension and any future adapters. Optimize for one-way dependencies, plain data contracts, and pure business logic.
 
 ## Rules
 
-### Layers
-
-- Types: domain vocabulary. Zero deps inside the package.
-- Ports: driven port contracts. Import only from `../types`.
-- Domain: pure business logic. Import from `../types` and `../ports`. No I/O — ports received as function parameters.
-- Services: actor-shaped factories. Take port aggregates, return service interfaces. Direction: services → domain → types. Never reversed.
-
-### Package exports
-
-- `./types` — domain vocabulary.
-- `./ports` — driven port contracts and actor aggregates.
-- `./domain/config` — .lumen file parsing and config manipulation.
-- `./domain/generation` — generation polling logic.
-- `./editor` — editor service factory.
+- Keep this package free of framework imports and adapter code.
+- Preserve the layer direction: `services` may depend on `domain`, `ports`, and `types`; `domain` may depend on `ports` and `types`; `ports` may depend only on `types`; `types` stay dependency-free.
+- Keep I/O behind port contracts. Domain code receives ports as parameters instead of importing adapters.
+- Return plain serializable data across package boundaries.
+- Keep the public surface aligned with the package exports: `./types`, `./ports`, `./domain/config`, `./domain/generation`, `./domain/validation`, and `./editor`.
 
 ## Structure
 
-```
-types/        schema, generation response, config — serializable across any boundary
-ports/        provider, asset store, secret store, logger — one file per port
-domain/       config parsing, generation polling — pure functions, no I/O
-services/     editor service — orchestrates ports for the editor lifecycle
-```
+- `types/` defines shared schema, config, and generation types.
+- `ports/` defines driven port contracts and aggregates for service entrypoints.
+- `domain/` defines pure config, validation, and generation logic.
+- `services/` defines actor-shaped factories that orchestrate domain logic with ports.
+
+## Verification
+
+- Run `bun run --cwd packages/lumen typecheck` after edits in this package.

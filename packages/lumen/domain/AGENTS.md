@@ -1,10 +1,15 @@
-# packages/lumen/domain/AGENTS.md
-
-Pure business logic. Data in, data out.
+`packages/lumen/domain/` owns pure business logic for `.lumen` config handling, validation, and generation polling. Optimize for data-in, data-out behavior that stays independent of adapters.
 
 ## Rules
 
-- Pure functions: no side effects, no I/O. Ports received as parameters when async work needed.
-- Import from `../types` and `../ports`. No imports from `../services` or any adapter.
-- `config.ts` — .lumen file parsing, serialization, config mutation. All immutable returns.
-- `generation.ts` — polling loop. Takes a `ProviderPort`, not a URL.
+- Keep every export here pure: no side effects, no process state, and no direct I/O.
+- Import only from `../types` and `../ports`.
+- Accept ports as parameters when async work is required.
+- Return new values instead of mutating caller-owned config objects.
+- Preserve provider-facing logic in terms of `ProviderPort`, not raw URLs or adapter clients.
+
+## Structure
+
+- `config.ts` parses, serializes, and mutates `.lumen` config data with immutable returns.
+- `generation.ts` polls generation runs through `ProviderPort`.
+- `validation.ts` holds schema and config validation helpers used by the core.
