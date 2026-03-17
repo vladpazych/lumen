@@ -56,7 +56,7 @@ function tempDir(prefix: string): string {
 describe("prepareServerStart", () => {
   test("writes the auth key file from secret storage", async () => {
     const workspaceRoot = tempDir("lumen-workspace-");
-    const serverPath = join(workspaceRoot, "assets", "server");
+    const serverPath = join(workspaceRoot, "server");
     mkdirSync(serverPath, { recursive: true });
 
     const storage = new MemorySecretStorage();
@@ -67,5 +67,17 @@ describe("prepareServerStart", () => {
 
     expect(env).toBe(process.env);
     expect(readAuthKey(serverPath)).toBe(authToken);
+  });
+
+  test("creates the auth key path when the server directory is missing", async () => {
+    const workspaceRoot = tempDir("lumen-workspace-");
+    const serverPath = join(workspaceRoot, "server");
+
+    const storage = new MemorySecretStorage();
+    const store = new WorkspaceSecretStore(storage, () => workspaceRoot);
+
+    await prepareServerStart(serverPath, store);
+
+    expect(readAuthKey(serverPath)).not.toBeNull();
   });
 });

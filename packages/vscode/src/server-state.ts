@@ -1,11 +1,12 @@
 import { randomBytes } from "node:crypto";
 import {
   existsSync,
+  mkdirSync,
   readFileSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 function authKeyFile(serverPath: string): string {
   return join(serverPath, ".authkey");
@@ -33,6 +34,7 @@ export function readAuthKey(serverPath: string): string | null {
 }
 
 export function writeAuthKey(serverPath: string, key: string): void {
+  mkdirSync(dirname(authKeyFile(serverPath)), { recursive: true });
   writeFileSync(authKeyFile(serverPath), `${key}\n`);
 }
 

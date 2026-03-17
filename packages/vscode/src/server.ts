@@ -55,6 +55,10 @@ const REBUILD_START = /Creating objects|Initializing|Building image/;
 const REBUILD_DONE = /Created web function serve|Serving app/;
 const MODAL_URL_RE = /https:\/\/\S+\.modal\.run/;
 
+function serverEntrypoint(sourcePath: string): string {
+  return join(sourcePath, "serve.py");
+}
+
 export async function prepareServerStart(
   sourcePath: string,
   workspaceSecrets: WorkspaceSecretStore,
@@ -103,6 +107,12 @@ export class ServerManager {
   async start(sourcePath: string): Promise<void> {
     if (!sourcePath) {
       vscode.window.showErrorMessage("No lumen.server configured");
+      return;
+    }
+    if (!existsSync(serverEntrypoint(sourcePath))) {
+      vscode.window.showErrorMessage(
+        `Lumen server not found at ${sourcePath}. Initialize the workspace first.`,
+      );
       return;
     }
     if (readPid(sourcePath) !== null) {
