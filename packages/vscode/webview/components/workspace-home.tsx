@@ -101,15 +101,15 @@ export function WorkspaceHome({
           <div className="flex flex-col gap-1">
             <h1 className="text-[16px] font-medium text-text-primary">Lumen Workspace</h1>
             <p className="text-[12px] text-text-secondary">
-              Initialize Lumen to create a managed Modal runtime in <code>assets/</code>,
-              install default agent skills, and create your first <code>.lumen</code>{" "}
-              config.
+              Initialize Lumen to create a committed <code>server/</code> runtime,
+              a gitignored <code>assets/</code> folder for runner configs, install
+              default agent skills, and create your first <code>.lumen</code> config.
             </p>
           </div>
           <div className="rounded-md border border-border bg-surface-1 px-3 py-2 text-[11px] text-text-tertiary">
-            Creates: <code>{home.homePath}</code>, <code>{home.assetsPath}</code>,{" "}
-            <code>assets/main.lumen</code>, <code>.agents/skills/</code>, and{" "}
-            <code>.claude/skills/</code>.
+            Creates: <code>{home.homePath}</code>, <code>server/</code>,{" "}
+            <code>{home.assetsPath}</code>, <code>assets/main.lumen</code>,{" "}
+            <code>.agents/skills/</code>, and <code>.claude/skills/</code>.
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="accent" onClick={onInitialize} disabled={installing}>
@@ -130,7 +130,7 @@ export function WorkspaceHome({
               Lumen uses Modal&apos;s native machine auth. Set up Modal on this machine,
               then Lumen reuses that CLI session for local dev and secret sync. Lumen
               keeps only its own bearer token in VS Code secrets and writes{" "}
-              <code>assets/server/.authkey</code> only when the local runtime needs it.
+              <code>server/.authkey</code> only when the local runtime needs it.
             </p>
           </div>
           <div className="rounded-md bg-surface-1 px-2.5 py-2 text-[11px] text-text-tertiary">

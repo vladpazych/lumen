@@ -24,7 +24,7 @@ const PIPELINE_PACKS_DIR = "server/packs";
 const SKILL_PACKS_DIR = "skill-packs";
 const MANAGED_SKILL_PREFIX = "lumen-";
 
-export const DEFAULT_LUMEN_SERVER_SETTING = "assets/server";
+export const DEFAULT_LUMEN_SERVER_SETTING = "server";
 export const DEFAULT_LUMEN_SKILL_PACK_IDS = [
   "pipeline",
   "lumen-file",

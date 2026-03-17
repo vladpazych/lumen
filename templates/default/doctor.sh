@@ -7,7 +7,7 @@ YELLOW='\033[0;33m'
 BOLD='\033[1m'
 NC='\033[0m'
 ROOT="$(cd "${0%/*}" 2>/dev/null && pwd)"
-SERVER_DIR="$ROOT/assets/server"
+SERVER_DIR="$ROOT/server"
 
 ok=0
 fail=0

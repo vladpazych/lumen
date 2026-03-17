@@ -1,4 +1,4 @@
-`templates/default/assets/server/` is the generated workspace's self-contained Modal server. Optimize for a stable HTTP contract and clear separation between shared runtime code and pipeline implementations.
+`templates/default/server/` is the generated workspace's self-contained Modal server. Optimize for a stable HTTP contract and clear separation between shared runtime code and pipeline implementations.
 
 ## Rules
 

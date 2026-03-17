@@ -294,7 +294,7 @@ export async function createPipelineFromPrompt(): Promise<string | null> {
   const slug = slugifyName(value);
   const filePath = join(serverPath, "pipelines", `${slug}.py`);
   if (existsSync(filePath)) {
-    throw new Error(`Pipeline already exists: assets/server/pipelines/${slug}.py`);
+    throw new Error(`Pipeline already exists: server/pipelines/${slug}.py`);
   }
 
   writeFileSync(filePath, pipelineTemplateText(serverPath, slug));

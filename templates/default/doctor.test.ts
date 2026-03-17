@@ -36,7 +36,7 @@ describe("doctor.sh", () => {
     const repoRoot = process.cwd();
     const projectDir = makeTempDir("lumen-doctor-");
     const binDir = join(projectDir, "bin");
-    const serverDir = join(projectDir, "assets", "server");
+    const serverDir = join(projectDir, "server");
     const logFile = join(projectDir, "calls.log");
 
     mkdirSync(binDir);

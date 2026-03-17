@@ -7,7 +7,7 @@ The goal experience is simple:
 1. Install the VS Code extension.
 2. Create `lumen.config.json`, or run `Lumen: Init Workspace`.
 3. Open it and follow the workspace setup flow.
-4. Let Lumen scaffold a managed runtime into `assets/`.
+4. Let Lumen scaffold a committed runtime into `server/` and configs into `assets/`.
 5. Start vibe-coding inference pipelines with your editor and preferred LLM tools.
 
 ## What It Is
@@ -24,7 +24,7 @@ The goal experience is simple:
 - Lumen is extension-led. The editor is the product surface; the Python server is just the runtime it manages for you.
 - `lumen.config.json` is the workspace home. Opening it becomes the setup and control surface for the whole workspace.
 - A `.lumen` file is a JSON array of generation configs. Each config targets one pipeline on one live server URL.
-- The VS Code extension owns the workflow: scaffold runtime files under `assets/`, generate auth, start `modal serve`, discover schemas, mirror logs, and write schema snapshots.
+- The VS Code extension owns the workflow: scaffold runtime files under `server/`, generate auth, start `modal serve`, discover schemas, mirror logs, and write schema snapshots.
 - The Python server is intentionally small. It discovers pipeline modules, validates bearer auth, exposes pipeline schemas, and runs `generate`.
 - Lumen installs default skill packs into both `.agents/skills/` and `.claude/skills/` so bring-your-own agents can work immediately.
 
@@ -35,7 +35,7 @@ The intended user flow is:
 1. Install the Lumen VS Code extension.
 2. Create `lumen.config.json`, or run `Lumen: Init Workspace`.
 3. Open the workspace home in VS Code.
-4. Initialize the workspace. Lumen creates `assets/`, the managed runtime, the first `.lumen` file, and default agent skills.
+4. Initialize the workspace. Lumen creates `server/`, `assets/`, the first `.lumen` file, and default agent skills.
 5. Copy the generated auth token into a Modal secret named `lumen-auth`, or let Lumen do it if the Modal CLI is available.
 6. Start the dev server from the home screen.
 7. Add configs from the discovered pipelines and iterate in `assets/*.lumen`.
@@ -62,11 +62,11 @@ The intended loop is: open VS Code, open `lumen.config.json`, let Lumen scaffold
 What the extension writes for you:
 
 - `lumen.config.json` as the workspace home
-- `assets/server/` with a self-contained FastAPI + Modal server
+- `server/` with a self-contained FastAPI + Modal server
 - `assets/main.lumen` as the first runner config
-- `assets/server/.authkey` for local auth during development
-- `assets/server/lumen.log` for mirrored logs
-- `assets/server/lumen.schema.json` for the latest discovered pipeline schemas
+- `server/.authkey` for local auth during development
+- `server/lumen.log` for mirrored logs
+- `server/lumen.schema.json` for the latest discovered pipeline schemas
 - `.agents/skills/` and `.claude/skills/` with default Lumen skill packs
 
 ## Consumer Flow
@@ -97,7 +97,7 @@ If you just want a ready-made example, open [templates/default](templates/defaul
 bun run lint
 bun x tsc --noEmit
 bun test templates/default/doctor.test.ts
-cd templates/default/assets/server && uv run pytest
+cd templates/default/server && uv run pytest
 ```
 
 - Open [packages/vscode/README.md](packages/vscode/README.md) for the extension-specific context.
