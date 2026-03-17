@@ -6,6 +6,7 @@ import { ConfigCard } from "@/components/config-card";
 import { ServerLog } from "@/components/server-log";
 import { AddConfigDialog } from "@/components/add-config-dialog";
 import { SetupPanel } from "@/components/setup-panel";
+import { WorkspaceHome } from "@/components/workspace-home";
 import { useLumen } from "@/lib/use-lumen";
 import { vscode } from "@/lib/vscode";
 
@@ -34,7 +35,9 @@ export function App() {
     devServerState,
     devServerLog,
     devServerUrl,
+    documentKind,
     serverSetup,
+    workspaceHome,
     installingServer,
     generating,
     progress,
@@ -54,6 +57,13 @@ export function App() {
     copyServerAuthToken,
     createModalSecret,
     revealServer,
+    initializeWorkspace,
+    createRunnerConfig,
+    openRunnerConfig,
+    createPipeline,
+    updateRuntime,
+    reinstallSkills,
+    revealAssets,
     pickImage,
     pickImageByUri,
     isPickingImage,
@@ -110,6 +120,46 @@ export function App() {
     setShowAddForm(false);
     setFocus(configs.length);
   };
+
+  if (documentKind === "workspace") {
+    return (
+      <TooltipProvider>
+        <div className="p-3 flex flex-col gap-3">
+          <WorkspaceHome
+            setup={serverSetup}
+            home={workspaceHome}
+            status={status}
+            devServerState={devServerState}
+            installing={installingServer}
+            canStart={canStart}
+            canStop={canStop}
+            canRestart={canRestart}
+            onInitialize={initializeWorkspace}
+            onStartServer={startDevServer}
+            onStopServer={stopDevServer}
+            onRestartServer={restartDevServer}
+            onCreatePipeline={createPipeline}
+            onCreateConfig={createRunnerConfig}
+            onOpenConfig={openRunnerConfig}
+            onUpdateRuntime={updateRuntime}
+            onReinstallSkills={reinstallSkills}
+            onCopyAuthToken={copyServerAuthToken}
+            onCreateModalSecret={createModalSecret}
+            onRevealAssets={revealAssets}
+          />
+
+          {serverSetup.installed && devServerLog.length > 0 && (
+            <div className="rounded-md border border-border bg-card">
+              <div className="px-3 py-2 text-[12px] text-text-secondary">
+                Server Log
+              </div>
+              <ServerLog lines={devServerLog} />
+            </div>
+          )}
+        </div>
+      </TooltipProvider>
+    );
+  }
 
   return (
     <TooltipProvider>

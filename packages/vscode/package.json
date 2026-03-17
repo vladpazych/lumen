@@ -29,17 +29,24 @@
       {
         "command": "lumen.openAsJson",
         "title": "Lumen: Open as JSON"
+      },
+      {
+        "command": "lumen.initWorkspace",
+        "title": "Lumen: Init Workspace"
       }
     ],
     "menus": {
       "commandPalette": [
+        {
+          "command": "lumen.initWorkspace"
+        },
         {
           "command": "lumen.openPreview",
           "when": "resourceFilename =~ /\\.lumen$/"
         },
         {
           "command": "lumen.openAsJson",
-          "when": "resourceFilename =~ /\\.lumen$/"
+          "when": "resourceFilename =~ /(^lumen\\.config\\.json$)|(/\\.lumen$/)"
         }
       ]
     },
@@ -50,6 +57,9 @@
         "selector": [
           {
             "filenamePattern": "*.lumen"
+          },
+          {
+            "filenamePattern": "lumen.config.json"
           }
         ],
         "priority": "default"

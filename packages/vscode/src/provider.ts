@@ -18,6 +18,7 @@ import { ServerConnection, type ConnectionEvents } from "./connection";
 import { handleMessage, type HandlerContext } from "./handlers";
 import { describeServerSetup, writeSchemaSnapshot } from "./server-scaffold";
 import { getServerSetting, getServerSource } from "./server";
+import { describeWorkspaceHome, getAssetsRootPath, isWorkspaceHomeDocument } from "./workspace-home";
 
 const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\].*?\x07|\[[\d;]*[A-Za-z]/g;
 function stripAnsi(text: string): string {
@@ -184,6 +185,9 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
     document: vscode.TextDocument,
     webviewPanel: vscode.WebviewPanel,
   ): Promise<void> {
+    const documentKind = isWorkspaceHomeDocument(document)
+      ? "workspace"
+      : "config";
     this.panels.add(webviewPanel);
     this.connection.rebuildProviders();
 
@@ -213,6 +217,7 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
 
   const handlerCtx: HandlerContext = {
       document,
+      documentKind,
       panel: webviewPanel,
       bridge,
       connection: this.connection,
@@ -259,6 +264,31 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
       webviewPanel.webview.html = this.getHtml(webviewPanel.webview);
     });
 
+    const workspaceWatcher =
+      documentKind === "workspace"
+        ? vscode.workspace.createFileSystemWatcher(
+            join(getAssetsRootPath(), "*.lumen"),
+          )
+        : null;
+    const refreshWorkspaceHome = () => {
+      if (documentKind !== "workspace") {
+        return;
+      }
+      webviewPanel.webview.postMessage({
+        type: "workspaceHome",
+        home: describeWorkspaceHome(),
+      } satisfies ExtensionMessage);
+    };
+    const workspaceCreateListener = workspaceWatcher?.onDidCreate(
+      refreshWorkspaceHome,
+    );
+    const workspaceDeleteListener = workspaceWatcher?.onDidDelete(
+      refreshWorkspaceHome,
+    );
+    const workspaceChangeListener = workspaceWatcher?.onDidChange(
+      refreshWorkspaceHome,
+    );
+
     webviewPanel.onDidDispose(() => {
       this.panels.delete(webviewPanel);
       changeListener.dispose();
@@ -267,6 +297,10 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
       docWatcher.dispose();
       distListener.dispose();
       distWatcher.dispose();
+      workspaceCreateListener?.dispose();
+      workspaceDeleteListener?.dispose();
+      workspaceChangeListener?.dispose();
+      workspaceWatcher?.dispose();
       if (this.panels.size === 0) this.connection.unsubscribeAll();
     });
   }

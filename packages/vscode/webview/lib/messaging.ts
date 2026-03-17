@@ -21,6 +21,23 @@ export type PackInfo = {
   description: string;
 };
 
+export type DocumentKind = "workspace" | "config";
+
+export type WorkspaceConfigFile = {
+  name: string;
+  path: string;
+  relativePath: string;
+  uri: string;
+};
+
+export type WorkspaceHomeInfo = {
+  workspaceRoot: string;
+  homePath: string;
+  assetsPath: string;
+  initialized: boolean;
+  configFiles: WorkspaceConfigFile[];
+};
+
 export type ManagedServerManifest = {
   templateVersion: number;
   authSecretName: string;
@@ -47,12 +64,14 @@ export type ServerSetupInfo = {
 
 export type InitMessage = {
   type: "init";
+  documentKind: DocumentKind;
   schemas: Record<string, PipelineConfig[]>;
   configs: LumenConfig[];
   serverStatuses: Record<string, ServerStatus>;
   devServerState: DevServerState;
   devServerUrl: string | null;
   serverSetup: ServerSetupInfo;
+  workspaceHome: WorkspaceHomeInfo;
 };
 
 export type ConfigsUpdatedMessage = {
@@ -124,6 +143,11 @@ export type ServerSetupMessage = {
   setup: ServerSetupInfo;
 };
 
+export type WorkspaceHomeMessage = {
+  type: "workspaceHome";
+  home: WorkspaceHomeInfo;
+};
+
 export type ExtensionMessage =
   | InitMessage
   | ConfigsUpdatedMessage
@@ -135,7 +159,8 @@ export type ExtensionMessage =
   | DevServerLogMessage
   | ImagePickedMessage
   | ImageThumbsMessage
-  | ServerSetupMessage;
+  | ServerSetupMessage
+  | WorkspaceHomeMessage;
 
 // --- Webview → Extension ---
 
@@ -213,9 +238,35 @@ export type InstallServerMessage = {
   initGit: boolean;
 };
 
+export type InitializeWorkspaceMessage = {
+  type: "initializeWorkspace";
+};
+
+export type CreateRunnerConfigMessage = {
+  type: "createRunnerConfig";
+};
+
+export type OpenRunnerConfigMessage = {
+  type: "openRunnerConfig";
+  uri: string;
+};
+
+export type CreatePipelineMessage = {
+  type: "createPipeline";
+};
+
+export type UpdateRuntimeMessage = {
+  type: "updateRuntime";
+};
+
+export type ReinstallSkillsMessage = {
+  type: "reinstallSkills";
+};
+
 export type CopyAuthTokenMessage = { type: "copyAuthToken" };
 export type CreateModalSecretMessage = { type: "createModalSecret" };
 export type RevealServerMessage = { type: "revealServer" };
+export type RevealAssetsMessage = { type: "revealAssets" };
 
 export type WebviewMessage =
   | ReadyMessage
@@ -232,6 +283,13 @@ export type WebviewMessage =
   | UpdateNameMessage
   | RemoveConfigMessage
   | InstallServerMessage
+  | InitializeWorkspaceMessage
+  | CreateRunnerConfigMessage
+  | OpenRunnerConfigMessage
+  | CreatePipelineMessage
+  | UpdateRuntimeMessage
+  | ReinstallSkillsMessage
   | CopyAuthTokenMessage
   | CreateModalSecretMessage
-  | RevealServerMessage;
+  | RevealServerMessage
+  | RevealAssetsMessage;

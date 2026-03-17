@@ -22,9 +22,21 @@ import {
   resolveImageParams,
 } from "./adapters/vscode-images";
 import { getServerSetting, getServerSource } from "./server";
+import {
+  createPipelineFromPrompt,
+  createRunnerConfigFromPrompt,
+  describeManagedWorkspaceServer,
+  describeWorkspaceHome,
+  initializeWorkspace,
+  openRunnerConfig,
+  revealAssetsFolder,
+  updateWorkspaceRuntime,
+  reinstallWorkspaceSkills,
+} from "./workspace-home";
 
 export type HandlerContext = {
   document: vscode.TextDocument;
+  documentKind: "workspace" | "config";
   panel: vscode.WebviewPanel;
   bridge: DocumentBridge;
   connection: ServerConnection;
@@ -78,11 +90,48 @@ export async function handleMessage(
       return handleCreateModalSecret(ctx);
     case "revealServer":
       return handleRevealServer(ctx);
+    case "initializeWorkspace":
+      return handleInitializeWorkspace(ctx);
+    case "createRunnerConfig":
+      return handleCreateRunnerConfig(ctx);
+    case "openRunnerConfig":
+      return handleOpenRunnerConfig(ctx, msg);
+    case "createPipeline":
+      return handleCreatePipeline(ctx);
+    case "updateRuntime":
+      return handleUpdateRuntime(ctx);
+    case "reinstallSkills":
+      return handleReinstallSkills(ctx);
+    case "revealAssets":
+      return handleRevealAssets(ctx);
   }
 }
 
 async function handleReady(ctx: HandlerContext): Promise<void> {
   const { document, panel, bridge, connection } = ctx;
+  const workspaceHome = describeWorkspaceHome();
+  const managedServer = describeManagedWorkspaceServer(ctx.context);
+
+  if (ctx.documentKind === "workspace") {
+    ctx.post({
+      type: "init",
+      documentKind: "workspace",
+      schemas: connection.schemas,
+      configs: [],
+      serverStatuses: connection.statuses,
+      devServerState: connection.devServerState,
+      devServerUrl: connection.serverUrl,
+      serverSetup: managedServer,
+      workspaceHome,
+    });
+
+    const bufferedLog = ctx.getDevLogBuffer();
+    if (bufferedLog.length > 0) {
+      ctx.post({ type: "devServerLog", text: bufferedLog.join("\n") });
+    }
+    return;
+  }
+
   const configs = bridge.read(document);
   if (ensureIds(configs)) {
     await bridge.write(document, configs);
@@ -93,6 +142,7 @@ async function handleReady(ctx: HandlerContext): Promise<void> {
 
   ctx.post({
     type: "init",
+    documentKind: "config",
     schemas: connection.schemas,
     configs,
     serverStatuses: connection.statuses,
@@ -103,6 +153,7 @@ async function handleReady(ctx: HandlerContext): Promise<void> {
       getServerSource(),
       getServerSetting(),
     ),
+    workspaceHome,
   });
 
   const bufferedLog = ctx.getDevLogBuffer();
@@ -362,6 +413,7 @@ async function handleInstallServer(
     ctx.connection.rebuildProviders();
     ctx.connection.subscribeAll();
     ctx.post({ type: "serverSetup", setup });
+    postWorkspaceHome(ctx);
     vscode.window.showInformationMessage("Lumen server installed");
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -400,6 +452,96 @@ async function handleCreateModalSecret(ctx: HandlerContext): Promise<void> {
 async function handleRevealServer(_: HandlerContext): Promise<void> {
   try {
     await revealServerFolder(getServerSource());
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    vscode.window.showErrorMessage(message);
+  }
+}
+
+function postWorkspaceHome(ctx: HandlerContext): void {
+  ctx.post({
+    type: "workspaceHome",
+    home: describeWorkspaceHome(),
+  });
+}
+
+async function handleInitializeWorkspace(ctx: HandlerContext): Promise<void> {
+  try {
+    const result = await initializeWorkspace(ctx.context);
+    ctx.connection.unsubscribeAll();
+    ctx.connection.rebuildProviders();
+    ctx.connection.subscribeAll();
+    ctx.post({ type: "serverSetup", setup: result.setup });
+    ctx.post({ type: "workspaceHome", home: result.home });
+    vscode.window.showInformationMessage("Lumen workspace initialized");
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    vscode.window.showErrorMessage(`Failed to initialize workspace: ${message}`);
+  }
+}
+
+async function handleCreateRunnerConfig(ctx: HandlerContext): Promise<void> {
+  try {
+    const home = await createRunnerConfigFromPrompt();
+    ctx.post({ type: "workspaceHome", home });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    vscode.window.showErrorMessage(`Failed to create config: ${message}`);
+  }
+}
+
+async function handleOpenRunnerConfig(
+  _: HandlerContext,
+  msg: Extract<WebviewMessage, { type: "openRunnerConfig" }>,
+): Promise<void> {
+  try {
+    await openRunnerConfig(msg.uri);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    vscode.window.showErrorMessage(`Failed to open config: ${message}`);
+  }
+}
+
+async function handleCreatePipeline(_: HandlerContext): Promise<void> {
+  try {
+    const created = await createPipelineFromPrompt();
+    if (created) {
+      vscode.window.showInformationMessage(
+        "Pipeline created. Restart the dev server to reload schemas.",
+      );
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    vscode.window.showErrorMessage(`Failed to create pipeline: ${message}`);
+  }
+}
+
+async function handleUpdateRuntime(ctx: HandlerContext): Promise<void> {
+  try {
+    const setup = await updateWorkspaceRuntime(ctx.context);
+    ctx.post({ type: "serverSetup", setup });
+    vscode.window.showInformationMessage("Lumen runtime updated");
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    vscode.window.showErrorMessage(`Failed to update runtime: ${message}`);
+  }
+}
+
+async function handleReinstallSkills(ctx: HandlerContext): Promise<void> {
+  try {
+    const setup = await reinstallWorkspaceSkills(ctx.context);
+    ctx.post({ type: "serverSetup", setup });
+    postWorkspaceHome(ctx);
+    vscode.window.showInformationMessage("Lumen skills reinstalled");
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    vscode.window.showErrorMessage(`Failed to reinstall skills: ${message}`);
+  }
+}
+
+async function handleRevealAssets(_: HandlerContext): Promise<void> {
+  try {
+    await revealAssetsFolder();
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     vscode.window.showErrorMessage(message);

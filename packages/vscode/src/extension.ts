@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { LumenEditorProvider } from "./provider";
 import { ServerManager, getServerSource } from "./server";
+import { openWorkspaceHome } from "./workspace-home";
 
 function activeDocumentUri(): vscode.Uri | undefined {
   const textUri = vscode.window.activeTextEditor?.document.uri;
@@ -56,6 +57,10 @@ export function activate(context: vscode.ExtensionContext): void {
       if (!uri) return;
       vscode.commands.executeCommand("vscode.openWith", uri, "default");
     }),
+
+    vscode.commands.registerCommand("lumen.initWorkspace", () =>
+      openWorkspaceHome(),
+    ),
 
     vscode.commands.registerCommand("lumen.startServer", () =>
       serverManager.start(getServerSource()),

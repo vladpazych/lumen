@@ -7,9 +7,11 @@ import type {
 } from "@vladpazych/lumen/types";
 import { createConfig } from "@vladpazych/lumen/domain/config";
 import type {
+  DocumentKind,
   DevServerState,
   ExtensionMessage,
   ServerSetupInfo,
+  WorkspaceHomeInfo,
 } from "./messaging";
 import { vscode } from "./vscode";
 
@@ -17,6 +19,7 @@ import { vscode } from "./vscode";
 const PROGRESS_RE = /^(.*?)\d+%\|/;
 
 type State = {
+  documentKind: DocumentKind;
   schemas: Record<string, PipelineConfig[]>;
   configs: LumenConfig[];
   serverStatuses: Record<string, ServerStatus>;
@@ -33,6 +36,7 @@ type State = {
   imageThumbs: Record<string, string>;
   devServerLog: string[];
   serverSetup: ServerSetupInfo;
+  workspaceHome: WorkspaceHomeInfo;
   installingServer: boolean;
   isPickingImage: boolean;
   ready: boolean;
@@ -41,14 +45,17 @@ type State = {
 type Action =
   | {
       type: "init";
+      documentKind: DocumentKind;
       schemas: Record<string, PipelineConfig[]>;
       configs: LumenConfig[];
       serverStatuses: Record<string, ServerStatus>;
       devServerState: DevServerState;
       devServerUrl: string | null;
       serverSetup: ServerSetupInfo;
+      workspaceHome: WorkspaceHomeInfo;
     }
   | { type: "serverSetup"; setup: ServerSetupInfo }
+  | { type: "workspaceHome"; home: WorkspaceHomeInfo }
   | { type: "configsUpdated"; configs: LumenConfig[] }
   | { type: "schemaRefresh"; serverUrl: string; pipelines: PipelineConfig[] }
   | { type: "serverStatus"; serverUrl: string; status: ServerStatus }
@@ -82,12 +89,14 @@ function reducer(state: State, action: Action): State {
     case "init":
       return {
         ...state,
+        documentKind: action.documentKind,
         schemas: action.schemas,
         configs: action.configs,
         serverStatuses: action.serverStatuses,
         devServerState: action.devServerState,
         devServerUrl: action.devServerUrl,
         serverSetup: action.serverSetup,
+        workspaceHome: action.workspaceHome,
         installingServer: false,
         ready: true,
       };
@@ -96,6 +105,11 @@ function reducer(state: State, action: Action): State {
         ...state,
         serverSetup: action.setup,
         installingServer: false,
+      };
+    case "workspaceHome":
+      return {
+        ...state,
+        workspaceHome: action.home,
       };
     case "configsUpdated":
       return { ...state, configs: action.configs };
@@ -203,6 +217,7 @@ function reducer(state: State, action: Action): State {
 }
 
 const initialState: State = {
+  documentKind: "config",
   schemas: {},
   configs: [],
   serverStatuses: {},
@@ -227,6 +242,13 @@ const initialState: State = {
     skillPacks: [],
     canCreateModalSecret: false,
   },
+  workspaceHome: {
+    workspaceRoot: "",
+    homePath: "",
+    assetsPath: "",
+    initialized: false,
+    configFiles: [],
+  },
   installingServer: false,
   isPickingImage: false,
   ready: false,
@@ -247,16 +269,21 @@ export function useLumen() {
         case "init":
           dispatch({
             type: "init",
+            documentKind: msg.documentKind,
             schemas: msg.schemas,
             configs: msg.configs,
             serverStatuses: msg.serverStatuses,
             devServerState: msg.devServerState,
             devServerUrl: msg.devServerUrl,
             serverSetup: msg.serverSetup,
+            workspaceHome: msg.workspaceHome,
           });
           break;
         case "serverSetup":
           dispatch({ type: "serverSetup", setup: msg.setup });
+          break;
+        case "workspaceHome":
+          dispatch({ type: "workspaceHome", home: msg.home });
           break;
         case "configsUpdated":
           dispatch({ type: "configsUpdated", configs: msg.configs });
@@ -466,6 +493,35 @@ export function useLumen() {
     vscode.postMessage({ type: "revealServer" });
   }, []);
 
+  const initializeWorkspace = useCallback(() => {
+    dispatch({ type: "installServerStart" });
+    vscode.postMessage({ type: "initializeWorkspace" });
+  }, []);
+
+  const createRunnerConfig = useCallback(() => {
+    vscode.postMessage({ type: "createRunnerConfig" });
+  }, []);
+
+  const openRunnerConfig = useCallback((uri: string) => {
+    vscode.postMessage({ type: "openRunnerConfig", uri });
+  }, []);
+
+  const createPipeline = useCallback(() => {
+    vscode.postMessage({ type: "createPipeline" });
+  }, []);
+
+  const updateRuntime = useCallback(() => {
+    vscode.postMessage({ type: "updateRuntime" });
+  }, []);
+
+  const reinstallSkills = useCallback(() => {
+    vscode.postMessage({ type: "reinstallSkills" });
+  }, []);
+
+  const revealAssets = useCallback(() => {
+    vscode.postMessage({ type: "revealAssets" });
+  }, []);
+
   const addConfig = useCallback(
     (
       service: string,
@@ -548,6 +604,13 @@ export function useLumen() {
     copyServerAuthToken,
     createModalSecret,
     revealServer,
+    initializeWorkspace,
+    createRunnerConfig,
+    openRunnerConfig,
+    createPipeline,
+    updateRuntime,
+    reinstallSkills,
+    revealAssets,
     pickImage,
     pickImageByUri,
   };

@@ -5,6 +5,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
@@ -13,11 +14,20 @@ import * as vscode from "vscode";
 import { ensureAuthKey, readAuthKey } from "./server-state";
 
 const SERVER_TEMPLATE_VERSION = 1;
+const SKILL_PACK_VERSION = 1;
 const AUTH_SECRET_NAME = "lumen-auth";
 const ASSETS_ROOT = "assets";
 const SERVER_BASE_DIR = "server/base";
 const PIPELINE_PACKS_DIR = "server/packs";
 const SKILL_PACKS_DIR = "skill-packs";
+const MANAGED_SKILL_PREFIX = "lumen-";
+
+export const DEFAULT_LUMEN_SERVER_SETTING = "assets/server";
+export const DEFAULT_LUMEN_SKILL_PACK_IDS = [
+  "pipeline",
+  "lumen-file",
+  "generation",
+] as const;
 
 export type PackKind = "pipeline" | "skill";
 
@@ -31,6 +41,7 @@ export type PackDefinition = {
 
 export type ManagedServerManifest = {
   templateVersion: number;
+  skillPackVersion: number;
   authSecretName: string;
   installedPipelinePacks: string[];
   installedSkillPacks: string[];
@@ -160,6 +171,34 @@ function copyContents(sourceDir: string, targetDir: string): void {
   }
 }
 
+function copyManagedRuntimeShell(sourceDir: string, targetDir: string): void {
+  mkdirSync(targetDir, { recursive: true });
+  for (const entry of readdirSync(sourceDir)) {
+    if (entry === "pipelines") {
+      continue;
+    }
+    cpSync(join(sourceDir, entry), join(targetDir, entry), { recursive: true });
+  }
+}
+
+function managedSkillTargetDirs(workspaceRoot: string, packId: string): string[] {
+  const dirName = `${MANAGED_SKILL_PREFIX}${packId}`;
+  return [
+    join(workspaceRoot, ".agents", "skills", dirName),
+    join(workspaceRoot, ".claude", "skills", dirName),
+  ];
+}
+
+function installSkillPackIntoWorkspace(
+  pack: PackDefinition,
+  workspaceRoot: string,
+): void {
+  for (const targetDir of managedSkillTargetDirs(workspaceRoot, pack.id)) {
+    rmSync(targetDir, { recursive: true, force: true });
+    copyContents(pack.sourceDir, targetDir);
+  }
+}
+
 function toStoredServerSetting(serverSetting: string, targetPath: string): string {
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
   if (!workspaceRoot) {
@@ -274,7 +313,7 @@ export async function installServerTemplate(options: InstallServerOptions): Prom
     if (!pack) {
       throw new Error(`Unknown skill pack: ${packId}`);
     }
-    copyContents(pack.sourceDir, skillTarget);
+    installSkillPackIntoWorkspace(pack, skillTarget);
   }
 
   ensureAuthKey(targetPath);
@@ -283,6 +322,7 @@ export async function installServerTemplate(options: InstallServerOptions): Prom
   }
   writeManifest(targetPath, {
     templateVersion: SERVER_TEMPLATE_VERSION,
+    skillPackVersion: SKILL_PACK_VERSION,
     authSecretName: AUTH_SECRET_NAME,
     installedPipelinePacks: [
       ...(existingManifest?.installedPipelinePacks ?? []),
@@ -342,5 +382,50 @@ export function createOrUpdateModalSecret(serverPath: string, secretName: string
   if (result.status !== 0) {
     const stderr = result.stderr?.trim();
     throw new Error(stderr || "modal secret create failed");
+  }
+}
+
+export async function updateManagedServerTemplate(
+  context: vscode.ExtensionContext,
+  serverSetting: string,
+): Promise<ServerSetupInfo> {
+  const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  const resolvedSetting =
+    workspaceRoot && !serverSetting.startsWith("/") && !serverSetting.startsWith("${workspaceFolder}")
+      ? join(workspaceRoot, serverSetting)
+      : serverSetting.replace(/\$\{workspaceFolder\}/g, workspaceRoot ?? "");
+
+  const targetPath = resolve(resolvedSetting);
+  const manifest = readManifest(targetPath);
+  if (!manifest) {
+    throw new Error("Lumen-managed server not found");
+  }
+
+  copyManagedRuntimeShell(assetsPath(context, SERVER_BASE_DIR), targetPath);
+  writeManifest(targetPath, {
+    ...manifest,
+    templateVersion: SERVER_TEMPLATE_VERSION,
+    skillPackVersion: SKILL_PACK_VERSION,
+  });
+
+  return describeServerSetup(context, targetPath, serverSetting);
+}
+
+export async function reinstallManagedSkillPacks(
+  context: vscode.ExtensionContext,
+  skillPackIds: string[],
+): Promise<void> {
+  const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  if (!workspaceRoot) {
+    throw new Error("Open a workspace folder to install Lumen skills");
+  }
+
+  const skillPacks = readPackDefinitions(context, "skill");
+  for (const packId of skillPackIds) {
+    const pack = skillPacks.find((candidate) => candidate.id === packId);
+    if (!pack) {
+      throw new Error(`Unknown skill pack: ${packId}`);
+    }
+    installSkillPackIntoWorkspace(pack, workspaceRoot);
   }
 }
