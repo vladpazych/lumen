@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.4
+
+- Rename the extension listing to `Lumen for Modal` so it can publish to the VS Code Marketplace
+
 ## 0.1.3
 
 - Build the extension in GitHub Actions before calling `vsce publish`
