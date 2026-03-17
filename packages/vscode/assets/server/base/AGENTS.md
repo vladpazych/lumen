@@ -1,23 +1,26 @@
-# Lumen Modal Server
-
-Self-contained Modal pipeline server scaffold. Pipelines live in `pipelines/` and are auto-discovered at startup.
+`packages/vscode/assets/server/base/` is the scaffold source shipped inside the extension for generated workspaces. Optimize for a self-contained Modal server that the extension can start and inspect without repo-local dependencies.
 
 ## Rules
 
-- Python via `uv`. Never `pip install` directly.
-- Keep the server self-contained. Do not introduce a repo-local SDK dependency.
-- `config` is plain JSON-shaped data. `generate()` returns plain JSON-shaped results.
-- Read API keys from environment variables or Modal secrets. Never hardcode secrets.
+- Use `uv` for Python workflows in this subtree.
+- Keep the scaffold self-contained. Do not introduce dependencies on repo-local Python packages.
+- Keep pipeline `config` values and `generate()` results plain JSON-shaped data.
+- Read secrets from environment variables or Modal secrets. Never hardcode credentials.
+- Keep extension-managed artifacts such as `.authkey`, logs, and schema snapshots out of source control logic.
 
-## Adding a pipeline
+## Structure
 
-Create a file in `pipelines/` that exports:
+- `serve.py` is the Modal entrypoint used by the extension-managed dev server flow.
+- `lumen_server/` owns auth, registry, Modal app wiring, and FastAPI routes.
+- `pipelines/` owns pipeline implementations and helper modules for discovery.
+- `tests/` owns API contract coverage for the scaffold server.
 
-1. `config` — a plain dict matching the Lumen pipeline schema
-2. `generate(params)` — async function returning a plain dict response
+## Verification
 
-Optional:
+- Run `uv run ruff check .` from this directory after Python edits.
+- Run `uv run pytest` from this directory after server or pipeline edits.
 
-- `serve_secrets = ["secret-name"]` to attach Modal secrets to the shared serve container
+## Gotchas
 
-Copy `pipelines/_template.py` to start.
+- Files in `pipelines/` that start with `_` are helpers, not discoverable pipelines.
+- Keep the HTTP contract stable for pipeline listing, pipeline lookup, and generation requests because the extension depends on it directly.
