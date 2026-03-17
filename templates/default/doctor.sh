@@ -7,7 +7,7 @@ YELLOW='\033[0;33m'
 BOLD='\033[1m'
 NC='\033[0m'
 ROOT="$(cd "${0%/*}" 2>/dev/null && pwd)"
-SERVER_DIR="$ROOT/server"
+SERVER_DIR="$ROOT/assets/server"
 
 ok=0
 fail=0
@@ -83,8 +83,8 @@ if [[ $fail -eq 0 ]]; then
 
   echo "Ready."
   echo "  1. Open this folder in VS Code"
-  echo "  2. Open or create a .lumen file"
-  echo "  3. Click Start in the Lumen editor"
+  echo "  2. Open lumen.config.json"
+  echo "  3. Start the server from the Lumen workspace home"
 else
   echo "${RED}$fail check(s) failed.${NC} Install missing dependencies and re-run:"
   echo "  bash doctor.sh"

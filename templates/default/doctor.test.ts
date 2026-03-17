@@ -36,11 +36,11 @@ describe("doctor.sh", () => {
     const repoRoot = process.cwd();
     const projectDir = makeTempDir("lumen-doctor-");
     const binDir = join(projectDir, "bin");
-    const serverDir = join(projectDir, "server");
+    const serverDir = join(projectDir, "assets", "server");
     const logFile = join(projectDir, "calls.log");
 
     mkdirSync(binDir);
-    mkdirSync(serverDir);
+    mkdirSync(serverDir, { recursive: true });
     copyFileSync(
       join(repoRoot, "templates/default/doctor.sh"),
       join(projectDir, "doctor.sh"),

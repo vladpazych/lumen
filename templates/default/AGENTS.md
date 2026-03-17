@@ -4,14 +4,14 @@
 
 - Keep this workspace runnable without any repo-local Python packages.
 - Treat the VS Code extension as the owner of server lifecycle, auth token generation, and schema discovery.
-- Use `uv` for Python workflows under `server/`.
-- Keep generated artifacts such as `server/lumen.log` and `server/lumen.schema.json` out of source edits.
+- Use `uv` for Python workflows under `assets/server/`.
+- Keep generated artifacts such as `assets/server/lumen.log` and `assets/server/lumen.schema.json` out of source edits.
 
 ## Structure
 
-- `server/` owns the self-contained Modal server used by the example workspace.
-- `server/pipelines/` contains the installed example pipeline set.
-- `*.lumen` files point at the live server URL discovered by the extension.
+- `lumen.config.json` is the workspace home file.
+- `assets/server/` owns the self-contained Modal server used by the example workspace.
+- `assets/*.lumen` are the runner config files managed from the workspace home.
 - `.agents/skills/` contains optional guidance packs the extension can install into generated workspaces.
 
 ## Gotchas
