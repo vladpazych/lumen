@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1
+
+- Fix the publish workflow so GitHub Actions can install repo tooling from the public registry
+
 ## 0.1.0
 
 - Initial public preview of the Lumen VS Code extension

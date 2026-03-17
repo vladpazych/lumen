@@ -2,7 +2,7 @@
   "name": "lumen-vscode",
   "displayName": "Lumen",
   "description": "Workspace home and schema-driven editor for Modal AI pipelines",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "vladpazych",
   "preview": true,
   "license": "MIT",
