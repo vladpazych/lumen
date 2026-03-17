@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3
+
+- Build the extension in GitHub Actions before calling `vsce publish`
+
 ## 0.1.2
 
 - Fix the remaining CI install path in release tooling so Marketplace publish can run from GitHub Actions
