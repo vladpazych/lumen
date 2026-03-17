@@ -31,6 +31,9 @@ jobs:
       - name: Typecheck
         run: bun run --cwd packages/vscode typecheck
 
+      - name: Build
+        run: bun run --cwd packages/vscode build
+
       - name: Publish to Marketplace
         run: bunx @vscode/vsce publish --no-dependencies
         working-directory: packages/vscode
