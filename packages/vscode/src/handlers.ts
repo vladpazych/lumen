@@ -21,6 +21,7 @@ import {
   pickImage,
   resolveImageParams,
 } from "./adapters/vscode-images";
+import { describeModalMachineAuth, modalSettingsUrl } from "./modal-auth";
 import { getServerSetting, getServerSource } from "./server";
 import {
   createPipelineFromPrompt,
@@ -88,10 +89,10 @@ export async function handleMessage(
       return handleInstallServer(ctx, msg);
     case "copyAuthToken":
       return handleCopyAuthToken(ctx);
-    case "saveModalCredentials":
-      return handleSaveModalCredentials(ctx, msg);
     case "syncLumenAuthToModal":
       return handleSyncLumenAuthToModal(ctx);
+    case "openModalSettings":
+      return handleOpenModalSettings();
     case "revealServer":
       return handleRevealServer(ctx);
     case "initializeWorkspace":
@@ -115,9 +116,10 @@ async function handleReady(ctx: HandlerContext): Promise<void> {
   const { document, panel, bridge, connection } = ctx;
   const workspaceHome = describeWorkspaceHome();
   const managedServer = describeManagedWorkspaceServer(ctx.context);
-  const managedAuth = await ctx.workspaceSecrets.describeAuth(
-    managedServer.authSecretName,
+  const managedAuth = await describeWorkspaceAuth(
+    ctx.workspaceSecrets,
     managedServer.serverPath,
+    managedServer.authSecretName,
   );
 
   if (ctx.documentKind === "workspace") {
@@ -164,9 +166,10 @@ async function handleReady(ctx: HandlerContext): Promise<void> {
     devServerUrl: url,
     serverSetup: currentSetup,
     workspaceHome,
-    workspaceAuth: await ctx.workspaceSecrets.describeAuth(
-      currentSetup.authSecretName,
+    workspaceAuth: await describeWorkspaceAuth(
+      ctx.workspaceSecrets,
       currentSetup.serverPath,
+      currentSetup.authSecretName,
     ),
   });
 
@@ -450,26 +453,6 @@ async function handleCopyAuthToken(ctx: HandlerContext): Promise<void> {
   }
 }
 
-async function handleSaveModalCredentials(
-  ctx: HandlerContext,
-  msg: Extract<WebviewMessage, { type: "saveModalCredentials" }>,
-): Promise<void> {
-  try {
-    const tokenId = msg.tokenId.trim();
-    const tokenSecret = msg.tokenSecret.trim();
-    if (!tokenId || !tokenSecret) {
-      throw new Error("Enter both Modal token ID and token secret");
-    }
-
-    await ctx.workspaceSecrets.saveModalCredentials(tokenId, tokenSecret);
-    await postWorkspaceAuth(ctx);
-    vscode.window.showInformationMessage("Saved Modal credentials for this workspace");
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    vscode.window.showErrorMessage(`Failed to save Modal credentials: ${message}`);
-  }
-}
-
 async function handleSyncLumenAuthToModal(ctx: HandlerContext): Promise<void> {
   try {
     const setup = describeServerSetup(
@@ -490,6 +473,10 @@ async function handleSyncLumenAuthToModal(ctx: HandlerContext): Promise<void> {
     const message = err instanceof Error ? err.message : String(err);
     vscode.window.showErrorMessage(`Failed to sync Lumen auth to Modal: ${message}`);
   }
+}
+
+async function handleOpenModalSettings(): Promise<void> {
+  await vscode.env.openExternal(vscode.Uri.parse(modalSettingsUrl()));
 }
 
 async function handleRevealServer(_: HandlerContext): Promise<void> {
@@ -523,11 +510,27 @@ async function postWorkspaceAuth(
         );
   ctx.post({
     type: "workspaceAuth",
-    auth: await ctx.workspaceSecrets.describeAuth(
-      modalSecretName ?? currentSetup.authSecretName,
+    auth: await describeWorkspaceAuth(
+      ctx.workspaceSecrets,
       currentSetup.serverPath,
+      modalSecretName ?? currentSetup.authSecretName,
     ),
   });
+}
+
+async function describeWorkspaceAuth(
+  workspaceSecrets: WorkspaceSecretStore,
+  serverPath: string,
+  modalSecretName: string,
+) {
+  const modal = describeModalMachineAuth();
+  return {
+    modalCliInstalled: modal.cliInstalled,
+    modalAuthenticated: modal.authenticated,
+    lumenAuthTokenSaved:
+      (await workspaceSecrets.peekLumenAuthToken(serverPath)) !== null,
+    modalSecretName,
+  };
 }
 
 async function handleInitializeWorkspace(ctx: HandlerContext): Promise<void> {

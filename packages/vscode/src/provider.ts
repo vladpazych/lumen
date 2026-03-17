@@ -16,6 +16,7 @@ import {
 import { DocumentBridge } from "./document";
 import { ServerConnection, type ConnectionEvents } from "./connection";
 import { handleMessage, type HandlerContext } from "./handlers";
+import { describeModalMachineAuth } from "./modal-auth";
 import { describeServerSetup, writeSchemaSnapshot } from "./server-scaffold";
 import { getServerSetting, getServerSource } from "./server";
 import { describeWorkspaceHome, getAssetsRootPath, isWorkspaceHomeDocument } from "./workspace-home";
@@ -134,12 +135,18 @@ export class LumenEditorProvider implements vscode.CustomTextEditorProvider {
 
   broadcastWorkspaceAuth(): void {
     const setup = this.currentServerSetup();
+    const modal = describeModalMachineAuth();
     void this.workspaceSecrets
-      .describeAuth(setup.authSecretName, setup.serverPath)
-      .then((auth) => {
+      .peekLumenAuthToken(setup.serverPath)
+      .then((token) => {
         this.broadcastToAll({
           type: "workspaceAuth",
-          auth,
+          auth: {
+            modalCliInstalled: modal.cliInstalled,
+            modalAuthenticated: modal.authenticated,
+            lumenAuthTokenSaved: token !== null,
+            modalSecretName: setup.authSecretName,
+          },
         });
       });
   }

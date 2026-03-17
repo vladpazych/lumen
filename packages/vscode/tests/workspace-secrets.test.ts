@@ -68,13 +68,9 @@ describe("workspace-secrets", () => {
     const first = createStore(storage, tempDir("lumen-workspace-a-"));
     const second = createStore(storage, tempDir("lumen-workspace-b-"));
 
-    await first.saveModalCredentials("token-id", "token-secret");
+    const firstToken = await first.getLumenAuthToken();
 
-    expect(await first.getModalCredentials()).toEqual({
-      tokenId: "token-id",
-      tokenSecret: "token-secret",
-    });
-    expect(await second.getModalCredentials()).toBeNull();
+    expect(firstToken.length).toBeGreaterThan(0);
     expect(await second.peekLumenAuthToken()).toBeNull();
   });
 });

@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { spawn } from "node:child_process";
 import * as vscode from "vscode";
 import type { DevServerState } from "../webview/lib/messaging";
+import { assertModalMachineAuth } from "./modal-auth";
 import {
   clearLastUrl,
   writeLastUrl,
@@ -59,10 +60,7 @@ export async function prepareServerStart(
   workspaceSecrets: WorkspaceSecretStore,
 ): Promise<NodeJS.ProcessEnv> {
   await workspaceSecrets.syncLumenAuthKeyFile(sourcePath);
-  return {
-    ...process.env,
-    ...(await workspaceSecrets.getModalProcessEnv()),
-  };
+  return process.env;
 }
 
 export class ServerManager {
@@ -114,6 +112,7 @@ export class ServerManager {
 
     let env: NodeJS.ProcessEnv;
     try {
+      assertModalMachineAuth();
       env = await prepareServerStart(sourcePath, this.workspaceSecrets);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

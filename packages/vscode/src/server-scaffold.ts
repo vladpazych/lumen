@@ -11,6 +11,7 @@ import {
 } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import * as vscode from "vscode";
+import { assertModalMachineAuth, describeModalMachineAuth } from "./modal-auth";
 import { writeAuthKey } from "./server-state";
 import type { WorkspaceSecretStore } from "./workspace-secrets";
 
@@ -240,10 +241,7 @@ function ensureGitRepo(targetPath: string): void {
 }
 
 export function canCreateModalSecret(): boolean {
-  const result = spawnSync("/bin/sh", ["-lc", "command -v modal >/dev/null 2>&1"], {
-    encoding: "utf-8",
-  });
-  return result.status === 0;
+  return describeModalMachineAuth().cliInstalled;
 }
 
 export function writeSchemaSnapshot(serverPath: string, pipelines: unknown): void {
@@ -376,11 +374,8 @@ export async function createOrUpdateModalSecret(
   serverPath: string,
   secretName: string,
 ): Promise<void> {
+  assertModalMachineAuth();
   const token = await workspaceSecrets.getLumenAuthToken(serverPath);
-  const env = {
-    ...process.env,
-    ...(await workspaceSecrets.getModalProcessEnv()),
-  };
 
   const result = spawnSync(
     "modal",
@@ -388,7 +383,7 @@ export async function createOrUpdateModalSecret(
     {
       cwd: serverPath,
       encoding: "utf-8",
-      env,
+      env: process.env,
     },
   );
 

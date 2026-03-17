@@ -56,8 +56,8 @@ export function App() {
     restartDevServer,
     installServer,
     copyServerAuthToken,
-    saveModalCredentials,
     syncLumenAuthToModal,
+    openModalSettings,
     revealServer,
     initializeWorkspace,
     createRunnerConfig,
@@ -147,8 +147,8 @@ export function App() {
             onUpdateRuntime={updateRuntime}
             onReinstallSkills={reinstallSkills}
             onCopyAuthToken={copyServerAuthToken}
-            onSaveModalCredentials={saveModalCredentials}
             onSyncLumenAuthToModal={syncLumenAuthToModal}
+            onOpenModalSettings={openModalSettings}
             onRevealAssets={revealAssets}
           />
 

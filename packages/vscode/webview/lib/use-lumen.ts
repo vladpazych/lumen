@@ -252,7 +252,8 @@ const initialState: State = {
     canCreateModalSecret: false,
   },
   workspaceAuth: {
-    modalCredentialsSaved: false,
+    modalCliInstalled: false,
+    modalAuthenticated: false,
     lumenAuthTokenSaved: false,
     modalSecretName: "lumen-auth",
   },
@@ -503,15 +504,12 @@ export function useLumen() {
     vscode.postMessage({ type: "copyAuthToken" });
   }, []);
 
-  const saveModalCredentials = useCallback(
-    (tokenId: string, tokenSecret: string) => {
-      vscode.postMessage({ type: "saveModalCredentials", tokenId, tokenSecret });
-    },
-    [],
-  );
-
   const syncLumenAuthToModal = useCallback(() => {
     vscode.postMessage({ type: "syncLumenAuthToModal" });
+  }, []);
+
+  const openModalSettings = useCallback(() => {
+    vscode.postMessage({ type: "openModalSettings" });
   }, []);
 
   const revealServer = useCallback(() => {
@@ -627,8 +625,8 @@ export function useLumen() {
     restartDevServer,
     installServer,
     copyServerAuthToken,
-    saveModalCredentials,
     syncLumenAuthToModal,
+    openModalSettings,
     revealServer,
     initializeWorkspace,
     createRunnerConfig,

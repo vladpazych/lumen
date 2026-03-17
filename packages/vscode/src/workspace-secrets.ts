@@ -7,19 +7,6 @@ export type SecretStorageLike = {
   delete(key: string): Thenable<void>;
 };
 
-export type ModalCredentials = {
-  tokenId: string;
-  tokenSecret: string;
-};
-
-export type WorkspaceAuthInfo = {
-  modalCredentialsSaved: boolean;
-  lumenAuthTokenSaved: boolean;
-  modalSecretName: string;
-};
-
-const MODAL_TOKEN_ID_KEY = "modal.tokenId";
-const MODAL_TOKEN_SECRET_KEY = "modal.tokenSecret";
 const LUMEN_AUTH_TOKEN_KEY = "lumen.authToken";
 
 export class WorkspaceSecretStore {
@@ -45,42 +32,6 @@ export class WorkspaceSecretStore {
 
   private async setValue(name: string, value: string): Promise<void> {
     await this.storage.store(this.scopedKey(name), value.trim());
-  }
-
-  async getModalCredentials(): Promise<ModalCredentials | null> {
-    const tokenId = await this.getValue(MODAL_TOKEN_ID_KEY);
-    const tokenSecret = await this.getValue(MODAL_TOKEN_SECRET_KEY);
-    if (!tokenId || !tokenSecret) {
-      return null;
-    }
-    return { tokenId, tokenSecret };
-  }
-
-  async saveModalCredentials(
-    tokenId: string,
-    tokenSecret: string,
-  ): Promise<void> {
-    await this.setValue(MODAL_TOKEN_ID_KEY, tokenId);
-    await this.setValue(MODAL_TOKEN_SECRET_KEY, tokenSecret);
-  }
-
-  async clearModalCredentials(): Promise<void> {
-    await this.storage.delete(this.scopedKey(MODAL_TOKEN_ID_KEY));
-    await this.storage.delete(this.scopedKey(MODAL_TOKEN_SECRET_KEY));
-  }
-
-  async getModalProcessEnv(): Promise<Record<string, string>> {
-    const credentials = await this.getModalCredentials();
-    if (!credentials) {
-      throw new Error(
-        "Save Modal credentials in the Lumen workspace home before starting the server.",
-      );
-    }
-
-    return {
-      MODAL_TOKEN_ID: credentials.tokenId,
-      MODAL_TOKEN_SECRET: credentials.tokenSecret,
-    };
   }
 
   async getLumenAuthToken(serverPath?: string): Promise<string> {
@@ -114,16 +65,5 @@ export class WorkspaceSecretStore {
     const token = await this.getLumenAuthToken(serverPath);
     writeAuthKey(serverPath, token);
     return token;
-  }
-
-  async describeAuth(
-    modalSecretName: string,
-    serverPath?: string,
-  ): Promise<WorkspaceAuthInfo> {
-    return {
-      modalCredentialsSaved: (await this.getModalCredentials()) !== null,
-      lumenAuthTokenSaved: (await this.peekLumenAuthToken(serverPath)) !== null,
-      modalSecretName,
-    };
   }
 }

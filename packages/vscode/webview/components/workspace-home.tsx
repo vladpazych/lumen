@@ -1,4 +1,3 @@
-import { useState } from "react";
 import type {
   DevServerState,
   ServerSetupInfo,
@@ -6,8 +5,6 @@ import type {
   WorkspaceHomeInfo,
 } from "@/lib/messaging";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { StatusDot } from "@/components/status-dot";
 
 const serverVariant = {
@@ -51,8 +48,8 @@ type Props = {
   onUpdateRuntime: () => void;
   onReinstallSkills: () => void;
   onCopyAuthToken: () => void;
-  onSaveModalCredentials: (tokenId: string, tokenSecret: string) => void;
   onSyncLumenAuthToModal: () => void;
+  onOpenModalSettings: () => void;
   onRevealAssets: () => void;
 };
 
@@ -66,7 +63,7 @@ function AuthStatus({
   return (
     <div className="inline-flex items-center gap-2 rounded-md border border-border bg-surface-1 px-2.5 py-1.5 text-[11px] text-text-secondary">
       <StatusDot variant={authVariant[ready ? "ready" : "missing"]} size="sm" />
-      {label}: {ready ? "Saved" : "Missing"}
+      {label}: {ready ? "Ready" : "Missing"}
     </div>
   );
 }
@@ -91,17 +88,11 @@ export function WorkspaceHome({
   onUpdateRuntime,
   onReinstallSkills,
   onCopyAuthToken,
-  onSaveModalCredentials,
   onSyncLumenAuthToModal,
+  onOpenModalSettings,
   onRevealAssets,
 }: Props) {
-  const [tokenId, setTokenId] = useState("");
-  const [tokenSecret, setTokenSecret] = useState("");
-
-  const handleSaveModalCredentials = () => {
-    onSaveModalCredentials(tokenId, tokenSecret);
-    setTokenSecret("");
-  };
+  const modalReady = auth.modalCliInstalled && auth.modalAuthenticated;
 
   return (
     <div className="flex flex-col gap-3">
@@ -136,9 +127,10 @@ export function WorkspaceHome({
           <div className="flex flex-col gap-1">
             <h2 className="text-[13px] font-medium text-text-primary">Auth</h2>
             <p className="text-[11px] text-text-tertiary">
-              Save Modal credentials in VS Code secrets. Lumen keeps its bearer token in
-              VS Code secrets too, then writes <code>assets/server/.authkey</code> only
-              when the local runtime needs it.
+              Lumen uses Modal&apos;s native machine auth. Set up Modal on this machine,
+              then Lumen reuses that CLI session for local dev and secret sync. Lumen
+              keeps only its own bearer token in VS Code secrets and writes{" "}
+              <code>assets/server/.authkey</code> only when the local runtime needs it.
             </p>
           </div>
           <div className="rounded-md bg-surface-1 px-2.5 py-2 text-[11px] text-text-tertiary">
@@ -147,41 +139,14 @@ export function WorkspaceHome({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <AuthStatus label="Modal credentials" ready={auth.modalCredentialsSaved} />
+          <AuthStatus label="Modal CLI" ready={auth.modalCliInstalled} />
+          <AuthStatus label="Modal auth" ready={auth.modalAuthenticated} />
           <AuthStatus label="Lumen auth token" ready={auth.lumenAuthTokenSaved} />
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="modal-token-id">Modal token ID</Label>
-            <Input
-              id="modal-token-id"
-              value={tokenId}
-              onChange={(event) => setTokenId(event.target.value)}
-              placeholder="ak-..."
-              autoComplete="off"
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="modal-token-secret">Modal token secret</Label>
-            <Input
-              id="modal-token-secret"
-              type="password"
-              value={tokenSecret}
-              onChange={(event) => setTokenSecret(event.target.value)}
-              placeholder="as-..."
-              autoComplete="off"
-            />
-          </div>
-        </div>
-
         <div className="flex flex-wrap gap-2">
-          <Button
-            variant="accent"
-            onClick={handleSaveModalCredentials}
-            disabled={!tokenId.trim() || !tokenSecret.trim()}
-          >
-            Save Modal Credentials
+          <Button variant="accent" onClick={onOpenModalSettings}>
+            Open Modal Settings
           </Button>
           <Button variant="outline" onClick={onCopyAuthToken} disabled={!auth.lumenAuthTokenSaved}>
             Copy Lumen Auth Token
@@ -191,7 +156,7 @@ export function WorkspaceHome({
             onClick={onSyncLumenAuthToModal}
             disabled={
               !setup.canCreateModalSecret ||
-              !auth.modalCredentialsSaved ||
+              !auth.modalAuthenticated ||
               !auth.lumenAuthTokenSaved
             }
           >
@@ -199,10 +164,17 @@ export function WorkspaceHome({
           </Button>
         </div>
 
-        {!setup.canCreateModalSecret && (
+        {!auth.modalCliInstalled && (
           <p className="text-[11px] text-text-tertiary">
-            Install the Modal CLI locally to sync the <code>{auth.modalSecretName}</code>{" "}
-            secret from this workspace.
+            Install the Modal CLI, then open Modal settings and run{" "}
+            <code>modal token set</code> on this machine.
+          </p>
+        )}
+
+        {auth.modalCliInstalled && !auth.modalAuthenticated && (
+          <p className="text-[11px] text-text-tertiary">
+            Modal CLI is installed, but this machine is not authenticated yet. Open
+            settings, create a token, and run <code>modal token set</code>.
           </p>
         )}
       </div>
@@ -235,12 +207,12 @@ export function WorkspaceHome({
 
             <div className="flex flex-wrap gap-2">
               {canStart && (
-                <Button variant="accent" onClick={onStartServer}>
+                <Button variant="accent" onClick={onStartServer} disabled={!modalReady}>
                   Start Server
                 </Button>
               )}
               {canRestart && (
-                <Button variant="outline" onClick={onRestartServer}>
+                <Button variant="outline" onClick={onRestartServer} disabled={!modalReady}>
                   Restart Server
                 </Button>
               )}

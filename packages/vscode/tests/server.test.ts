@@ -54,20 +54,18 @@ function tempDir(prefix: string): string {
 }
 
 describe("prepareServerStart", () => {
-  test("writes the auth key file from secret storage and injects Modal env", async () => {
+  test("writes the auth key file from secret storage", async () => {
     const workspaceRoot = tempDir("lumen-workspace-");
     const serverPath = join(workspaceRoot, "assets", "server");
     mkdirSync(serverPath, { recursive: true });
 
     const storage = new MemorySecretStorage();
     const store = new WorkspaceSecretStore(storage, () => workspaceRoot);
-    await store.saveModalCredentials("modal-id", "modal-secret");
 
     const env = await prepareServerStart(serverPath, store);
     const authToken = await store.getLumenAuthToken(serverPath);
 
-    expect(env.MODAL_TOKEN_ID).toBe("modal-id");
-    expect(env.MODAL_TOKEN_SECRET).toBe("modal-secret");
+    expect(env).toBe(process.env);
     expect(readAuthKey(serverPath)).toBe(authToken);
   });
 });

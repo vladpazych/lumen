@@ -39,7 +39,8 @@ export type WorkspaceHomeInfo = {
 };
 
 export type WorkspaceAuthInfo = {
-  modalCredentialsSaved: boolean;
+  modalCliInstalled: boolean;
+  modalAuthenticated: boolean;
   lumenAuthTokenSaved: boolean;
   modalSecretName: string;
 };
@@ -276,14 +277,9 @@ export type ReinstallSkillsMessage = {
   type: "reinstallSkills";
 };
 
-export type SaveModalCredentialsMessage = {
-  type: "saveModalCredentials";
-  tokenId: string;
-  tokenSecret: string;
-};
-
 export type CopyAuthTokenMessage = { type: "copyAuthToken" };
 export type SyncLumenAuthToModalMessage = { type: "syncLumenAuthToModal" };
+export type OpenModalSettingsMessage = { type: "openModalSettings" };
 export type RevealServerMessage = { type: "revealServer" };
 export type RevealAssetsMessage = { type: "revealAssets" };
 
@@ -308,8 +304,8 @@ export type WebviewMessage =
   | CreatePipelineMessage
   | UpdateRuntimeMessage
   | ReinstallSkillsMessage
-  | SaveModalCredentialsMessage
   | CopyAuthTokenMessage
   | SyncLumenAuthToModalMessage
+  | OpenModalSettingsMessage
   | RevealServerMessage
   | RevealAssetsMessage;
