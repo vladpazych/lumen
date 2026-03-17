@@ -166,7 +166,7 @@ function ensureEmptyOrManagedDirectory(targetPath: string): void {
 function copyContents(sourceDir: string, targetDir: string): void {
   mkdirSync(targetDir, { recursive: true });
   for (const entry of readdirSync(sourceDir)) {
-    if (entry === "pack.json") {
+    if (entry === "pack.json" || entry === "AGENTS.md") {
       continue;
     }
     cpSync(join(sourceDir, entry), join(targetDir, entry), { recursive: true });
@@ -176,7 +176,7 @@ function copyContents(sourceDir: string, targetDir: string): void {
 function copyManagedRuntimeShell(sourceDir: string, targetDir: string): void {
   mkdirSync(targetDir, { recursive: true });
   for (const entry of readdirSync(sourceDir)) {
-    if (entry === "pipelines") {
+    if (entry === "pipelines" || entry === "AGENTS.md") {
       continue;
     }
     cpSync(join(sourceDir, entry), join(targetDir, entry), { recursive: true });
