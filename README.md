@@ -64,6 +64,7 @@ What the extension writes for you:
 - `lumen.config.json` as the workspace home
 - `server/` with a self-contained FastAPI + Modal server
 - `assets/main.lumen` as the first runner config
+- `AGENTS.md` with workspace-level guidance for agents and editors
 - `server/.authkey` for local auth during development
 - `server/lumen.log` for mirrored logs
 - `server/lumen.schema.json` for the latest discovered pipeline schemas

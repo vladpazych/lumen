@@ -22,6 +22,7 @@ import type { WorkspaceSecretStore } from "./workspace-secrets";
 export const LUMEN_WORKSPACE_FILE = "lumen.config.json";
 export const LUMEN_ASSETS_DIR = "assets";
 export const LUMEN_DEFAULT_CONFIG_FILE = "main.lumen";
+const LUMEN_WORKSPACE_POLICY_FILE = "AGENTS.md";
 
 export type WorkspaceConfigFile = {
   name: string;
@@ -52,6 +53,10 @@ function workspaceConfigText(): string {
 
 function runnerConfigText(): string {
   return "[]\n";
+}
+
+function workspacePolicyTemplatePath(context: vscode.ExtensionContext): string {
+  return join(context.extensionPath, "assets", "workspace", LUMEN_WORKSPACE_POLICY_FILE);
 }
 
 function gitignoreEntries(): string[] {
@@ -170,6 +175,14 @@ export function ensureWorkspaceHomeDocument(): string {
   return homePath;
 }
 
+function ensureWorkspacePolicy(context: vscode.ExtensionContext): void {
+  const policyPath = join(requireWorkspaceRoot(), LUMEN_WORKSPACE_POLICY_FILE);
+  if (existsSync(policyPath)) {
+    return;
+  }
+  writeFileSync(policyPath, readFileSync(workspacePolicyTemplatePath(context), "utf-8"));
+}
+
 export function ensureWorkspaceGitignore(): void {
   const root = requireWorkspaceRoot();
   const gitignorePath = join(root, ".gitignore");
@@ -219,6 +232,7 @@ export async function initializeWorkspace(
   setup: ServerSetupInfo;
 }> {
   ensureWorkspaceHomeDocument();
+  ensureWorkspacePolicy(context);
   ensureWorkspaceGitignore();
   const assetsPath = getAssetsRootPath();
   mkdirSync(assetsPath, { recursive: true });

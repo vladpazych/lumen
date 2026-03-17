@@ -1,4 +1,4 @@
-`templates/default/` is a Lumen workspace root: workspace home, committed Modal server, gitignored runner configs, and optional agent skills. Optimize for a runnable project that non-devs can steer from VS Code and agents can edit safely.
+`/` is a Lumen workspace root: workspace home, committed Modal server, gitignored runner configs, and optional agent skills. Optimize for a runnable project that non-devs can steer from VS Code and agents can edit safely.
 
 ## Rules
 
@@ -17,4 +17,4 @@
 
 ## Gotchas
 
-- Changes here should usually mirror equivalent changes in `packages/vscode/assets/server/base/` unless the example workspace intentionally diverges from the scaffold source.
+- Changes to the committed workspace server should usually mirror equivalent changes in `packages/vscode/assets/server/base/` unless this workspace intentionally diverges from the scaffold.
