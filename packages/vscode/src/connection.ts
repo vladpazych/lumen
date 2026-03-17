@@ -55,6 +55,18 @@ export class ServerConnection {
     return this.detectedUrl;
   }
 
+  private syncDetectedUrlFromState(): void {
+    const serverSource = this.getServerSource();
+    if (!serverSource) {
+      return;
+    }
+
+    const storedUrl = readLastUrl(serverSource);
+    if (storedUrl) {
+      this.detectedUrl = storedUrl;
+    }
+  }
+
   onUrlDetected(_source: string, url: string): void {
     this.detectedUrl = url;
     this.log.info(`[modal] detected URL: ${url}`);
@@ -79,6 +91,7 @@ export class ServerConnection {
   // --- Provider lifecycle ---
 
   async rebuildProviders(): Promise<void> {
+    this.syncDetectedUrlFromState();
     for (const key of Object.keys(this.providers)) {
       delete this.providers[key];
     }
